@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Craumix/tormsg/internal/tor"
+	"github.com/Craumix/tormsg/internal/types"
 )
 
 const (
@@ -20,17 +21,28 @@ const (
 func main() {
 	err := tor.Run(pw, socks, cont, dir, internal)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalln(err.Error())
 	}
 
 	log.Printf("Tor seems to be runnning\n")
 
 	ctrl, err := tor.WaitForController(pw, lo + ":" + cont, time.Second, 30)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalln(err.Error())
 	}
-	_= ctrl
+
+	_ = ctrl
 	log.Printf("Connected controller to tor\n")
+
+	service := types.NewHiddenService()
+	service.Onion().Ports[80] = "example.org:80"
+
+	err = ctrl.AddOnion(service.Onion())
+	if err != nil {
+		log.Println(err.Error())
+	}else {
+		log.Printf("Started hidden service at %s", service.URL())
+	}
 
 	for (true) {
 		time.Sleep(time.Second * 10)
