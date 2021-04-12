@@ -1,0 +1,59 @@
+#!/bin/bash
+
+zlibVerison=1.2.11
+libeventVersion=2.1.8
+opensslVersion=1.0.2l
+#opensslVersion=1.1.1i
+torVersion=0.4.4.6
+
+mkdir -p build/tor
+cd build/tor
+
+curl -fsSL "https://zlib.net/zlib-$zlibVerison.tar.gz" | tar zxvf -
+cd zlib-$zlibVerison
+./configure --prefix=$PWD/install
+make -j$(nproc)
+make install
+cd ..
+
+curl -fsSL "https://github.com/libevent/libevent/releases/download/release-$libeventVersion-stable/libevent-$libeventVersion-stable.tar.gz" | tar zxvf -
+cd libevent-$libeventVersion-stable
+./configure --prefix=$PWD/install \
+           --disable-shared \
+           --enable-static \
+           --with-pic
+make -j$(nproc)
+make install
+cd ..
+
+curl -fsSL "https://www.openssl.org/source/openssl-$opensslVersion.tar.gz" | tar zxvf -
+cd openssl-$opensslVersion
+./config --prefix=$PWD/install no-shared no-dso
+make -j$(nproc)
+make install
+cd ..
+
+curl -fsSL "https://www.torproject.org/dist/tor-$torVersion.tar.gz" | tar zxvf -
+cd tor-$torVersion
+./configure --prefix=$PWD/install \
+            --enable-static-tor \
+            --with-libevent-dir=$PWD/../libevent-$libeventVersion-stable/install \
+            --with-openssl-dir=$PWD/../openssl-$opensslVersion/install \
+            --with-zlib-dir=$PWD/../zlib-$zlibVerison/install
+make -j$(nproc)
+make install
+cd ..
+
+cp tor-$torVersion/install/bin/tor ./
+
+echo "=====Finishing touches====="
+ls -l --block-size=M ./tor
+strip tor
+ls -l --block-size=M ./tor
+upx --best tor
+ls -l --block-size=M ./tor
+
+rm -rf ./libevent-*
+rm -rf ./openssl-*
+rm -rf ./zlib-*
+rm -rf ./tor-*
