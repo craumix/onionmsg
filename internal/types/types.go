@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/ed25519"
+	"strconv"
 
 	"github.com/wybiral/torgo"
 )
@@ -30,4 +31,12 @@ func (s *HiddenService) Onion() *torgo.Onion {
 
 func (s *HiddenService) URL() string {
 	return s.Onion().ServiceID + ".onion"
+}
+
+func (s *HiddenService) Proxy(torPort int, addr string) {
+	s.Onion().Ports[torPort] = addr
+}
+
+func (s *HiddenService) LocalProxy(torPort, localPort int) {
+	s.Onion().Ports[torPort] = "127.0.0.1:" + strconv.Itoa(localPort)
 }

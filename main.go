@@ -35,7 +35,8 @@ func main() {
 	log.Printf("Connected controller to tor\n")
 
 	service := types.NewHiddenService()
-	service.Onion().Ports[80] = "example.org:80"
+	service.Proxy(80, "example.org")
+	service.LocalProxy(8080, 8080)
 
 	err = ctrl.AddOnion(service.Onion())
 	if err != nil {
