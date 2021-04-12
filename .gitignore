@@ -1,2 +1,2 @@
 build/tor
-internal/bindata
+internal/bindata/bindata.go
