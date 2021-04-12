@@ -2,4 +2,4 @@ build/tor
 build/bin
 internal/bindata/bindata.go
 
-*.log
+tordir
