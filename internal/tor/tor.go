@@ -17,6 +17,9 @@ func Run(useInternal bool) error {
 	exe := "tor"
 
 	if useInternal {
+		if !validBinOS() {
+			return fmt.Errorf("Cannot use internal tor binary on platfrom \"%s\"", runtime.GOOS)
+		}
 		exe, err = binToMem()
 		if err != nil {
 			return err
@@ -32,10 +35,6 @@ func Run(useInternal bool) error {
 }
 
 func binToMem() (string, error) {
-	if runtime.GOOS != "linux" {
-		return "", fmt.Errorf("Can only execute in-memory on linux")
-	}
-
 	memfd, err := memfd.CreateMemFD("tormemfd")
 	if err != nil {
 		return "", err
@@ -84,4 +83,15 @@ func versionFromExe(exe string) (string, error) {
 	version := string(out)
 
 	return version[:len(version) - 1], nil
+}
+
+func validBinOS() bool {
+	os := []string{"linux", "android"}
+
+    for _, a := range os {
+        if a == runtime.GOOS {
+            return true
+        }
+    }
+    return false
 }

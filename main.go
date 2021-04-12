@@ -9,7 +9,7 @@ import (
 
 func main() {
 	go func() {
-		err := tor.Run(false)
+		err := tor.Run(true)
 		if err != nil {
 			log.Fatalf(err.Error())
 		}
