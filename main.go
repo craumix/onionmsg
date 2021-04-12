@@ -9,18 +9,7 @@ import (
 
 func main() {
 	go func() {
-		useMyTor := false
-		exe := "tor"
-		var err error
-
-		if useMyTor {
-			exe, err = tor.WriteTorToMemory()
-			if err != nil {
-				log.Fatalf(err.Error())
-			}
-		}
-
-		err = tor.StartTor(exe)
+		err := tor.Run(false)
 		if err != nil {
 			log.Fatalf(err.Error())
 		}

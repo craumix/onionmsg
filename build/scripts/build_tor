@@ -53,6 +53,7 @@ ls -l --block-size=M ./tor
 upx --best tor
 ls -l --block-size=M ./tor
 
+echo "=====Removing build files====="
 rm -rf ./libevent-*
 rm -rf ./openssl-*
 rm -rf ./zlib-*

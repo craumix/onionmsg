@@ -12,7 +12,26 @@ import (
 	"github.com/Craumix/tormsg/internal/memfd"
 )
 
-func WriteTorToMemory() (string, error) {
+func Run(useInternal bool) error {
+	var err error
+	exe := "tor"
+
+	if useInternal {
+		exe, err = binToMem()
+		if err != nil {
+			return err
+		}
+	}
+
+	err = runExecutable(exe)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func binToMem() (string, error) {
 	if runtime.GOOS != "linux" {
 		return "", fmt.Errorf("Can only execute in-memory on linux")
 	}
@@ -31,8 +50,8 @@ func WriteTorToMemory() (string, error) {
 	return memfd, nil
 }
 
-func StartTor(exe string) error {
-	version, err := TorVersion(exe)
+func runExecutable(exe string) error {
+	version, err := versionFromExe(exe)
 	if err != nil {
 		return err
 	}
@@ -56,7 +75,7 @@ func StartTor(exe string) error {
 	return nil
 }
 
-func TorVersion(exe string) (string, error) {
+func versionFromExe(exe string) (string, error) {
 	out, err := exec.Command(exe, "--version").Output()
 	if err != nil {
 		return "", err
