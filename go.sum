@@ -1,3 +1,5 @@
+github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e h1:MRM5ITcdelLK2j1vwZ3Je0FKVCfqOLp5zO6trqMLYs0=
+github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e/go.mod h1:XV66xRDqSt+GTGFMVlhk3ULuV0y9ZmzeVGR4mloJI3M=
 github.com/wybiral/torgo v0.0.0-20201209223426-5fd9910eab31 h1:SwsJDiOttfoLuvW5f8Lhv0L+pDtLoEss0S9ZwJleGMU=
 github.com/wybiral/torgo v0.0.0-20201209223426-5fd9910eab31/go.mod h1:LAhGyZRjuXZ/+uO4tqc5QV26hkdIo+yGHPfX1aubR0M=
 golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 h1:It14KIkyBFYkHkwZ7k45minvA9aorojkyjGk9KJ5B/w=

@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"image/png"
 	"log"
+	"os"
 	"time"
 
 	"github.com/Craumix/tormsg/internal/tor"
@@ -55,6 +57,20 @@ func main() {
 	i := types.NewIdentity()
 	log.Printf("ID: %s\n", i.Fingerprint())
 
+	/*
+	img, err := i.QR(256)
+	if err != nil {
+		log.Println(err.Error())
+	}else {
+		f, err := os.OpenFile(dir + "/id.png", os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Println(err.Error())
+		}
+		png.Encode(f, img)
+		f.Close()
+	}
+	*/
+	
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
