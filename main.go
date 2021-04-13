@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"log"
 	"time"
 
@@ -11,14 +13,19 @@ import (
 const (
 	lo = "127.0.0.1"
 
-	pw = "abc"
 	socks = "9050"
 	cont = "9051"
 	dir = "tordir"
 	internal = true
 )
 
+var (
+	pw string
+)
+
 func main() {
+	randomizePW(64)
+	
 	err := tor.Run(pw, socks, cont, dir, internal)
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -48,4 +55,10 @@ func main() {
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
+}
+
+func randomizePW(size int) {
+	r := make([]byte, size)
+	rand.Read(r)
+	pw = base64.RawStdEncoding.EncodeToString(r)
 }
