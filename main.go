@@ -52,6 +52,9 @@ func main() {
 		log.Printf("Started hidden service at %s", service.URL())
 	}
 
+	i := types.NewIdentity()
+	log.Printf("ID: %s\n", i.Fingerprint())
+
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
