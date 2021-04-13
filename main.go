@@ -3,9 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"image/png"
 	"log"
-	"os"
 	"time"
 
 	"github.com/Craumix/tormsg/internal/tor"
@@ -70,7 +68,7 @@ func main() {
 		f.Close()
 	}
 	*/
-	
+
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
