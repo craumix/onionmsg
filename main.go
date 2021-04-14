@@ -38,8 +38,8 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-	_ = ctrl
-	log.Printf("Connected controller to tor\n")
+	v, _ := ctrl.GetVersion()
+	log.Printf("Connected controller to tor version %s\n", v)
 
 	service := types.NewHiddenService()
 	service.Proxy(80, "example.org")
@@ -47,9 +47,9 @@ func main() {
 
 	err = ctrl.AddOnion(service.Onion())
 	if err != nil {
-		log.Println(err.Error())
+		log.Printf("Failed to add onion %s\n", err.Error())
 	}else {
-		log.Printf("Started hidden service at %s", service.URL())
+		log.Printf("Started hidden service at %s\n", service.URL())
 	}
 
 	i := types.NewIdentity()
