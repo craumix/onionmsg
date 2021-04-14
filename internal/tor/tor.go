@@ -130,7 +130,7 @@ func pwHashFromExe(exe, pw string) (string, error) {
 }
 
 func validBinOS() bool {
-	os := []string{"linux", "android"}
+	os := []string{"linux"}
 
     for _, a := range os {
         if a == runtime.GOOS {
