@@ -47,3 +47,7 @@ func (i *Identity) QR(res int) (image.Image, error) {
 func (i *Identity) B64PubKey() string {
 	return base64.RawURLEncoding.EncodeToString(i.Pub)
 }
+
+func (i *Identity) Sign(data []byte) []byte {
+	return ed25519.Sign(i.Priv, data)
+}

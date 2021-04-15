@@ -6,8 +6,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/Craumix/tormsg/internal/server"
 	"github.com/Craumix/tormsg/internal/tor"
 	"github.com/Craumix/tormsg/internal/types"
+	"github.com/wybiral/torgo"
+	"golang.org/x/net/proxy"
 )
 
 const (
@@ -17,9 +20,14 @@ const (
 	cont = "9051"
 	dir = "tordir"
 	internal = true
+
+	contactPort = 10050
 )
 
 var (
+	contactIdentities = make(map[string]*types.Identity)
+	controller			*torgo.Controller
+
 	pw string
 )
 
@@ -33,45 +41,62 @@ func main() {
 
 	log.Printf("Tor seems to be runnning\n")
 
-	ctrl, err := tor.WaitForController(pw, lo + ":" + cont, time.Second, 30)
+	controller, err = tor.WaitForController(pw, lo + ":" + cont, time.Second, 30)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
-	v, _ := ctrl.GetVersion()
+	v, _ := controller.GetVersion()
 	log.Printf("Connected controller to tor version %s\n", v)
 
-	service := types.NewHiddenService()
-	service.Proxy(80, "example.org")
-	service.LocalProxy(8080, 8080)
-
-	err = ctrl.AddOnion(service.Onion())
-	if err != nil {
-		log.Printf("Failed to add onion %s\n", err.Error())
-	}else {
-		log.Printf("Started hidden service at %s\n", service.URL())
-	}
+	go server.StartContactServer(contactPort, contactIdentities)
 
 	i := types.NewIdentity()
-	log.Printf("ID: %s\n", i.Fingerprint())
+	registerContactIdentity(i)
 
-	/*
-	img, err := i.QR(256)
-	if err != nil {
-		log.Println(err.Error())
-	}else {
-		f, err := os.OpenFile(dir + "/id.png", os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			log.Println(err.Error())
-		}
-		png.Encode(f, img)
-		f.Close()
-	}
-	*/
+	remote, _ := types.NewRemoteIdentity("Yb94xTxQRLUQnSfeLObOhAvSKU9nlA1DATM1LHsByek@qfhsbq5xvbvtvvlh5ju7oursopkuwyggygw6t2a3o5k3cmz57m7esoad")
+	dialer, _ := proxy.SOCKS5("tcp", "localhost:9050", nil, nil)
+	_ = remote
+	_ = dialer
+	_, _ = types.NewRoom([]*types.RemoteIdentity{remote}, dialer);
 
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
+}
+
+func registerContactIdentity(i *types.Identity) error {
+	service := i.Service
+	service.LocalProxy(contactPort, contactPort)
+
+	err := controller.AddOnion(service.Onion())
+	if err != nil {
+		return err
+	}
+
+	contactIdentities[i.Fingerprint()] = i
+
+	log.Printf("Registered contact identity %s\n", i.Fingerprint())
+
+	return nil
+}
+
+func deregisterContactIdentity(fingerprint string) error {
+	if contactIdentities[fingerprint] == nil {
+		return nil
+	}
+
+	i := contactIdentities[fingerprint]
+	err := controller.DeleteOnion(i.Service.Onion().ServiceID)
+	if err != nil {
+		return err
+	}
+
+	contactIdentities[fingerprint] = nil
+
+	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
+
+	return nil
 }
 
 func randomizePW(size int) {
