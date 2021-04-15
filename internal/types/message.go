@@ -6,23 +6,23 @@ import (
 )
 
 type Message struct {
-	Sender		string
-	Time		time.Time
-	Content		[]byte
-	signature	[]byte
+	Sender		string		`json:"sender"`
+	Time		time.Time	`json:"time"`
+	Content		[]byte		`json:"content"`
+	Signature	[]byte		`json:"signature"`
 }
 
 func (m *Message) Sign(priv ed25519.PrivateKey) {
 	
-	m.signature = ed25519.Sign(priv, m.digestBytes())
+	m.Signature = ed25519.Sign(priv, m.digestBytes())
 }
 
 func (m *Message) Verify(pub ed25519.PublicKey) bool {
-	if m.signature == nil {
+	if m.Signature == nil {
 		return false
 	}
 
-	return ed25519.Verify(pub, m.digestBytes(), m.signature)
+	return ed25519.Verify(pub, m.digestBytes(), m.Signature)
 }
 
 func (m *Message) digestBytes() []byte {

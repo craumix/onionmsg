@@ -11,9 +11,9 @@ import (
 )
 
 type Identity struct {
-	Service *HiddenService
-	Pub 	ed25519.PublicKey
-	Priv	ed25519.PrivateKey
+	Service *HiddenService		`json:"hidden_service"`
+	Pub 	ed25519.PublicKey	`json:"public_key"`
+	Priv	ed25519.PrivateKey	`json:"private_key"`
 }
 
 func NewIdentity() *Identity {

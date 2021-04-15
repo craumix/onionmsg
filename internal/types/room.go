@@ -9,9 +9,10 @@ import (
 )
 
 type Room struct {
-	Self	*Identity
-	Peers	[]*RemoteIdentity
-	ID		uuid.UUID
+	Self		*Identity			`json:"self"`
+	Peers		[]*RemoteIdentity	`json:"peers"`
+	ID			uuid.UUID			`json:"uuid"`
+	Messages	[]*Message			`json:"messages"`
 }
 
 func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, error) {

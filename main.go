@@ -3,29 +3,45 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/Craumix/tormsg/internal/server"
 	"github.com/Craumix/tormsg/internal/tor"
 	"github.com/Craumix/tormsg/internal/types"
+	"github.com/google/uuid"
+	"github.com/klauspost/compress/zstd"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
 )
 
-const (
-	lo = "127.0.0.1"
+/*SerializedData struct exists purely for serialaization purposes*/
+type SerializedData struct {
+	ContactIdentities	map[string]*types.Identity	`json:"contact_identities"`
+	Rooms				map[uuid.UUID]*types.Room	`json:"rooms"`
+	MessageQueue		[]*types.WrappedMessage		`json:"message_queue"`
+}
 
+const (
 	socks = "9050"
 	cont = "9051"
 	dir = "tordir"
 	internal = true
 
 	contactPort = 10050
+
+	datafile = "tormsg.zstd.aes"
 )
 
 var (
-	contactIdentities = make(map[string]*types.Identity)
+	data = SerializedData{
+		ContactIdentities: 	make(map[string]*types.Identity),
+		Rooms: 				make(map[uuid.UUID]*types.Room),
+		MessageQueue: 		make([]*types.WrappedMessage, 0),
+	}
 	controller			*torgo.Controller
 
 	pw string
@@ -41,7 +57,7 @@ func main() {
 
 	log.Printf("Tor seems to be runnning\n")
 
-	controller, err = tor.WaitForController(pw, lo + ":" + cont, time.Second, 30)
+	controller, err = tor.WaitForController(pw, "localhost:" + cont, time.Second, 30)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -49,16 +65,24 @@ func main() {
 	v, _ := controller.GetVersion()
 	log.Printf("Connected controller to tor version %s\n", v)
 
-	go server.StartContactServer(contactPort, contactIdentities)
+	go server.StartContactServer(contactPort, data.ContactIdentities)
 
 	i := types.NewIdentity()
 	registerContactIdentity(i)
 
-	remote, _ := types.NewRemoteIdentity("Yb94xTxQRLUQnSfeLObOhAvSKU9nlA1DATM1LHsByek@qfhsbq5xvbvtvvlh5ju7oursopkuwyggygw6t2a3o5k3cmz57m7esoad")
+	remote, _ := types.NewRemoteIdentity(i.Fingerprint())
 	dialer, _ := proxy.SOCKS5("tcp", "localhost:9050", nil, nil)
 	_ = remote
 	_ = dialer
-	_, _ = types.NewRoom([]*types.RemoteIdentity{remote}, dialer);
+	room, _ := types.NewRoom([]*types.RemoteIdentity{remote}, dialer);
+	data.Rooms[room.ID] = room
+
+	//deregisterContactIdentity(i.Fingerprint())
+
+	s, err := json.Marshal(data)
+	fmt.Println(string(s))
+
+	saveData()
 
 	for (true) {
 		time.Sleep(time.Second * 10)
@@ -74,7 +98,7 @@ func registerContactIdentity(i *types.Identity) error {
 		return err
 	}
 
-	contactIdentities[i.Fingerprint()] = i
+	data.ContactIdentities[i.Fingerprint()] = i
 
 	log.Printf("Registered contact identity %s\n", i.Fingerprint())
 
@@ -82,19 +106,45 @@ func registerContactIdentity(i *types.Identity) error {
 }
 
 func deregisterContactIdentity(fingerprint string) error {
-	if contactIdentities[fingerprint] == nil {
+	if data.ContactIdentities[fingerprint] == nil {
 		return nil
 	}
 
-	i := contactIdentities[fingerprint]
+	i := data.ContactIdentities[fingerprint]
 	err := controller.DeleteOnion(i.Service.Onion().ServiceID)
 	if err != nil {
 		return err
 	}
 
-	contactIdentities[fingerprint] = nil
+	delete(data.ContactIdentities, fingerprint)
 
 	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
+
+	return nil
+}
+
+func saveData() error {
+	file, err := os.OpenFile(datafile, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	enc, err := zstd.NewWriter(file)
+	if err != nil {
+		return err
+	}
+
+	s, _ := json.Marshal(data)
+
+	_, err = enc.Write(s)
+	if err != nil {
+		return err
+	}
+	
+	stat, _ := file.Stat()
+
+	log.Printf("Written %d compressed bytes, down from %d (%.2f%%)\n", stat.Size(), len(s), (float64(stat.Size()) / float64(len(s))) * 100)
 
 	return nil
 }

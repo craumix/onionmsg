@@ -8,8 +8,8 @@ import (
 )
 
 type RemoteIdentity struct {
-	pub		ed25519.PublicKey
-	Service	string
+	Pub		ed25519.PublicKey	`json:"public_key"`
+	Service	string				`json:"service"`
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
@@ -24,13 +24,13 @@ func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
 	}
 
 	return &RemoteIdentity{
-		pub: ed25519.PublicKey(k),
+		Pub: ed25519.PublicKey(k),
 		Service: tmp[1],
 	}, nil
 }
 
 func (i *RemoteIdentity) Verify(msg, sig []byte) bool {
-	return ed25519.Verify(i.pub, msg, sig)
+	return ed25519.Verify(i.Pub, msg, sig)
 }
 
 func (i *RemoteIdentity) URL() string {
@@ -42,5 +42,5 @@ func (i *RemoteIdentity) Fingerprint() string {
 }
 
 func (i *RemoteIdentity) B64PubKey() string {
-	return base64.RawURLEncoding.EncodeToString(i.pub)
+	return base64.RawURLEncoding.EncodeToString(i.Pub)
 }
