@@ -11,18 +11,16 @@ import (
 )
 
 type Identity struct {
-	Service *HiddenService		`json:"hidden_service"`
-	Pub 	ed25519.PublicKey	`json:"public_key"`
-	Priv	ed25519.PrivateKey	`json:"private_key"`
+	Service *HiddenService	`json:"hidden_service"`
+	Key	ed25519.PrivateKey	`json:"key"`
 }
 
 func NewIdentity() *Identity {
-	pub, priv, _ := ed25519.GenerateKey(nil)
+	_, priv, _ := ed25519.GenerateKey(nil)
 
 	return &Identity {
 		Service: NewHiddenService(),
-		Pub: pub,
-		Priv: priv,
+		Key: priv,
 	}
 }
 
@@ -45,9 +43,9 @@ func (i *Identity) QR(res int) (image.Image, error) {
 }
 
 func (i *Identity) B64PubKey() string {
-	return base64.RawURLEncoding.EncodeToString(i.Pub)
+	return base64.RawURLEncoding.EncodeToString(i.Key.Public().(ed25519.PublicKey))
 }
 
 func (i *Identity) Sign(data []byte) []byte {
-	return ed25519.Sign(i.Priv, data)
+	return ed25519.Sign(i.Key, data)
 }

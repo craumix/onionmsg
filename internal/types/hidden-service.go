@@ -10,22 +10,20 @@ import (
 type HiddenService struct {
 	onion	*torgo.Onion
 
-	Pub 	ed25519.PublicKey	`json:"public_key"`
-	Priv	ed25519.PrivateKey	`json:"private_key"`
+	Key	ed25519.PrivateKey	`json:"key"`
 }
 
 func NewHiddenService() *HiddenService {
-	pub, priv, _ := ed25519.GenerateKey(nil)
+	_, priv, _ := ed25519.GenerateKey(nil)
 
 	return &HiddenService{
-		Pub: pub,
-		Priv: priv,
+		Key: priv,
 	}
 }
 
 func (s *HiddenService) Onion() *torgo.Onion {
 	if s.onion == nil {
-		s.onion, _ = torgo.OnionFromEd25519(s.Priv)
+		s.onion, _ = torgo.OnionFromEd25519(s.Key)
 	}
 		
 	return s.onion
