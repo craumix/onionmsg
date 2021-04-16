@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/ed25519"
+	"encoding/binary"
 	"time"
 )
 
@@ -31,4 +32,10 @@ func (m *Message) digestBytes() []byte {
 	d = append(d, m.Content...)
 
 	return d
+}
+
+func int64ToBytes(i int64) []byte {
+	bs := make([]byte, 8)
+    binary.LittleEndian.PutUint64(bs, uint64(i))
+    return bs
 }
