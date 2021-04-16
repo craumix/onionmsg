@@ -24,21 +24,20 @@ func StartContactServer(port int, identities map[string]*types.Identity) (error)
 		}
 
 		go func() {
-			con := c
+			dconn := types.NewDataIO(c)
 
-			msg, err := types.ReadCon(con)
+			contactFingerprint, err := dconn.ReadString()
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 
-			sentFingerprint := string(msg)
-			if identities[string(msg)] == nil {
-				log.Printf("Contact id %s unknown\n", string(msg))
+			if identities[contactFingerprint] == nil {
+				log.Printf("Contact id %s unknown\n", contactFingerprint)
 				return
 			}
 			
-			msg, err = types.ReadCon(con)
+			msg, err := dconn.ReadBytes()
 			if err != nil {
 				log.Println(err.Error())
 				return
@@ -46,20 +45,20 @@ func StartContactServer(port int, identities map[string]*types.Identity) (error)
 			id, _ := uuid.FromBytes(msg)
 
 			convID := types.NewIdentity()
-
-			_, err = types.WriteCon(con, []byte(convID.Fingerprint()))
+			_, err = dconn.WriteString(convID.Fingerprint())
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 
-			_, err = types.WriteCon(con, identities[sentFingerprint].Sign(append([]byte(convID.Fingerprint()), id[:]...)))
+			_, err = dconn.WriteBytes(identities[contactFingerprint].Sign(append([]byte(convID.Fingerprint()), id[:]...)))
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 
-			con.Close()
+			dconn.Flush()
+			dconn.Close()
 
 			log.Printf("Exchange succesfull uuid %s sent id %s", id, convID.Fingerprint())
 		}()

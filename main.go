@@ -82,7 +82,10 @@ func main() {
 	s, err := json.Marshal(data)
 	fmt.Println(string(s))
 
-	saveData()
+	err = saveData()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	for (true) {
 		time.Sleep(time.Second * 10)
@@ -141,9 +144,10 @@ func saveData() error {
 	if err != nil {
 		return err
 	}
-	
-	stat, _ := file.Stat()
+	enc.Flush()
 
+	stat, _ := file.Stat()
+	
 	log.Printf("Written %d compressed bytes, down from %d (%.2f%%)\n", stat.Size(), len(s), (float64(stat.Size()) / float64(len(s))) * 100)
 
 	return nil

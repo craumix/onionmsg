@@ -21,44 +21,48 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, er
 	id, _ := uuid.NewUUID()
 
 	for _, c :=  range contactIdentities {
-		con, err := proxy.Dial("tcp", c.URL() + ":10050")
+		conn, err := proxy.Dial("tcp", c.URL() + ":10050")
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = WriteCon(con, []byte(c.Fingerprint()))
+		dconn := NewDataIO(conn)
+
+		_, err = dconn.WriteString(c.Fingerprint())
 		if err != nil {
 			return nil, err
 		}
 		
-		_, err = WriteCon(con, id[:])
+		_, err = dconn.WriteBytes(id[:])
 		if err != nil {
 			return nil, err
 		}
 
-		msg, err := ReadCon(con)
+		dconn.Flush()
+
+		remoteConv, err := dconn.ReadString()
 		if err != nil {
 			return nil, err
 		}
 
-		sig, err := ReadCon(con)
+		sig, err := dconn.ReadBytes()
 		if err != nil {
 			return nil, err
 		}
 
-		con.Close()
+		dconn.Close()
 
-		if !c.Verify(append(msg, id[:]...), sig) {
+		if !c.Verify(append([]byte(remoteConv), id[:]...), sig) {
 			return nil, fmt.Errorf("Invalid signature from remote %s", c.URL())
 		}
 
-		r, err := NewRemoteIdentity(string(msg))
+		r, err := NewRemoteIdentity(remoteConv)
 		if err != nil {
 			return nil, err
 		}
 
 		log.Printf("Validated %s\n", c.URL())
-		log.Printf("Conversiation ID %s\n", string(msg))
+		log.Printf("Conversiation ID %s\n", remoteConv)
 
 		peers = append(peers, r)
 	}
