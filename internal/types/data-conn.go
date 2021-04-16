@@ -53,12 +53,20 @@ func (d *DataConn) ReadString() (string, error) {
 	return string(msg), nil
 }
 
-func (d *DataConn) Flush() {
-	d.buffer.Flush()
+//Flush writes any buffered data to the underlying io.Writer.
+func (d *DataConn) Flush() error {
+	//log.Printf("Buffered %d bytes before flushing\n", d.Buffered())
+	return d.buffer.Flush()
 }
 
+//Close closes the connection. Any blocked Read or Write operations will be unblocked and return errors.
 func (d *DataConn) Close() error {
 	return d.conn.Close()
+}
+
+//Buffered returns the number of bytes that have been written into the current buffer.
+func (d *DataConn) Buffered() int {
+	return d.buffer.Writer.Buffered()
 }
 
 func bytesToInt(d []byte) int {
