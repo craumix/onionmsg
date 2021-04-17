@@ -1,6 +1,7 @@
 # TorMsg
 
 [![CodeFactor](https://www.codefactor.io/repository/github/craumix/tormsg/badge)](https://www.codefactor.io/repository/github/craumix/tormsg)
+[![DeepSource](https://deepsource.io/gh/Craumix/tormsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/tormsg/?ref=repository-badge)
 
 TorMsg is intendeed to be a P2P, anonymous and secure Messenger over the Tor Network.
 
