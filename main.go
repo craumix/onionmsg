@@ -52,6 +52,8 @@ func main() {
 	external := flag.Bool("e", false, "use external tor")
 	interactive := flag.Bool("i", false, "start interactive mode")
 
+	flag.Parse()
+
 	randomizePW(64)
 	
 	err := tor.Run(pw, socks, cont, dir, !*external)
