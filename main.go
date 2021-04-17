@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -48,9 +49,12 @@ var (
 )
 
 func main() {
+	external := flag.Bool("e", false, "use external tor")
+	interactive := flag.Bool("i", false, "start interactive mode")
+
 	randomizePW(64)
 	
-	err := tor.Run(pw, socks, cont, dir, internal)
+	err := tor.Run(pw, socks, cont, dir, !*external)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -87,9 +91,18 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
+	if *interactive {
+		go startInteractive()
+	}
+
+
 	for (true) {
 		time.Sleep(time.Second * 10)
 	}
+}
+
+func startInteractive() {
+	//TODO
 }
 
 func registerContactIdentity(i *types.Identity) error {

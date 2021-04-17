@@ -3,7 +3,7 @@ package bindata
 import "os"
 
 func WriteToFile(path, name string) (int, error) {
-	file, err := os.OpenFile(path, os.O_WRONLY, 0700)
+	file, err := os.OpenFile(path, os.O_WRONLY, 0600)
 	if err != nil {
 		return 0, err
 	}
