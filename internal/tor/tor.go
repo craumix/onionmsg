@@ -7,30 +7,31 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 
 	"github.com/Craumix/tormsg/internal/bindata"
 	"github.com/Craumix/tormsg/internal/memfd"
 )
 
-func Run(pw, socksPort, controlPort, datadir string, useInternal bool) error {
+func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.Process, error) {
 	var err error
 	exe := "tor"
 	torrc := datadir + "/torrc"
 	logfile := datadir + "/tor.log"
 
 	if useInternal {
-		if !validBinOS() {
-			return fmt.Errorf("Cannot use internal tor binary on platfrom \"%s\"", runtime.GOOS)
+		if runtime.GOOS != "linux" {
+			return nil, fmt.Errorf("Cannot use internal tor binary on platfrom \"%s\"", runtime.GOOS)
 		}
 		exe, err = binToMem()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	err = os.MkdirAll(datadir, 0700)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	_, err = os.OpenFile(torrc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -39,32 +40,32 @@ func Run(pw, socksPort, controlPort, datadir string, useInternal bool) error {
 	}
 
 	args := []string{"-f", torrc, 
-		"SocksPort", socksPort, 
-		"ControlPort", controlPort,
+		"SocksPort", strconv.Itoa(socksPort), 
+		"ControlPort", strconv.Itoa(controlPort),
 		"DataDirectory", datadir}
 
 	if pw != "" {
 		hash, err := pwHashFromExe(exe, pw)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		
 		args = append(args, "HashedControlPassword", hash)
 		log.Printf("Password hash set as %s\n", hash)
 	}
 
-	err = runExecutable(exe, args, logfile)
+	proc, err := runExecutable(exe, args, logfile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	
-	return nil
+	return proc, nil
 }
 
-func runExecutable(exe string, args []string, logpath string) error {
+func runExecutable(exe string, args []string, logpath string) (*os.Process, error) {
 	version, err := versionFromExe(exe)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Printf("Detected %s\n", version)
 
@@ -86,10 +87,10 @@ func runExecutable(exe string, args []string, logpath string) error {
 	log.Println("Starting Tor...")
 	err = cmd.Start()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return cmd.Process, nil
 }
 
 func binToMem() (string, error) {
@@ -127,15 +128,4 @@ func pwHashFromExe(exe, pw string) (string, error) {
 	version := string(out)
 
 	return version[:len(version) - 1], nil
-}
-
-func validBinOS() bool {
-	os := []string{"linux"}
-
-    for _, a := range os {
-        if a == runtime.GOOS {
-            return true
-        }
-    }
-    return false
 }

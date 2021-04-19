@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func StartContactServer(port int, identities map[string]*types.Identity) (error) {
+func StartContactServer(port int, identities map[string]*types.Identity, rooms map[uuid.UUID]*types.Room) (error) {
 	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(port))
 	if err != nil {
 		return err
@@ -36,6 +36,17 @@ func StartContactServer(port int, identities map[string]*types.Identity) (error)
 				log.Printf("Contact id %s unknown\n", contactFingerprint)
 				return
 			}
+
+			remoteFingerprint, err := dconn.ReadString()
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
+			remoteID, _ := types.NewRemoteIdentity(remoteFingerprint)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
 			
 			msg, err := dconn.ReadBytes()
 			if err != nil {
@@ -60,7 +71,15 @@ func StartContactServer(port int, identities map[string]*types.Identity) (error)
 			dconn.Flush()
 			dconn.Close()
 
-			log.Printf("Exchange succesfull uuid %s sent id %s", id, convID.Fingerprint())
+			rooms[id] = &types.Room{
+				Self: convID,
+				Peers: []*types.RemoteIdentity{remoteID},
+				ID: id,
+				Messages: make([]*types.Message, 0),
+			}
+
+			//Kinda breaks interactive
+			//log.Printf("Exchange succesfull uuid %s sent id %s", id, convID.Fingerprint())
 		}()
 	}
 }

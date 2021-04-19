@@ -32,6 +32,11 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, er
 		if err != nil {
 			return nil, err
 		}
+
+		_, err = dconn.WriteString(s.Fingerprint())
+		if err != nil {
+			return nil, err
+		}
 		
 		_, err = dconn.WriteBytes(id[:])
 		if err != nil {
@@ -53,7 +58,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, er
 		dconn.Close()
 
 		if !c.Verify(append([]byte(remoteConv), id[:]...), sig) {
-			return nil, fmt.Errorf("Invalid signature from remote %s", c.URL())
+			return nil, fmt.Errorf("invalid signature from remote %s", c.URL())
 		}
 
 		r, err := NewRemoteIdentity(remoteConv)
@@ -72,5 +77,6 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, er
 		Self: s,
 		Peers: peers,
 		ID: id,
+		Messages: make([]*Message, 0),
 	}, nil
 }
