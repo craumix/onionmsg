@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
@@ -76,11 +77,30 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		peers = append(peers, r)
 	}
 	
-
-	return &Room{
+	room := &Room{
 		Self: s,
 		Peers: peers,
 		ID: id,
 		Messages: make([]*Message, 0),
-	}, nil
+	}
+
+	for _, peer := range peers {
+		room.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
+	}
+
+	return room, nil
+}
+
+func (r *Room) SendMessage(mtype byte, content []byte) {
+	msg := &Message{
+		Sender: r.Self.Fingerprint(),
+		Time: time.Now(),
+		Type: mtype,
+		Content: content,
+	}
+	msg.Sign(r.Self.Key)
+
+	for _, peer := range r.Peers {
+		peer.Queue = append(peer.Queue, msg)
+	}
 }
