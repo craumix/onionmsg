@@ -3,6 +3,7 @@ package daemon
 import (
 	"log"
 	"net"
+	"os"
 
 	"github.com/Craumix/tormsg/internal/server"
 	"github.com/Craumix/tormsg/internal/sio"
@@ -70,7 +71,7 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	}
 
 	err = loadData()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		log.Fatalf(err.Error())
 	}
 	err = loadContactIdentites()
