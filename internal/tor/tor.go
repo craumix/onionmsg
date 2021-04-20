@@ -98,7 +98,7 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 }
 
 func binToMem() (string, error) {
-	if(torBinMemFD == "") {
+	if(torBinMemFD != "") {
 		return torBinMemFD, nil
 	}
 
