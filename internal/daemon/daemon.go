@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-/*SerializedData struct exists purely for serialaization purposes*/
+/*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
 	ContactIdentities	map[string]*types.Identity	`json:"contact_identities"`
 	Rooms				map[uuid.UUID]*types.Room	`json:"rooms"`
