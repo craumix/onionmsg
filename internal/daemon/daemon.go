@@ -20,8 +20,8 @@ type SerializableData struct {
 }
 
 const (
-	socksPort 			= 9050
-	controlPort 		= 9051
+	socksPort 			= 10048
+	controlPort 		= 10049
 	contactPort 		= 10050
 	conversationPort 	= 10051
 	apiPort 			= 10052
