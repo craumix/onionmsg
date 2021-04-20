@@ -128,7 +128,7 @@ func startInteractive() {
 
 				id, err := uuid.Parse(uid)
 				if err != nil {
-					log.Println()
+					log.Println("Unable to parse uid")
 					continue
 				}
 
@@ -143,6 +143,28 @@ func startInteractive() {
 
 				room.SendMessage(types.MTYPE_TEXT, []byte(message))
 				log.Println("Sent message!")
+		case "list_messages":
+			log.Println("Enter a room uid:")
+			uid, _ := cin.ReadString('\n')
+			uid = strings.Trim(uid, " \n")
+
+			id, err := uuid.Parse(uid)
+			if err != nil {
+				log.Println("Unable to parse uid")
+				continue
+			}
+
+			room := data.Rooms[id]
+			if room == nil {
+				log.Println("No such room")
+				continue
+			}
+
+			for _, msg := range room.Messages {
+				log.Printf("From %s, at %s\n", msg.Sender, msg.Time)
+				log.Printf("Type %d, Content \"%s\"\n", msg.Type, string(msg.Content))
+			}
+		
 		default:
 			log.Printf("Unknown command \"%s\"\n", cmd)
 		}
