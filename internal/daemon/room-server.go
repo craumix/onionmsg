@@ -44,8 +44,6 @@ func startRoomServer() error {
 			room := data.Rooms[uid]
 			if room == nil {
 				log.Printf("Unknown room with %s\n", uid)
-				dconn.WriteBytes([]byte{0x01})
-				dconn.Flush()
 				return
 			}
 
@@ -59,14 +57,18 @@ func startRoomServer() error {
 				raw, err := dconn.ReadBytes()
 				if err != nil {
 					log.Println(err.Error())
-					return
+					dconn.WriteBytes([]byte{0x01})
+					dconn.Flush()
+					continue
 				}
 
 				msg := &types.Message{}
 				err = json.Unmarshal(raw, msg)
 				if err != nil {
 					log.Println(err.Error())
-					return
+					dconn.WriteBytes([]byte{0x01})
+					dconn.Flush()
+					continue
 				}
 
 				sender := room.PeerByFingerprint(msg.Sender)
@@ -74,14 +76,14 @@ func startRoomServer() error {
 					log.Printf("Received invalid sender fingerprint %s\n", msg.Sender)
 					dconn.WriteBytes([]byte{0x01})
 					dconn.Flush()
-					return
+					continue
 				}
 
 				if !msg.Verify(sender.Pub) {
 					log.Printf("Received invalid message signature for room %s\n", uid)
 					dconn.WriteBytes([]byte{0x01})
 					dconn.Flush()
-					return
+					continue
 				}
 
 				log.Printf("Read %d for message with type %d\n", len(raw), msg.Type)
@@ -94,10 +96,10 @@ func startRoomServer() error {
 						handleCommand(string(msg.Content), sender, room)
 					}
 				}
-			}
 
-			dconn.WriteBytes([]byte{0x00})
-			dconn.Flush()
+				dconn.WriteBytes([]byte{0x00})
+				dconn.Flush()
+			}
 		}()
 	}
 }
@@ -110,6 +112,8 @@ func handleCommand(cmd string, sender *types.RemoteIdentity, room *types.Room) {
 			log.Printf("Not enough args for command \"%s\"\n", cmd)
 			break
 		}
+
+		log.Printf("DEBUG\n")
 
 		if room.PeerByFingerprint(args[1]) != nil || args[1] == room.Self.Fingerprint() {
 			//User already added, or self
