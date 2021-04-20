@@ -1,4 +1,4 @@
-package daemon
+package sio
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func createUnixSocket(name string) (socket net.Listener, err error) {
+func CreateUnixSocket(name string) (socket net.Listener, err error) {
 	if(runtime.GOOS == "linux") {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 		if(runtimeDir == "") {
@@ -36,8 +36,8 @@ func createUnixSocket(name string) (socket net.Listener, err error) {
 	return
 }
 
-func createTCPSocket(port int) (socket net.Listener, err error) {
-	address := loopback + ":" + strconv.Itoa(port)
+func CreateTCPSocket(port int) (socket net.Listener, err error) {
+	address :=  "127.0.0.1:" + strconv.Itoa(port)
 	log.Printf("Starteing socket on on %s\n", address)
 	socket, err = net.Listen("tcp", address)
 	return

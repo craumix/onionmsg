@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/Craumix/tormsg/internal/bindata"
-	"github.com/Craumix/tormsg/internal/memfd"
+	"github.com/Craumix/tormsg/internal/sio"
 )
 
 var (
@@ -102,7 +102,7 @@ func binToMem() (string, error) {
 		return torBinMemFD, nil
 	}
 
-	memfd, err := memfd.CreateMemFD("tormemfd")
+	memfd, err := sio.CreateMemFD("tormemfd")
 	if err != nil {
 		return "", err
 	}

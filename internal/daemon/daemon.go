@@ -4,8 +4,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/Craumix/tormsg/internal/file"
 	"github.com/Craumix/tormsg/internal/server"
+	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/Craumix/tormsg/internal/tor"
 	"github.com/Craumix/tormsg/internal/types"
 	"github.com/google/uuid"
@@ -55,9 +55,9 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	unixSocket 	= unixSocketArg
 
 	if(unixSocket) {
-		apiSocket, err = createUnixSocket(unixSocketName)
+		apiSocket, err = sio.CreateUnixSocket(unixSocketName)
 	}else {
-		apiSocket, err = createTCPSocket(apiPort)
+		apiSocket, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -85,11 +85,11 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 }
 
 func saveData() (err error) {
-	err = file.SaveDataCompressed(datafile, &data)
+	err = sio.SaveDataCompressed(datafile, &data)
 	return
 }
 
 func loadData() (err error) {
-	err = file.LoadCompressedData(datafile, &data)
+	err = sio.LoadCompressedData(datafile, &data)
 	return
 }

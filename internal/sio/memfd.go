@@ -1,4 +1,4 @@
-package memfd
+package sio
 
 import (
 	"log"
