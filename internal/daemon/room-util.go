@@ -18,7 +18,7 @@ func loadRooms() (err error) {
 		}
 	}
 
-	log.Printf("Loaded %d Rooms\n", len(data.ContactIdentities))
+	log.Printf("Loaded %d Rooms\n", len(data.Rooms))
 
 	for _, room := range data.Rooms {
 		room.RunRemoteMessageQueues(torInstance.Proxy, conversationPort)
