@@ -38,7 +38,7 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 
 func CreateTCPSocket(port int) (socket net.Listener, err error) {
 	address :=  "127.0.0.1:" + strconv.Itoa(port)
-	log.Printf("Starteing socket on on %s\n", address)
+	log.Printf("Starting socket on on %s\n", address)
 	socket, err = net.Listen("tcp", address)
 	return
 }
