@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +25,7 @@ func StartContactServer(port int, identities map[string]*types.Identity, rooms m
 		}
 
 		go func() {
-			dconn := types.NewDataIO(c)
+			dconn := sio.NewDataIO(c)
 
 			contactFingerprint, err := dconn.ReadString()
 			if err != nil {

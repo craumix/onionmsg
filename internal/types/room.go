@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
+
+	"github.com/Craumix/tormsg/internal/sio"
 )
 
 type Room struct {
@@ -27,7 +29,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer, contactPor
 			return nil, err
 		}
 
-		dconn := NewDataIO(conn)
+		dconn := sio.NewDataIO(conn)
 
 		_, err = dconn.WriteString(c.Fingerprint())
 		if err != nil {
