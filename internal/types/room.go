@@ -100,6 +100,8 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 	}
 	msg.Sign(r.Self.Key)
 
+	r.Messages = append(r.Messages, msg)
+
 	for _, peer := range r.Peers {
 		peer.Queue = append(peer.Queue, msg)
 	}

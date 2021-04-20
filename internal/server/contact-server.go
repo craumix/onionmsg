@@ -73,7 +73,7 @@ func StartContactServer(port , conversationPort int, identities map[string]*type
 			dconn.Flush()
 			dconn.Close()
 
-			remoteID.RunMessageQueue(dialer, conversationPort)
+			go remoteID.RunMessageQueue(dialer, conversationPort)
 
 			rooms[id] = &types.Room{
 				Self: convID,
