@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
@@ -15,13 +16,13 @@ type Room struct {
 	Messages	[]*Message			`json:"messages"`
 }
 
-func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer) (*Room, error) {
+func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer, contactPort int) (*Room, error) {
 	s := NewIdentity()
 	peers := make([]*RemoteIdentity, 0)
 	id, _ := uuid.NewUUID()
 
 	for _, c :=  range contactIdentities {
-		conn, err := proxy.Dial("tcp", c.URL() + ":10050")
+		conn, err := proxy.Dial("tcp", c.URL() + ":" + strconv.Itoa(contactPort))
 		if err != nil {
 			return nil, err
 		}

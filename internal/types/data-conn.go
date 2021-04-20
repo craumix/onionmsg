@@ -23,6 +23,7 @@ func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	return n, err
 }
 
+
 func (d *DataConn) ReadBytes() ([]byte, error) {
 	l := make([]byte, 4)
 	_, err := d.buffer.Read(l)
@@ -51,6 +52,20 @@ func (d *DataConn) ReadString() (string, error) {
 	}
 
 	return string(msg), nil
+}
+
+func (d *DataConn) WriteInt(msg int) (int, error) {
+	n, err := d.WriteBytes(intToBytes(msg))
+	return n, err
+}
+
+func (d *DataConn) ReadInt() (int, error) {
+	msg, err := d.ReadBytes()
+	if err != nil {
+		return 0, err
+	}
+
+	return bytesToInt(msg), nil
 }
 
 //Flush writes any buffered data to the underlying io.Writer.

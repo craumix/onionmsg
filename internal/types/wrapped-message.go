@@ -18,4 +18,4 @@ func BulkNewWrappedMessage(msg *Message, remotes []*RemoteIdentity) []*WrappedMe
 		messages[i] = NewWrappedMessage(msg, r)
 	}
 	return messages
-}
+} 

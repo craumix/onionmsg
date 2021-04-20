@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/Craumix/tormsg/internal/server"
 	"github.com/Craumix/tormsg/internal/sio"
@@ -16,7 +17,7 @@ import (
 type SerializableData struct {
 	ContactIdentities	map[string]*types.Identity	`json:"contact_identities"`
 	Rooms				map[uuid.UUID]*types.Room	`json:"rooms"`
-	MessageQueue		[]*types.WrappedMessage		`json:"message_queue"`		
+	MessageQueue		[]types.WrappedMessage		`json:"message_queue"`		
 }
 
 const (
@@ -41,7 +42,7 @@ var (
 	data = SerializableData{
 		ContactIdentities: 	make(map[string]*types.Identity),
 		Rooms: 				make(map[uuid.UUID]*types.Room),
-		MessageQueue: 		make([]*types.WrappedMessage, 0),
+		MessageQueue: 		make([]types.WrappedMessage, 0),
 	}
 
 	torInstance	*tor.TorInstance
@@ -80,6 +81,9 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	}
 
 	go server.StartContactServer(contactPort, data.ContactIdentities, data.Rooms)
+	go runQueueLoop()
+
+	time.Sleep(time.Millisecond * 100)
 
 	if interactive {
 		go startInteractive()

@@ -104,7 +104,8 @@ func startInteractive() {
 				continue
 			}
 
-			room, err := types.NewRoom(ids, torInstance.Proxy)
+			log.Printf("Trying to create a room with %d peers\n", len(ids))
+			room, err := types.NewRoom(ids, torInstance.Proxy, contactPort)
 			if err != nil {
 				log.Println(err.Error())
 				continue
