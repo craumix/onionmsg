@@ -113,7 +113,12 @@ func startInteractive() {
 				continue
 			}
 
-			data.Rooms[room.ID] = room
+			err = registerRoom(room)
+			if err != nil {
+				log.Println()
+				continue
+			}
+
 			log.Printf("Room created with %s and %s\n", room.ID, room.Self.Fingerprint())
 		default:
 			log.Printf("Unknown command \"%s\"\n", cmd)

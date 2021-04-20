@@ -5,7 +5,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/Craumix/tormsg/internal/server"
 	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/Craumix/tormsg/internal/tor"
 	"github.com/Craumix/tormsg/internal/types"
@@ -72,14 +71,17 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalf(err.Error())
 	}
+
 	err = loadContactIdentites()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
+	err = loadRooms()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
-	go server.StartContactServer(contactPort, conversationPort, data.ContactIdentities, data.Rooms, torInstance.Proxy)
-
-	runMessageQueues()
+	go startContactServer()
 
 	if interactive {
 		go startInteractive()
@@ -94,10 +96,4 @@ func saveData() (err error) {
 func loadData() (err error) {
 	err = sio.LoadCompressedData(datafile, &data)
 	return
-}
-
-func runMessageQueues() {
-	for _, room := range data.Rooms {
-		room.RunRemoteMessageQueues(torInstance.Proxy, conversationPort)
-	}
 }

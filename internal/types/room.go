@@ -69,7 +69,6 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		if err != nil {
 			return nil, err
 		}
-		go r.RunMessageQueue(dialer, conversationPort)
 
 		log.Printf("Validated %s\n", c.URL())
 		log.Printf("Conversiation ID %s\n", remoteConv)

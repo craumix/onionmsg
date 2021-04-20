@@ -1,4 +1,4 @@
-package server
+package daemon
 
 import (
 	"log"
@@ -8,11 +8,10 @@ import (
 	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/Craumix/tormsg/internal/types"
 	"github.com/google/uuid"
-	"golang.org/x/net/proxy"
 )
 
-func StartContactServer(port , conversationPort int, identities map[string]*types.Identity, rooms map[uuid.UUID]*types.Room, dialer proxy.Dialer) (error) {
-	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(port))
+func startContactServer() (error) {
+	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(contactPort))
 	if err != nil {
 		return err
 	}
@@ -34,7 +33,7 @@ func StartContactServer(port , conversationPort int, identities map[string]*type
 				return
 			}
 
-			if identities[contactFingerprint] == nil {
+			if data.ContactIdentities[contactFingerprint] == nil {
 				log.Printf("Contact id %s unknown\n", contactFingerprint)
 				return
 			}
@@ -64,7 +63,7 @@ func StartContactServer(port , conversationPort int, identities map[string]*type
 				return
 			}
 
-			_, err = dconn.WriteBytes(identities[contactFingerprint].Sign(append([]byte(convID.Fingerprint()), id[:]...)))
+			_, err = dconn.WriteBytes(data.ContactIdentities[contactFingerprint].Sign(append([]byte(convID.Fingerprint()), id[:]...)))
 			if err != nil {
 				log.Println(err.Error())
 				return
@@ -73,13 +72,15 @@ func StartContactServer(port , conversationPort int, identities map[string]*type
 			dconn.Flush()
 			dconn.Close()
 
-			go remoteID.RunMessageQueue(dialer, conversationPort)
-
-			rooms[id] = &types.Room{
+			room := &types.Room{
 				Self: convID,
 				Peers: []*types.RemoteIdentity{remoteID},
 				ID: id,
 				Messages: make([]*types.Message, 0),
+			}
+			err = registerRoom(room)
+			if err != nil {
+				log.Println()
 			}
 
 			//Kinda breaks interactive
