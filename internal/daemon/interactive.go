@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Craumix/tormsg/internal/tor"
 	"github.com/Craumix/tormsg/internal/types"
 )
 

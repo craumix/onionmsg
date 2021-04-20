@@ -59,6 +59,11 @@ func (i *RemoteIdentity) B64PubKey() string {
 
 func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int) {
 	for {
+		if(len(i.Queue) == 0) {
+			time.Sleep(queueTimeout)
+			continue
+		}
+
 		conn, err := dialer.Dial("tcp", i.URL() + ":" + strconv.Itoa(conversationPort))
 		if err != nil {
 			log.Println(err.Error())
@@ -93,7 +98,6 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 				i.Queue = i.Queue[:len(i.Queue)-1]     	// Truncate slice.
 			}
 		}
-
 
 		time.Sleep(queueTimeout)
 	}
