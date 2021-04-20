@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Craumix/tormsg/internal/sio"
+	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
 )
 
@@ -57,7 +58,7 @@ func (i *RemoteIdentity) B64PubKey() string {
 	return base64.RawURLEncoding.EncodeToString(i.Pub)
 }
 
-func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int) {
+func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {
 	for {
 		if(len(i.Queue) == 0) {
 			time.Sleep(queueTimeout)
@@ -70,6 +71,7 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 		}else {
 			dconn := sio.NewDataIO(conn)
 			
+			dconn.WriteBytes(roomID[:])
 			dconn.WriteInt(len(i.Queue))
 			dconn.Flush()
 			for index, msg := range i.Queue {

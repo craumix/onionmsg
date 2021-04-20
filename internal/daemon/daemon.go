@@ -82,6 +82,7 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	}
 
 	go startContactServer()
+	go startRoomServer()
 
 	if interactive {
 		go startInteractive()

@@ -108,6 +108,16 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 
 func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
 	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(dialer, conversationPort)
+		go peer.RunMessageQueue(dialer, conversationPort, r.ID)
 	}
 }
+
+
+func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
+	for _, peer := range r.Peers {
+		if peer.Fingerprint() == fingerprint {
+			return peer
+		}
+	}
+	return nil
+} 

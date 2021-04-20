@@ -10,12 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func startContactServer() (error) {
+func startContactServer() error {
 	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(contactPort))
 	if err != nil {
 		return err
 	}
-
 	defer server.Close()
 
 	for {
@@ -26,6 +25,7 @@ func startContactServer() (error) {
 
 		go func() {
 			dconn := sio.NewDataIO(c)
+			defer dconn.Close()
 
 			contactFingerprint, err := dconn.ReadString()
 			if err != nil {
@@ -70,7 +70,6 @@ func startContactServer() (error) {
 			}
 
 			dconn.Flush()
-			dconn.Close()
 
 			room := &types.Room{
 				Self: convID,

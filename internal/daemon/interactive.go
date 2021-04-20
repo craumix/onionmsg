@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Craumix/tormsg/internal/types"
+	"github.com/google/uuid"
 )
 
 func startInteractive() {
@@ -120,6 +121,28 @@ func startInteractive() {
 			}
 
 			log.Printf("Room created with %s and %s\n", room.ID, room.Self.Fingerprint())
+			case "send_message":
+				log.Printf("Write Room UID in first line and message in second:")
+				uid, _ := cin.ReadString('\n')
+				uid = strings.Trim(uid, " \n")
+
+				id, err := uuid.Parse(uid)
+				if err != nil {
+					log.Println()
+					continue
+				}
+
+				room := data.Rooms[id]
+				if room == nil {
+					log.Println("No such room")
+					continue
+				}
+
+				message, _ := cin.ReadString('\n')
+				message = strings.Trim(message, " \n")
+
+				room.SendMessage(types.MTYPE_TEXT, []byte(message))
+				log.Println("Sent message!")
 		default:
 			log.Printf("Unknown command \"%s\"\n", cmd)
 		}
