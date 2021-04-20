@@ -5,12 +5,13 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/Craumix/tormsg/internal/types"
 	"github.com/Craumix/tormsg/internal/sio"
+	"github.com/Craumix/tormsg/internal/types"
 	"github.com/google/uuid"
+	"golang.org/x/net/proxy"
 )
 
-func StartContactServer(port int, identities map[string]*types.Identity, rooms map[uuid.UUID]*types.Room) (error) {
+func StartContactServer(port , conversationPort int, identities map[string]*types.Identity, rooms map[uuid.UUID]*types.Room, dialer proxy.Dialer) (error) {
 	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(port))
 	if err != nil {
 		return err
@@ -71,6 +72,8 @@ func StartContactServer(port int, identities map[string]*types.Identity, rooms m
 
 			dconn.Flush()
 			dconn.Close()
+
+			remoteID.RunMessageQueue(dialer, conversationPort)
 
 			rooms[id] = &types.Room{
 				Self: convID,

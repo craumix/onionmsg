@@ -18,13 +18,13 @@ type Room struct {
 	Messages	[]*Message			`json:"messages"`
 }
 
-func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer, contactPort int) (*Room, error) {
+func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
 	s := NewIdentity()
 	peers := make([]*RemoteIdentity, 0)
 	id, _ := uuid.NewUUID()
 
 	for _, c :=  range contactIdentities {
-		conn, err := proxy.Dial("tcp", c.URL() + ":" + strconv.Itoa(contactPort))
+		conn, err := dialer.Dial("tcp", c.URL() + ":" + strconv.Itoa(contactPort))
 		if err != nil {
 			return nil, err
 		}
@@ -68,6 +68,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, proxy proxy.Dialer, contactPor
 		if err != nil {
 			return nil, err
 		}
+		go r.RunMessageQueue(dialer, conversationPort)
 
 		log.Printf("Validated %s\n", c.URL())
 		log.Printf("Conversiation ID %s\n", remoteConv)

@@ -77,7 +77,7 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 		log.Fatalf(err.Error())
 	}
 
-	go server.StartContactServer(contactPort, data.ContactIdentities, data.Rooms)
+	go server.StartContactServer(contactPort, conversationPort, data.ContactIdentities, data.Rooms, torInstance.Proxy)
 
 	if interactive {
 		go startInteractive()
