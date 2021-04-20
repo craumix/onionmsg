@@ -32,7 +32,7 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 		return
 	}
 
-	err = fmt.Errorf("Cannot use unix socket on %s", runtime.GOOS)
+	err = fmt.Errorf("cannot use unix socket on %s", runtime.GOOS)
 	return
 }
 
