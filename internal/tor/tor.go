@@ -13,6 +13,10 @@ import (
 	"github.com/Craumix/tormsg/internal/memfd"
 )
 
+var (
+	torBinMemFD	string
+)
+
 func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.Process, error) {
 	var err error
 	exe := "tor"
@@ -94,6 +98,10 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 }
 
 func binToMem() (string, error) {
+	if(torBinMemFD == "") {
+		return torBinMemFD, nil
+	}
+
 	memfd, err := memfd.CreateMemFD("tormemfd")
 	if err != nil {
 		return "", err
@@ -104,6 +112,8 @@ func binToMem() (string, error) {
 		return "", err
 	}
 	log.Printf("Wrote %d bytes to %s", n, memfd)
+
+	torBinMemFD = memfd
 
 	return memfd, nil
 }
