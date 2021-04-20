@@ -22,7 +22,7 @@ type Room struct {
 func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
 	s := NewIdentity()
 	peers := make([]*RemoteIdentity, 0)
-	id, _ := uuid.NewUUID()
+	id := uuid.New()
 
 	for _, c :=  range contactIdentities {
 		conn, err := dialer.Dial("tcp", c.URL() + ":" + strconv.Itoa(contactPort))
