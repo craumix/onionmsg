@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/Craumix/tormsg/internal/types"
@@ -68,14 +69,62 @@ func startRoomServer() error {
 					return
 				}
 
+				sender := room.PeerByFingerprint(msg.Sender)
+				if sender == nil {
+					log.Printf("Received invalid sender fingerprint %s\n", msg.Sender)
+					dconn.WriteBytes([]byte{0x01})
+					dconn.Flush()
+					return
+				}
+
+				if !msg.Verify(sender.Pub) {
+					log.Printf("Received invalid message signature for room %s\n", uid)
+					dconn.WriteBytes([]byte{0x01})
+					dconn.Flush()
+					return
+				}
+
 				log.Printf("Read %d for message with type %d\n", len(raw), msg.Type)
 				log.Printf("For room %s with content \"%s\"\n", uid, string(msg.Content))
 
 				room.Messages = append(room.Messages, msg)
+
+				if msg.Type == types.MTYPE_CMD {
+					if msg.Content != nil {
+						handleCommand(string(msg.Content), sender, room)
+					}
+				}
 			}
 
 			dconn.WriteBytes([]byte{0x00})
 			dconn.Flush()
 		}()
+	}
+}
+
+func handleCommand(cmd string, sender *types.RemoteIdentity, room *types.Room) {
+	args := strings.Split(cmd, " ")
+	switch args[0] {
+	case "join":
+		if len(args) < 2 {
+			log.Printf("Not enough args for command \"%s\"\n", cmd)
+			break
+		}
+
+		if room.PeerByFingerprint(args[1]) != nil {
+			//User already added
+			break;
+		}
+
+		newPeer, err := types.NewRemoteIdentity(args[1])
+		if err != nil {
+			log.Println(err.Error())
+			break
+		}
+
+		room.Peers = append(room.Peers, newPeer)
+		log.Printf("New peer %s added to room %s\n", newPeer.Fingerprint(), room.ID)
+	default:
+		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
 }

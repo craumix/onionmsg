@@ -92,7 +92,6 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 
 				if state[0] != 0x00 {
 					log.Printf("Received invalid state for message %d\n", state[0])
-					break
 				}
 
 				copy(i.Queue[index:], i.Queue[index+1:])// Shift a[i+1:] left one index.
