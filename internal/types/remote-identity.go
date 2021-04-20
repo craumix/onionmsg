@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	queueTimeout = time.Second * 10
+	queueTimeout = time.Second * 3
 )
 
 type RemoteIdentity struct {
@@ -34,7 +34,7 @@ func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &RemoteIdentity{
 		Pub: ed25519.PublicKey(k),
 		Service: tmp[1],
