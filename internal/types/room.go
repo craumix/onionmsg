@@ -104,3 +104,9 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 		peer.Queue = append(peer.Queue, msg)
 	}
 }
+
+func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
+	for _, peer := range r.Peers {
+		go peer.RunMessageQueue(dialer, conversationPort)
+	}
+}

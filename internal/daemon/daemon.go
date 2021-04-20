@@ -79,6 +79,8 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 
 	go server.StartContactServer(contactPort, conversationPort, data.ContactIdentities, data.Rooms, torInstance.Proxy)
 
+	runMessageQueues()
+
 	if interactive {
 		go startInteractive()
 	}
@@ -92,4 +94,10 @@ func saveData() (err error) {
 func loadData() (err error) {
 	err = sio.LoadCompressedData(datafile, &data)
 	return
+}
+
+func runMessageQueues() {
+	for _, room := range data.Rooms {
+		room.RunRemoteMessageQueues(torInstance.Proxy, conversationPort)
+	}
 }

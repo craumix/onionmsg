@@ -22,6 +22,7 @@ func startInteractive() {
 		cmd = strings.Trim(cmd, " \n")
 
 		switch(cmd) {
+		/*
 		case "load":
 			err = loadData()
 			if err != nil {
@@ -43,6 +44,8 @@ func startInteractive() {
 				log.Println(err.Error())
 				continue
 			}
+			runMessageQueues()
+		*/
 		case "save":
 			err = saveData()
 			if err != nil {
