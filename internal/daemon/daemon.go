@@ -47,8 +47,12 @@ var (
 	apiSocket	net.Listener
 )
 
-func StartDaemon(interactive, internalTor, unixSocket bool) {
+func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 	var err error
+
+	internalTor = internalTorArg
+	interactive = interactiveArg
+	unixSocket 	= unixSocketArg
 
 	if(unixSocket) {
 		apiSocket, err = createUnixSocket(unixSocketName)
