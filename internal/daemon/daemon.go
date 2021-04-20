@@ -68,6 +68,15 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 		log.Fatalf(err.Error())
 	}
 
+	err = loadData()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	err = loadContactIdentites()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
 	go server.StartContactServer(contactPort, data.ContactIdentities, data.Rooms)
 
 	if interactive {
