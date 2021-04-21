@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Craumix/tormsg/internal/sio"
 	"github.com/Craumix/tormsg/internal/tor"
@@ -83,6 +85,8 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 		log.Fatalf(err.Error())
 	}
 
+	createTermSignalHandler()
+
 	go startContactServer()
 	go startRoomServer()
 
@@ -99,6 +103,16 @@ func saveData() (err error) {
 func loadData() (err error) {
 	err = sio.LoadCompressedData(datafile, &data)
 	return
+}
+
+func createTermSignalHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Printf("Received shutdown signal, exiting gracefully...")
+		exitDaemon()
+	}()
 }
 
 func exitDaemon() {
