@@ -3,6 +3,8 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/craumix/tormsg/badge)](https://www.codefactor.io/repository/github/craumix/tormsg)
 [![DeepSource](https://deepsource.io/gh/Craumix/tormsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/tormsg/?ref=repository-badge)
 
+**⚠️ This programm is not considered stable atm, and will receive breaking changes. ⚠️**
+
 TorMsg is intended to be a P2P, anonymous and secure Messenger over the Tor Network.  
 This is only a Daemon that should expose functionality over a TCP or UNIX Socket using a REST-API to other **local** CLI or GUI clients.  
 This Daemon is **not** intended to be used similarly to a E-Mail Server.
