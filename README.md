@@ -2,6 +2,7 @@
 
 [![CodeFactor](https://www.codefactor.io/repository/github/craumix/tormsg/badge)](https://www.codefactor.io/repository/github/craumix/tormsg)
 [![DeepSource](https://deepsource.io/gh/Craumix/tormsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/tormsg/?ref=repository-badge)
+[![Test](https://github.com/Craumix/tormsg/actions/workflows/test.yaml/badge.svg)](https://github.com/Craumix/tormsg/actions/workflows/test.yaml)
 
 **⚠️ This programm is not considered stable atm, and will receive breaking changes. ⚠️**
 
