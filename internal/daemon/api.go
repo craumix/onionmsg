@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/Craumix/tormsg/internal/types"
@@ -16,6 +17,7 @@ func startAPIServer() {
 	log.Printf("Starting API-Server %s\n", apiSocket.Addr())
 
 	http.HandleFunc("/v1/status", statusRoute)
+	http.HandleFunc("/v1/torlog", torlogRoute)
 
 	http.HandleFunc("/v1/contact/list", listContactIDsRoute)
 	http.HandleFunc("/v1/contact/add", addContactIDRoute)
@@ -34,6 +36,25 @@ func startAPIServer() {
 
 func statusRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("{\"status\":\"ok\"}"))
+	return
+}
+
+func torlogRoute(w http.ResponseWriter, req *http.Request) {
+	logfile, err := os.OpenFile(tordir + "/tor.log", os.O_RDONLY, 0600)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	logs, err := io.ReadAll(logfile)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	msg := fmt.Sprintf("{\"log\":\"%s\"}", string(logs))
+
+	w.Write([]byte(msg))
 	return
 }
 
