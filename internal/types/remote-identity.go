@@ -67,7 +67,8 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 
 		conn, err := dialer.Dial("tcp", i.URL() + ":" + strconv.Itoa(conversationPort))
 		if err != nil {
-			log.Println(err.Error())
+			//Expected error
+			//log.Println(err.Error())
 		}else {
 			dconn := sio.NewDataIO(conn)
 			
