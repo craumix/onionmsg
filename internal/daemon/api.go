@@ -6,8 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/Craumix/tormsg/internal/types"
+	"github.com/google/uuid"
 )
 
 func startAPIServer() {
@@ -21,6 +23,8 @@ func startAPIServer() {
 
 	http.HandleFunc("/v1/room/list", listRoomsRoute)
 	http.HandleFunc("/v1/room/create", createRoomRoute)
+	http.HandleFunc("/v1/room/send", sendMessageRoute)
+	http.HandleFunc("/v1/room/messages", listRoomMessagesRoute)
 
 	err := http.Serve(apiSocket, nil)
 	if err != nil {
@@ -130,5 +134,57 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
+	return
+}
+
+func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
+	uuid, err := uuid.Parse(req.FormValue("uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var mtype int
+	if req.FormValue("type") == "" {
+		mtype = types.MTYPE_TEXT;
+	}else {
+		mtype, err = strconv.Atoi(req.FormValue("type"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	room := data.Rooms[uuid]
+	if room == nil {
+		http.Error(w, "No such room " + uuid.String(), http.StatusBadRequest)
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	room.SendMessage(byte(mtype), body)
+
+	return
+}
+
+func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
+	uuid, err := uuid.Parse(req.FormValue("uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	room := data.Rooms[uuid]
+	if room == nil {
+		http.Error(w, "No such room " + uuid.String(), http.StatusBadRequest)
+	}
+
+	raw, _ := json.Marshal(room.Messages)
+
+	w.Write(raw)
 	return
 }
