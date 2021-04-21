@@ -14,5 +14,11 @@ jobs:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Go-Bindata Dummy
+      run: |
+        go get -u github.com/go-bindata/go-bindata/...
+        mkdir -p ./build/tor
+        touch ./build/tor/tor
+        go-bindata -nometadata -nocompress -o ./internal/bindata/bindata.go -pkg bindata ./build/tor/tor
     - name: Test
       run: go test ./...
