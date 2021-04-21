@@ -113,8 +113,6 @@ func handleCommand(cmd string, sender *types.RemoteIdentity, room *types.Room) {
 			break
 		}
 
-		log.Printf("DEBUG\n")
-
 		if room.PeerByFingerprint(args[1]) != nil || args[1] == room.Self.Fingerprint() {
 			//User already added, or self
 			break;
