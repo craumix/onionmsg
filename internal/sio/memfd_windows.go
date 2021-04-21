@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	"runtime"
 )
 
 func CreateMemFD(name string) (path string, err error) {
