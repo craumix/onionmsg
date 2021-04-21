@@ -62,6 +62,8 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 		log.Fatalf(err.Error())
 	}
 
+	go startAPIServer()
+
 	torInstance, err = tor.NewTorInstance(internalTor, tordir, socksPort, controlPort)
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -97,4 +99,10 @@ func saveData() (err error) {
 func loadData() (err error) {
 	err = sio.LoadCompressedData(datafile, &data)
 	return
+}
+
+func exitDaemon() {
+	torInstance.Stop()
+	saveData()
+	os.Exit(0)
 }

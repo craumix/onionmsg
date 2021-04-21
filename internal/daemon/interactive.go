@@ -53,9 +53,7 @@ func startInteractive() {
 				continue
 			}
 		case "exit":
-			torInstance.Stop()
-			saveData()
-			os.Exit(0)
+			exitDaemon()
 		case "add_cont":
 			err = registerContactIdentity(types.NewIdentity())
 			if err != nil {
