@@ -25,11 +25,11 @@ Potential Drawbacks:
 (Any "ID" described here is a pair of an Onion-Service-ID and another ed25519 Public-Key.  
 Usually formatted as `serviceID + "@" + publicKey`)
 
-Any user can generate an arbitrary amount of *ContactIDs* which are similar to usernames for regular messengers.  
+Any user can generate an arbitrary amount of **ContactIDs** which are similar to usernames for regular messengers.  
 Although they differ in some aspects:
 - They can be created and deleted at any time.
 - An arbitrary amount can be generated.
 - Users who initiate contact don't need a ContactID.
-- ContactIDs are unneeded except for negotiating a ChatRoom, so they are deleted as soon as they have been utilized.
+- ContactIDs are unneeded except for negotiating a Chatroom, so they are deleted as soon as they have been utilized.
 
-*RoomIDs (or ConversationIDs)* are used for Messaging inside a ChatRoom. They are uniquely generated for every user for each ChatRoom.
+**RoomIDs** (or ConversationIDs)* are used for Messaging inside a Chatroom. They are uniquely generated for every user for each Chatroom.
