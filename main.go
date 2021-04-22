@@ -7,13 +7,17 @@ import (
 	"github.com/Craumix/onionmsg/internal/daemon"
 )
 
+var (
+	interactive   bool
+	useUnixSocket bool
+)
+
 func main() {
-	externalTor := flag.Bool("e", false, "use external tor")
-	interactive := flag.Bool("i", false, "start interactive mode")
-	useUnixSocket := flag.Bool("u", false, "use a unix socket")
+	flag.BoolVar(&interactive, "i", false, "start interactive mode")
+	flag.BoolVar(&useUnixSocket, "u", false, "use a unix socket")
 	flag.Parse()
 
-	daemon.StartDaemon(*interactive, !*externalTor, *useUnixSocket)
+	daemon.StartDaemon(interactive, useUnixSocket)
 
 	for {
 		time.Sleep(time.Second * 10)
