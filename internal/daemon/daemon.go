@@ -7,45 +7,45 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Craumix/tormsg/internal/sio"
-	"github.com/Craumix/tormsg/internal/tor"
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/tor"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
 /*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
-	ContactIdentities	map[string]*types.Identity	`json:"contact_identities"`
-	Rooms				map[uuid.UUID]*types.Room	`json:"rooms"`
+	ContactIdentities map[string]*types.Identity `json:"contact_identities"`
+	Rooms             map[uuid.UUID]*types.Room  `json:"rooms"`
 }
 
 const (
-	socksPort 			= 10048
-	controlPort 		= 10049
-	contactPort 		= 10050
-	conversationPort 	= 10051
-	apiPort 			= 10052
+	socksPort        = 10048
+	controlPort      = 10049
+	contactPort      = 10050
+	conversationPort = 10051
+	apiPort          = 10052
 
-	tordir 				= "tordir"
-	datafile 			= "tormsg.zstd.aes"
-	unixSocketName 		= "tormsg.sock"
+	tordir         = "tordir"
+	datafile       = "onionmsg.zstd"
+	unixSocketName = "onionmsg.sock"
 
-	loopback			= "127.0.0.1"
+	loopback = "127.0.0.1"
 )
 
 var (
-	internalTor	bool
-	interactive	bool
-	unixSocket	bool
+	internalTor bool
+	interactive bool
+	unixSocket  bool
 
 	data = SerializableData{
-		ContactIdentities: 	make(map[string]*types.Identity),
-		Rooms: 				make(map[uuid.UUID]*types.Room),
+		ContactIdentities: make(map[string]*types.Identity),
+		Rooms:             make(map[uuid.UUID]*types.Room),
 	}
 
-	torInstance	*tor.TorInstance
+	torInstance *tor.TorInstance
 
-	apiSocket	net.Listener
+	apiSocket net.Listener
 )
 
 func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
@@ -53,11 +53,11 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 
 	internalTor = internalTorArg
 	interactive = interactiveArg
-	unixSocket 	= unixSocketArg
+	unixSocket = unixSocketArg
 
-	if(unixSocket) {
+	if unixSocket {
 		apiSocket, err = sio.CreateUnixSocket(unixSocketName)
-	}else {
+	} else {
 		apiSocket, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {

@@ -1,7 +1,7 @@
 torbuild = build/tor/tor
 bindata = internal/bindata/bindata.go
 builddir = build/bin
-buildbin = $(builddir)/tormsg
+buildbin = $(builddir)/onionmsg
 
 run: $(bindata)
 	go run ./

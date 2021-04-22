@@ -9,12 +9,12 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/Craumix/tormsg/internal/bindata"
-	"github.com/Craumix/tormsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/bindata"
+	"github.com/Craumix/onionmsg/internal/sio"
 )
 
 var (
-	torBinMemFD	string
+	torBinMemFD string
 )
 
 func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.Process, error) {
@@ -43,8 +43,8 @@ func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.
 		log.Printf("Unable to to touch torrc \"%s\"\n%s\n", torrc, err.Error())
 	}
 
-	args := []string{"-f", torrc, 
-		"SocksPort", strconv.Itoa(socksPort), 
+	args := []string{"-f", torrc,
+		"SocksPort", strconv.Itoa(socksPort),
 		"ControlPort", strconv.Itoa(controlPort),
 		"DataDirectory", datadir}
 
@@ -53,7 +53,7 @@ func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.
 		if err != nil {
 			return nil, err
 		}
-		
+
 		args = append(args, "HashedControlPassword", hash)
 		log.Printf("Password hash set as %s\n", hash)
 	}
@@ -62,7 +62,7 @@ func Run(pw, datadir string, socksPort, controlPort int, useInternal bool) (*os.
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return proc, nil
 }
 
@@ -81,7 +81,7 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 		logfile, err := os.OpenFile(logpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			log.Printf("Unable to open logfile \"%s\"\n%s\n", logpath, err.Error())
-		}else {
+		} else {
 			logWriter := io.Writer(logfile)
 			cmd.Stdout = logWriter
 			cmd.Stderr = logWriter
@@ -98,7 +98,7 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 }
 
 func binToMem() (string, error) {
-	if(torBinMemFD != "") {
+	if torBinMemFD != "" {
 		return torBinMemFD, nil
 	}
 
@@ -126,7 +126,7 @@ func versionFromExe(exe string) (string, error) {
 
 	version := string(out)
 
-	return version[:len(version) - 1], nil
+	return version[:len(version)-1], nil
 }
 
 func pwHashFromExe(exe, pw string) (string, error) {
@@ -137,5 +137,5 @@ func pwHashFromExe(exe, pw string) (string, error) {
 
 	version := string(out)
 
-	return version[:len(version) - 1], nil
+	return version[:len(version)-1], nil
 }

@@ -8,20 +8,20 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
 )
 
 type TorInstance struct {
-	Process		*os.Process
-	Controller 	*torgo.Controller
-	Proxy		proxy.Dialer
+	Process    *os.Process
+	Controller *torgo.Controller
+	Proxy      proxy.Dialer
 
-	tordir			string
-	socksPort 		int
-	controlPort 	int
-	usingInternal	bool
+	tordir        string
+	socksPort     int
+	controlPort   int
+	usingInternal bool
 }
 
 func NewTorInstance(internal bool, tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
@@ -33,7 +33,7 @@ func NewTorInstance(internal bool, tordir string, socksPort, controlPort int) (i
 
 	log.Printf("Tor seems to be runnning\n")
 
-	controller, err := WaitForController(pw, "127.0.0.1:" + strconv.Itoa(controlPort), time.Second, 30)
+	controller, err := WaitForController(pw, "127.0.0.1:"+strconv.Itoa(controlPort), time.Second, 30)
 	if err != nil {
 		return
 	}
@@ -41,15 +41,15 @@ func NewTorInstance(internal bool, tordir string, socksPort, controlPort int) (i
 	v, _ := controller.GetVersion()
 	log.Printf("Connected controller to tor version %s\n", v)
 
-	dialer, _ := proxy.SOCKS5("tcp", "127.0.0.1:" + strconv.Itoa(socksPort), nil, nil)
+	dialer, _ := proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(socksPort), nil, nil)
 
 	instance = &TorInstance{
-		Process: torproc,
-		Controller: controller,
-		Proxy: dialer,
-		tordir: tordir,
-		socksPort: socksPort,
-		controlPort: controlPort,
+		Process:       torproc,
+		Controller:    controller,
+		Proxy:         dialer,
+		tordir:        tordir,
+		socksPort:     socksPort,
+		controlPort:   controlPort,
 		usingInternal: internal,
 	}
 
@@ -60,10 +60,10 @@ func (i *TorInstance) Stop() (err error) {
 	if i.Process != nil {
 		if runtime.GOOS == "windows" {
 			err = i.Process.Kill()
-		}else {
+		} else {
 			err = i.Process.Signal(os.Interrupt)
 		}
-	}else {
+	} else {
 		err = fmt.Errorf("Tor was not running")
 		return
 	}

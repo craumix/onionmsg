@@ -1,4 +1,4 @@
-module github.com/Craumix/tormsg
+module github.com/Craumix/onionmsg
 
 go 1.16
 

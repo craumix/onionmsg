@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Craumix/tormsg/internal/sio"
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
 func startRoomServer() error {
-	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(conversationPort))
+	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(conversationPort))
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func handleCommand(cmd string, sender *types.RemoteIdentity, room *types.Room) {
 
 		if room.PeerByFingerprint(args[1]) != nil || args[1] == room.Self.Fingerprint() {
 			//User already added, or self
-			break;
+			break
 		}
 
 		newPeer, err := types.NewRemoteIdentity(args[1])

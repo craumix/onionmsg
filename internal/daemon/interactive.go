@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -21,30 +21,30 @@ func startInteractive() {
 		cmd, _ := cin.ReadString('\n')
 		cmd = strings.Trim(cmd, " \n")
 
-		switch(cmd) {
+		switch cmd {
 		/*
-		case "load":
-			err = loadData()
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-			err = torInstance.Stop()
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-			torInstance, err = tor.NewTorInstance(internalTor, tordir, socksPort, controlPort)
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-			err = loadContactIdentites()
-			if err != nil {
-				log.Println(err.Error())
-				continue
-			}
-			runMessageQueues()
+			case "load":
+				err = loadData()
+				if err != nil {
+					log.Println(err.Error())
+					continue
+				}
+				err = torInstance.Stop()
+				if err != nil {
+					log.Println(err.Error())
+					continue
+				}
+				torInstance, err = tor.NewTorInstance(internalTor, tordir, socksPort, controlPort)
+				if err != nil {
+					log.Println(err.Error())
+					continue
+				}
+				err = loadContactIdentites()
+				if err != nil {
+					log.Println(err.Error())
+					continue
+				}
+				runMessageQueues()
 		*/
 		case "save":
 			err = saveData()
@@ -89,9 +89,9 @@ func startInteractive() {
 				peer = strings.Trim(peer, " \n")
 
 				if peer == "" {
-					break;
+					break
 				}
-				
+
 				p, err := types.NewRemoteIdentity(peer)
 				if err != nil {
 					log.Println(err.Error())
@@ -119,28 +119,28 @@ func startInteractive() {
 			}
 
 			log.Printf("Room created with %s and %s\n", room.ID, room.Self.Fingerprint())
-			case "send_message":
-				log.Printf("Write Room UID in first line and message in second:")
-				uid, _ := cin.ReadString('\n')
-				uid = strings.Trim(uid, " \n")
+		case "send_message":
+			log.Printf("Write Room UID in first line and message in second:")
+			uid, _ := cin.ReadString('\n')
+			uid = strings.Trim(uid, " \n")
 
-				id, err := uuid.Parse(uid)
-				if err != nil {
-					log.Println("Unable to parse uid")
-					continue
-				}
+			id, err := uuid.Parse(uid)
+			if err != nil {
+				log.Println("Unable to parse uid")
+				continue
+			}
 
-				room := data.Rooms[id]
-				if room == nil {
-					log.Println("No such room")
-					continue
-				}
+			room := data.Rooms[id]
+			if room == nil {
+				log.Println("No such room")
+				continue
+			}
 
-				message, _ := cin.ReadString('\n')
-				message = strings.Trim(message, " \n")
+			message, _ := cin.ReadString('\n')
+			message = strings.Trim(message, " \n")
 
-				room.SendMessage(types.MTYPE_TEXT, []byte(message))
-				log.Println("Sent message!")
+			room.SendMessage(types.MTYPE_TEXT, []byte(message))
+			log.Println("Sent message!")
 		case "list_messages":
 			log.Println("Enter a room uid:")
 			uid, _ := cin.ReadString('\n')
@@ -162,7 +162,7 @@ func startInteractive() {
 				log.Printf("From %s, at %s\n", msg.Sender, msg.Time)
 				log.Printf("Type %d, Content \"%s\"\n", msg.Type, string(msg.Content))
 			}
-		
+
 		default:
 			log.Printf("Unknown command \"%s\"\n", cmd)
 		}

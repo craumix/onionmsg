@@ -9,14 +9,14 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
 
-	"github.com/Craumix/tormsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/sio"
 )
 
 type Room struct {
-	Self		*Identity			`json:"self"`
-	Peers		[]*RemoteIdentity	`json:"peers"`
-	ID			uuid.UUID			`json:"uuid"`
-	Messages	[]*Message			`json:"messages"`
+	Self     *Identity         `json:"self"`
+	Peers    []*RemoteIdentity `json:"peers"`
+	ID       uuid.UUID         `json:"uuid"`
+	Messages []*Message        `json:"messages"`
 }
 
 func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
@@ -24,8 +24,8 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 	peers := make([]*RemoteIdentity, 0)
 	id := uuid.New()
 
-	for _, c :=  range contactIdentities {
-		conn, err := dialer.Dial("tcp", c.URL() + ":" + strconv.Itoa(contactPort))
+	for _, c := range contactIdentities {
+		conn, err := dialer.Dial("tcp", c.URL()+":"+strconv.Itoa(contactPort))
 		if err != nil {
 			return nil, err
 		}
@@ -41,7 +41,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		if err != nil {
 			return nil, err
 		}
-		
+
 		_, err = dconn.WriteBytes(id[:])
 		if err != nil {
 			return nil, err
@@ -75,16 +75,16 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 
 		peers = append(peers, r)
 	}
-	
+
 	room := &Room{
-		Self: s,
-		Peers: peers,
-		ID: id,
+		Self:     s,
+		Peers:    peers,
+		ID:       id,
 		Messages: make([]*Message, 0),
 	}
 
 	for _, peer := range peers {
-		room.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
+		room.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
 	}
 
 	return room, nil
@@ -92,9 +92,9 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 
 func (r *Room) SendMessage(mtype byte, content []byte) {
 	msg := &Message{
-		Sender: r.Self.Fingerprint(),
-		Time: time.Now(),
-		Type: mtype,
+		Sender:  r.Self.Fingerprint(),
+		Time:    time.Now(),
+		Type:    mtype,
 		Content: content,
 	}
 	msg.Sign(r.Self.Key)
@@ -112,7 +112,6 @@ func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int)
 	}
 }
 
-
 func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 	for _, peer := range r.Peers {
 		if peer.Fingerprint() == fingerprint {
@@ -120,4 +119,4 @@ func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 		}
 	}
 	return nil
-} 
+}

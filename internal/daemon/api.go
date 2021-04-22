@@ -9,7 +9,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -40,7 +40,7 @@ func statusRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func torlogRoute(w http.ResponseWriter, req *http.Request) {
-	logfile, err := os.OpenFile(tordir + "/tor.log", os.O_RDONLY, 0600)
+	logfile, err := os.OpenFile(tordir+"/tor.log", os.O_RDONLY, 0600)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -167,8 +167,8 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 
 	var mtype int
 	if req.FormValue("type") == "" {
-		mtype = types.MTYPE_TEXT;
-	}else {
+		mtype = types.MTYPE_TEXT
+	} else {
 		mtype, err = strconv.Atoi(req.FormValue("type"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -178,7 +178,7 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 
 	room := data.Rooms[uuid]
 	if room == nil {
-		http.Error(w, "No such room " + uuid.String(), http.StatusBadRequest)
+		http.Error(w, "No such room "+uuid.String(), http.StatusBadRequest)
 		return
 	}
 
@@ -202,7 +202,7 @@ func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
 
 	room := data.Rooms[uuid]
 	if room == nil {
-		http.Error(w, "No such room " + uuid.String(), http.StatusBadRequest)
+		http.Error(w, "No such room "+uuid.String(), http.StatusBadRequest)
 	}
 
 	raw, _ := json.Marshal(room.Messages)

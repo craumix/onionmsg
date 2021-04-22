@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Craumix/tormsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/sio"
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
 )
@@ -20,9 +20,9 @@ const (
 )
 
 type RemoteIdentity struct {
-	Pub		ed25519.PublicKey	`json:"public_key"`
-	Service	string				`json:"service"`
-	Queue	[]*Message			`json:"queue"`
+	Pub     ed25519.PublicKey `json:"public_key"`
+	Service string            `json:"service"`
+	Queue   []*Message        `json:"queue"`
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
@@ -37,7 +37,7 @@ func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
 	}
 
 	return &RemoteIdentity{
-		Pub: ed25519.PublicKey(k),
+		Pub:     ed25519.PublicKey(k),
 		Service: tmp[1],
 	}, nil
 }
@@ -60,24 +60,24 @@ func (i *RemoteIdentity) B64PubKey() string {
 
 func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {
 	for {
-		if(len(i.Queue) == 0) {
+		if len(i.Queue) == 0 {
 			time.Sleep(queueTimeout)
 			continue
 		}
 
-		conn, err := dialer.Dial("tcp", i.URL() + ":" + strconv.Itoa(conversationPort))
+		conn, err := dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(conversationPort))
 		if err != nil {
 			//Expected error
 			//log.Println(err.Error())
-		}else {
+		} else {
 			dconn := sio.NewDataIO(conn)
-			
+
 			dconn.WriteBytes(roomID[:])
 			dconn.WriteInt(len(i.Queue))
 			dconn.Flush()
 			for index, msg := range i.Queue {
 				raw, _ := json.Marshal(msg)
-				
+
 				_, err = dconn.WriteBytes(raw)
 				if err != nil {
 					fmt.Println(err.Error())
@@ -95,9 +95,9 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 					log.Printf("Received invalid state for message %d\n", state[0])
 				}
 
-				copy(i.Queue[index:], i.Queue[index+1:])// Shift a[i+1:] left one index.
-				i.Queue[len(i.Queue)-1] = nil    		// Erase last element (write zero value).
-				i.Queue = i.Queue[:len(i.Queue)-1]     	// Truncate slice.
+				copy(i.Queue[index:], i.Queue[index+1:]) // Shift a[i+1:] left one index.
+				i.Queue[len(i.Queue)-1] = nil            // Erase last element (write zero value).
+				i.Queue = i.Queue[:len(i.Queue)-1]       // Truncate slice.
 			}
 		}
 

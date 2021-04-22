@@ -5,13 +5,13 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/Craumix/tormsg/internal/sio"
-	"github.com/Craumix/tormsg/internal/types"
+	"github.com/Craumix/onionmsg/internal/sio"
+	"github.com/Craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
 func startContactServer() error {
-	server, err := net.Listen("tcp", "localhost:" + strconv.Itoa(contactPort))
+	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(contactPort))
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func startContactServer() error {
 				log.Println(err.Error())
 				return
 			}
-			
+
 			msg, err := dconn.ReadBytes()
 			if err != nil {
 				log.Println(err.Error())
@@ -72,9 +72,9 @@ func startContactServer() error {
 			dconn.Flush()
 
 			room := &types.Room{
-				Self: convID,
-				Peers: []*types.RemoteIdentity{remoteID},
-				ID: id,
+				Self:     convID,
+				Peers:    []*types.RemoteIdentity{remoteID},
+				ID:       id,
 				Messages: make([]*types.Message, 0),
 			}
 			err = registerRoom(room)
