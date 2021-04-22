@@ -22,8 +22,7 @@ Potential Drawbacks:
 <hr>
 
 ### Concept:
-(Any "ID" described here is a pair of an Onion-Service-ID and another ed25519 Public-Key.  
-Usually formatted as `serviceID + "@" + publicKey`)
+(Any "ID" described here is a ed25519 Public Key that is used to create a Hidden-Service, and sign messages.)
 
 Any user can generate an arbitrary amount of **ContactIDs** which are similar to usernames for regular messengers.  
 Although they differ in some aspects:

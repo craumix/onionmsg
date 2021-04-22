@@ -8,7 +8,7 @@ import (
 
 func loadContactIdentites() (err error) {
 	for _, i := range data.ContactIdentities {
-		s := i.Service
+		s := i.Service()
 		s.LocalProxy(contactPort, contactPort)
 
 		err = torInstance.Controller.AddOnion(s.Onion())
@@ -23,7 +23,7 @@ func loadContactIdentites() (err error) {
 }
 
 func registerContactIdentity(i *types.Identity) error {
-	service := i.Service
+	service := i.Service()
 	service.LocalProxy(contactPort, contactPort)
 
 	err := torInstance.Controller.AddOnion(service.Onion())
@@ -44,7 +44,7 @@ func deregisterContactIdentity(fingerprint string) error {
 	}
 
 	i := data.ContactIdentities[fingerprint]
-	err := torInstance.Controller.DeleteOnion(i.Service.Onion().ServiceID)
+	err := torInstance.Controller.DeleteOnion(i.Service().Onion().ServiceID)
 	if err != nil {
 		return err
 	}

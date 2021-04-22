@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Craumix/onionmsg/internal/sio"
 	"github.com/google/uuid"
+	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
 )
 
@@ -20,25 +20,18 @@ const (
 )
 
 type RemoteIdentity struct {
-	Pub     ed25519.PublicKey `json:"public_key"`
-	Service string            `json:"service"`
-	Queue   []*Message        `json:"queue"`
+	Pub   ed25519.PublicKey `json:"public_key"`
+	Queue []*Message        `json:"queue"`
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
-	if !strings.Contains(fingerprint, "@") {
-		return nil, fmt.Errorf("%s is not a valid id", fingerprint)
-	}
-
-	tmp := strings.Split(fingerprint, "@")
-	k, err := base64.RawURLEncoding.DecodeString(tmp[0])
+	k, err := base64.RawURLEncoding.DecodeString(fingerprint)
 	if err != nil {
 		return nil, err
 	}
 
 	return &RemoteIdentity{
-		Pub:     ed25519.PublicKey(k),
-		Service: tmp[1],
+		Pub: ed25519.PublicKey(k),
 	}, nil
 }
 
@@ -47,15 +40,20 @@ func (i *RemoteIdentity) Verify(msg, sig []byte) bool {
 }
 
 func (i *RemoteIdentity) URL() string {
-	return i.Service + ".onion"
+	return i.ServiceID() + ".onion"
 }
 
 func (i *RemoteIdentity) Fingerprint() string {
-	return i.B64PubKey() + "@" + i.Service
+	return i.B64PubKey()
 }
 
 func (i *RemoteIdentity) B64PubKey() string {
 	return base64.RawURLEncoding.EncodeToString(i.Pub)
+}
+
+func (i *RemoteIdentity) ServiceID() (id string) {
+	id, _ = torgo.ServiceIDFromEd25519(i.Pub)
+	return
 }
 
 func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {

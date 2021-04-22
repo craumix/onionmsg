@@ -21,6 +21,12 @@ func NewHiddenService() *HiddenService {
 	}
 }
 
+func NewHiddenServiceFromKey(priv ed25519.PrivateKey) *HiddenService {
+	return &HiddenService{
+		Key: priv,
+	}
+}
+
 func (s *HiddenService) Onion() *torgo.Onion {
 	if s.onion == nil {
 		s.onion, _ = torgo.OnionFromEd25519(s.Key)

@@ -9,7 +9,7 @@ import (
 
 func loadRooms() (err error) {
 	for _, i := range data.Rooms {
-		s := i.Self.Service
+		s := i.Self.Service()
 		s.LocalProxy(conversationPort, conversationPort)
 
 		err = torInstance.Controller.AddOnion(s.Onion())
@@ -28,7 +28,7 @@ func loadRooms() (err error) {
 }
 
 func registerRoom(room *types.Room) error {
-	service := room.Self.Service
+	service := room.Self.Service()
 	service.LocalProxy(conversationPort, conversationPort)
 
 	err := torInstance.Controller.AddOnion(service.Onion())
@@ -51,7 +51,7 @@ func deregisterRoom(id uuid.UUID) error {
 	}
 
 	room := data.Rooms[id]
-	err := torInstance.Controller.DeleteOnion(room.Self.Service.Onion().ServiceID)
+	err := torInstance.Controller.DeleteOnion(room.Self.Service().Onion().ServiceID)
 	if err != nil {
 		return err
 	}

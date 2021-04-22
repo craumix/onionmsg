@@ -11,21 +11,19 @@ import (
 )
 
 type Identity struct {
-	Service *HiddenService     `json:"hidden_service"`
-	Key     ed25519.PrivateKey `json:"key"`
+	Key ed25519.PrivateKey `json:"key"`
 }
 
 func NewIdentity() *Identity {
 	_, priv, _ := ed25519.GenerateKey(nil)
 
 	return &Identity{
-		Service: NewHiddenService(),
-		Key:     priv,
+		Key: priv,
 	}
 }
 
 func (i *Identity) Fingerprint() string {
-	return i.B64PubKey() + "@" + i.Service.Onion().ServiceID
+	return i.B64PubKey()
 }
 
 func (i *Identity) QR(res int) (image.Image, error) {
@@ -48,4 +46,9 @@ func (i *Identity) B64PubKey() string {
 
 func (i *Identity) Sign(data []byte) []byte {
 	return ed25519.Sign(i.Key, data)
+}
+
+func (i *Identity) Service() (service *HiddenService) {
+	service = NewHiddenServiceFromKey(i.Key)
+	return
 }
