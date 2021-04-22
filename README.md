@@ -1,12 +1,12 @@
-# TorMsg Daemon
+# OnionMsg Daemon
 
-[![CodeFactor](https://www.codefactor.io/repository/github/craumix/tormsg/badge)](https://www.codefactor.io/repository/github/craumix/tormsg)
-[![DeepSource](https://deepsource.io/gh/Craumix/tormsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/tormsg/?ref=repository-badge)
-[![Tests](https://github.com/Craumix/tormsg/actions/workflows/test.yaml/badge.svg)](https://github.com/Craumix/tormsg/actions/workflows/test.yaml)
+[![CodeFactor](https://www.codefactor.io/repository/github/craumix/onionmsg/badge)](https://www.codefactor.io/repository/github/craumix/onionmsg)
+[![DeepSource](https://deepsource.io/gh/Craumix/onionmsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/onionmsg/?ref=repository-badge)
+[![Tests](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml/badge.svg)](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml)
 
 **⚠️ This programm is not considered stable atm, and will receive breaking changes. ⚠️**
 
-TorMsg is intended to be a P2P, anonymous and secure Messenger over the Tor Network.  
+OnionMsg is intended to be a P2P, anonymous and secure Messenger over the Tor Network.  
 This is only a Daemon that should expose functionality over a TCP or UNIX Socket using a REST-API to other **local** CLI or GUI clients.  
 This Daemon is **not** intended to be used similarly to a E-Mail Server.
 
