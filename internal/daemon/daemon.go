@@ -29,8 +29,6 @@ const (
 	tordir         = "tordir"
 	datafile       = "onionmsg.zstd"
 	unixSocketName = "onionmsg.sock"
-
-	loopback = "127.0.0.1"
 )
 
 var (

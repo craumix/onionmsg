@@ -21,7 +21,6 @@ type TorInstance struct {
 	tordir        string
 	socksPort     int
 	controlPort   int
-	usingInternal bool
 }
 
 func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
@@ -63,7 +62,11 @@ func (i *TorInstance) Stop() (err error) {
 			err = i.Process.Signal(os.Interrupt)
 		}
 	} else {
-		err = fmt.Errorf("Tor was not running")
+		err = fmt.Errorf("tor was not running")
+		return
+	}
+
+	if err != nil {
 		return
 	}
 
