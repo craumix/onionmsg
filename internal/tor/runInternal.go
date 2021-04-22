@@ -18,12 +18,11 @@ var (
 
 func Run(pw, datadir string, socksPort, controlPort int) (*os.Process, error) {
 	var err error
-	exe := "tor"
 	torrc := datadir + "/torrc"
 	logfile := datadir + "/tor.log"
 
 	if runtime.GOOS != "linux" {
-		return nil, fmt.Errorf("Cannot use internal tor binary on platfrom \"%s\"", runtime.GOOS)
+		return nil, fmt.Errorf("Cannot use internal tor binary on platform \"%s\"", runtime.GOOS)
 	}
 	exe, err = binToMem()
 	if err != nil {
