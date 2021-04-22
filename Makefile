@@ -8,7 +8,7 @@ run: $(bindata)
 
 compile: $(bindata)
 	mkdir -p $(builddir)
-	go build -ldflags="-s -w" -o $(buildbin) ./
+	CGO=0 go build -ldflags="-s -w" -o $(buildbin) ./
 	upx --best $(buildbin)
 
 $(bindata): $(torbuild)
