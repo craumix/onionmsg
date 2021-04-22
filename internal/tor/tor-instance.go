@@ -24,9 +24,9 @@ type TorInstance struct {
 	usingInternal bool
 }
 
-func NewTorInstance(internal bool, tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
+func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
 	pw := types.RandomString(64)
-	torproc, err := Run(pw, tordir, socksPort, controlPort, internal)
+	torproc, err := Run(pw, tordir, socksPort, controlPort)
 	if err != nil {
 		return
 	}
@@ -44,13 +44,12 @@ func NewTorInstance(internal bool, tordir string, socksPort, controlPort int) (i
 	dialer, _ := proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(socksPort), nil, nil)
 
 	instance = &TorInstance{
-		Process:       torproc,
-		Controller:    controller,
-		Proxy:         dialer,
-		tordir:        tordir,
-		socksPort:     socksPort,
-		controlPort:   controlPort,
-		usingInternal: internal,
+		Process:     torproc,
+		Controller:  controller,
+		Proxy:       dialer,
+		tordir:      tordir,
+		socksPort:   socksPort,
+		controlPort: controlPort,
 	}
 
 	return

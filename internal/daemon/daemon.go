@@ -34,7 +34,6 @@ const (
 )
 
 var (
-	internalTor bool
 	interactive bool
 	unixSocket  bool
 
@@ -44,14 +43,12 @@ var (
 	}
 
 	torInstance *tor.TorInstance
-
-	apiSocket net.Listener
+	apiSocket   net.Listener
 )
 
-func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
+func StartDaemon(interactiveArg, unixSocketArg bool) {
 	var err error
 
-	internalTor = internalTorArg
 	interactive = interactiveArg
 	unixSocket = unixSocketArg
 
@@ -66,7 +63,7 @@ func StartDaemon(interactiveArg, internalTorArg, unixSocketArg bool) {
 
 	go startAPIServer()
 
-	torInstance, err = tor.NewTorInstance(internalTor, tordir, socksPort, controlPort)
+	torInstance, err = tor.NewTorInstance(tordir, socksPort, controlPort)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
