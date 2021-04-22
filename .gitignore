@@ -3,4 +3,4 @@ build/bin
 internal/bindata/bindata.go
 
 tordir
-onionmsg.zstd.aes
+onionmsg.zstd
