@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/DataDog/zstd"
+	"github.com/klauspost/compress/zstd"
 )
 
 func SaveDataCompressed(datafile string, src interface{}) error {
@@ -17,7 +17,9 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 	defer file.Close()
 
 	raw, _ := json.Marshal(src)
-	comp, _ := zstd.CompressLevel(nil, raw, zstd.BestCompression)
+	
+	enc, _ := zstd.NewWriter(file)
+	comp := enc.EncodeAll(raw, make([]byte, 0))
 
 	_, err = file.Write(comp)
 	if err != nil {
@@ -41,7 +43,8 @@ func LoadCompressedData(datafile string, dest interface{}) error {
 		return err
 	}
 
-	raw, _:= zstd.Decompress(nil, comp)
+	dec, _ := zstd.NewReader(nil)
+	raw, _:= dec.DecodeAll(comp, nil)
 	
 	json.Unmarshal(raw, dest)
 
