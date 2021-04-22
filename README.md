@@ -1,6 +1,8 @@
 # OnionMsg Daemon
 
 [![CodeFactor](https://www.codefactor.io/repository/github/craumix/onionmsg/badge)](https://www.codefactor.io/repository/github/craumix/onionmsg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/craumix/onionmsg)](https://goreportcard.com/report/github.com/craumix/onionmsg)
+
 [![DeepSource](https://deepsource.io/gh/Craumix/onionmsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/onionmsg/?ref=repository-badge)
 [![Tests](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml/badge.svg)](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml)
 
