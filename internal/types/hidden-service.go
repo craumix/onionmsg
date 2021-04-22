@@ -8,9 +8,9 @@ import (
 )
 
 type HiddenService struct {
-	onion	*torgo.Onion
+	onion *torgo.Onion
 
-	Key	ed25519.PrivateKey	`json:"key"`
+	Key ed25519.PrivateKey `json:"key"`
 }
 
 func NewHiddenService() *HiddenService {
@@ -25,7 +25,7 @@ func (s *HiddenService) Onion() *torgo.Onion {
 	if s.onion == nil {
 		s.onion, _ = torgo.OnionFromEd25519(s.Key)
 	}
-		
+
 	return s.onion
 }
 

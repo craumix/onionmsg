@@ -17,7 +17,7 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 	defer file.Close()
 
 	raw, _ := json.Marshal(src)
-	
+
 	enc, _ := zstd.NewWriter(file)
 	comp := enc.EncodeAll(raw, make([]byte, 0))
 
@@ -25,8 +25,8 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 	if err != nil {
 		return err
 	}
-	
-	log.Printf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp)) / float64(len(raw))) * 100)
+
+	log.Printf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp))/float64(len(raw)))*100)
 
 	return nil
 }
@@ -37,15 +37,15 @@ func LoadCompressedData(datafile string, dest interface{}) error {
 		return err
 	}
 	defer file.Close()
-	
+
 	comp, err := ioutil.ReadAll(file)
 	if err != nil {
 		return err
 	}
 
 	dec, _ := zstd.NewReader(nil)
-	raw, _:= dec.DecodeAll(comp, nil)
-	
+	raw, _ := dec.DecodeAll(comp, nil)
+
 	json.Unmarshal(raw, dest)
 
 	log.Printf("Decoded %d bytes from file contents\n", len(raw))

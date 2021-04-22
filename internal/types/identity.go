@@ -11,16 +11,16 @@ import (
 )
 
 type Identity struct {
-	Service *HiddenService	`json:"hidden_service"`
-	Key	ed25519.PrivateKey	`json:"key"`
+	Service *HiddenService     `json:"hidden_service"`
+	Key     ed25519.PrivateKey `json:"key"`
 }
 
 func NewIdentity() *Identity {
 	_, priv, _ := ed25519.GenerateKey(nil)
 
-	return &Identity {
+	return &Identity{
 		Service: NewHiddenService(),
-		Key: priv,
+		Key:     priv,
 	}
 }
 

@@ -10,27 +10,27 @@ func WaitForController(pw, addr string, interval time.Duration, retries int) (*t
 	var err error
 	var ctrl *torgo.Controller
 
-	for(retries > 0) {
+	for retries > 0 {
 		ctrl, err = torgo.NewController(addr)
 		if err == nil {
-			break;
+			break
 		}
 
-		retries--;
+		retries--
 		time.Sleep(interval)
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if pw == "" {
 		err = ctrl.AuthenticateNone()
-	}else {
+	} else {
 		err = ctrl.AuthenticatePassword(pw)
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return ctrl, nil
 }

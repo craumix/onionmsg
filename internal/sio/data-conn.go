@@ -7,14 +7,14 @@ import (
 )
 
 type DataConn struct {
-	buffer	*bufio.ReadWriter
-	conn	net.Conn
+	buffer *bufio.ReadWriter
+	conn   net.Conn
 }
 
 func NewDataIO(conn net.Conn) *DataConn {
 	return &DataConn{
 		buffer: bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
-		conn: conn,
+		conn:   conn,
 	}
 }
 
@@ -22,7 +22,6 @@ func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	n, err := d.buffer.Write(append(intToBytes(len(msg)), msg...))
 	return n, err
 }
-
 
 func (d *DataConn) ReadBytes() ([]byte, error) {
 	l := make([]byte, 4)
@@ -90,6 +89,6 @@ func bytesToInt(d []byte) int {
 
 func intToBytes(i int) []byte {
 	bs := make([]byte, 4)
-    binary.LittleEndian.PutUint32(bs, uint32(i))
-    return bs
+	binary.LittleEndian.PutUint32(bs, uint32(i))
+	return bs
 }
