@@ -55,7 +55,7 @@ func deregisterRoom(id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-
+	
 	data.Rooms[id].StopQueues()
 
 	delete(data.Rooms, id)

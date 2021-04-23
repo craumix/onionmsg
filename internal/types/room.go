@@ -83,7 +83,6 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Peers:    peers,
 		ID:       id,
 		Messages: make([]*Message, 0),
-		queueTerminate: make(chan bool),
 	}
 
 	for _, peer := range peers {
@@ -105,12 +104,12 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 	r.Messages = append(r.Messages, msg)
 
 	for _, peer := range r.Peers {
-		peer.QueueMessage(msg)
+		go peer.QueueMessage(msg)
 	}
 }
 
 func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
-	r.queueTerminate <- false
+	r.queueTerminate = make(chan bool)
 	for _, peer := range r.Peers {
 		peer.InitQueue(dialer, conversationPort, r.ID, r.queueTerminate)
 		go peer.RunMessageQueue()
@@ -127,5 +126,5 @@ func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 }
 
 func (r *Room) StopQueues() {
-	r.queueTerminate <- true
+	close(r.queueTerminate)
 }

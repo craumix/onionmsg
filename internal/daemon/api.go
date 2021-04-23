@@ -165,7 +165,7 @@ func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	
 	err = deregisterRoom(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
