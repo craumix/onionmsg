@@ -37,7 +37,6 @@ func startAPIServer() {
 
 func statusRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("{\"status\":\"ok\"}"))
-	return
 }
 
 func torlogRoute(w http.ResponseWriter, req *http.Request) {
@@ -56,7 +55,6 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 	msg := fmt.Sprintf("{\"log\":\"%s\"}", string(logs))
 
 	w.Write([]byte(msg))
-	return
 }
 
 func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
@@ -68,7 +66,6 @@ func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
 	raw, _ := json.Marshal(&contIDs)
 
 	w.Write(raw)
-	return
 }
 
 func listRoomsRoute(w http.ResponseWriter, req *http.Request) {
@@ -80,7 +77,6 @@ func listRoomsRoute(w http.ResponseWriter, req *http.Request) {
 	raw, _ := json.Marshal(&rooms)
 
 	w.Write(raw)
-	return
 }
 
 func addContactIDRoute(w http.ResponseWriter, req *http.Request) {
@@ -92,7 +88,6 @@ func addContactIDRoute(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", id.Fingerprint())))
-	return
 }
 
 func rmContactIDRoute(w http.ResponseWriter, req *http.Request) {
@@ -107,8 +102,6 @@ func rmContactIDRoute(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	return
 }
 
 func createRoomRoute(w http.ResponseWriter, req *http.Request) {
@@ -155,8 +148,6 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}()
-
-	return
 }
 
 func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
@@ -165,14 +156,12 @@ func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	err = deregisterRoom(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	return
 }
 
 func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
@@ -206,8 +195,6 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 	}
 
 	room.SendMessage(byte(mtype), body)
-
-	return
 }
 
 func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
@@ -225,5 +212,4 @@ func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
 	raw, _ := json.Marshal(room.Messages)
 
 	w.Write(raw)
-	return
 }
