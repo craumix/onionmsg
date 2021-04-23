@@ -18,6 +18,8 @@ var (
 
 func Run(pw, datadir string, socksPort, controlPort int) (*os.Process, error) {
 	var err error
+	var exe string
+
 	torrc := datadir + "/torrc"
 	logfile := datadir + "/tor.log"
 
