@@ -18,9 +18,9 @@ type TorInstance struct {
 	Controller *torgo.Controller
 	Proxy      proxy.Dialer
 
-	tordir        string
-	socksPort     int
-	controlPort   int
+	tordir      string
+	socksPort   int
+	controlPort int
 }
 
 func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {

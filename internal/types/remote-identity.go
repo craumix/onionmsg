@@ -16,12 +16,20 @@ import (
 )
 
 const (
-	queueTimeout = time.Second * 3
+	queueTimeout = time.Second * 15
 )
 
 type RemoteIdentity struct {
 	Pub   ed25519.PublicKey `json:"public_key"`
 	Queue []*Message        `json:"queue"`
+
+	dialer           proxy.Dialer
+	convPort         int
+	roomID           uuid.UUID
+	queueInit        bool
+	lastQueueErr     error
+	lastQueueRun     time.Time
+	lastQueueRuntime int64
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
@@ -56,41 +64,59 @@ func (i *RemoteIdentity) ServiceID() (id string) {
 	return
 }
 
-func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {
+func (i *RemoteIdentity) InitQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {
+	i.dialer = dialer
+	i.convPort = conversationPort
+	i.roomID = roomID
+	i.queueInit = true
+}
+
+func (i *RemoteIdentity) QueueMessage(msg *Message) {
+	if i.queueInit {
+		conn, err := i.dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(i.convPort))
+		if err == nil {
+			dconn := sio.NewDataIO(conn)
+			defer dconn.Close()
+
+			dconn.WriteBytes(i.roomID[:])
+			dconn.WriteInt(1)
+			dconn.Flush()
+
+			err = i.sendMessage(msg, dconn)
+			if err == nil {
+				return
+			}
+		}
+	}
+
+	i.Queue = append(i.Queue, msg)
+}
+
+func (i *RemoteIdentity) RunMessageQueue() error {
+	if !i.queueInit {
+		return fmt.Errorf("queue was not initialized")
+	}
+
 	for {
 		if len(i.Queue) == 0 {
 			time.Sleep(queueTimeout)
 			continue
 		}
 
-		conn, err := dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(conversationPort))
-		if err != nil {
-			//Expected error
-			//log.Println(err.Error())
-		} else {
+		i.lastQueueRun = time.Now()
+		conn, err := i.dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(i.convPort))
+		if err == nil {
 			dconn := sio.NewDataIO(conn)
+			defer dconn.Close()
 
-			dconn.WriteBytes(roomID[:])
+			dconn.WriteBytes(i.roomID[:])
 			dconn.WriteInt(len(i.Queue))
 			dconn.Flush()
 			for index, msg := range i.Queue {
-				raw, _ := json.Marshal(msg)
-
-				_, err = dconn.WriteBytes(raw)
+				err = i.sendMessage(msg, dconn)
 				if err != nil {
-					fmt.Println(err.Error())
+					log.Println(err.Error())
 					break
-				}
-				dconn.Flush()
-
-				state, err := dconn.ReadBytes()
-				if err != nil {
-					fmt.Println(err.Error())
-					break
-				}
-
-				if state[0] != 0x00 {
-					log.Printf("Received invalid state for message %d\n", state[0])
 				}
 
 				copy(i.Queue[index:], i.Queue[index+1:]) // Shift a[i+1:] left one index.
@@ -99,6 +125,30 @@ func (i *RemoteIdentity) RunMessageQueue(dialer proxy.Dialer, conversationPort i
 			}
 		}
 
+		i.lastQueueRuntime = time.Since(i.lastQueueRun).Nanoseconds()
+		i.lastQueueErr = err
+
 		time.Sleep(queueTimeout)
 	}
+}
+
+func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) (err error) {
+	raw, _ := json.Marshal(msg)
+
+	_, err = dconn.WriteBytes(raw)
+	if err != nil {
+		return
+	}
+	dconn.Flush()
+
+	state, err := dconn.ReadBytes()
+	if err != nil {
+		return
+	}
+
+	if state[0] != 0x00 {
+		err = fmt.Errorf("received invalid state for message %d", state[0])
+	}
+
+	return
 }
