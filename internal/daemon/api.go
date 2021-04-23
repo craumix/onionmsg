@@ -25,6 +25,7 @@ func startAPIServer() {
 
 	http.HandleFunc("/v1/room/list", listRoomsRoute)
 	http.HandleFunc("/v1/room/create", createRoomRoute)
+	http.HandleFunc("/v1/room/delete", deleteRoomRoute)
 	http.HandleFunc("/v1/room/send", sendMessageRoute)
 	http.HandleFunc("/v1/room/messages", listRoomMessagesRoute)
 
@@ -154,6 +155,22 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}()
+
+	return
+}
+
+func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
+	uuid, err := uuid.Parse(req.FormValue("uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = deregisterRoom(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	return
 }
