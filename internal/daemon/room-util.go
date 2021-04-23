@@ -56,6 +56,8 @@ func deregisterRoom(id uuid.UUID) error {
 		return err
 	}
 
+	data.Rooms[id].StopQueues()
+
 	delete(data.Rooms, id)
 
 	log.Printf("Deregistered Room %s\n", id)

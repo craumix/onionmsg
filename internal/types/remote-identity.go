@@ -26,10 +26,11 @@ type RemoteIdentity struct {
 	dialer           proxy.Dialer
 	convPort         int
 	roomID           uuid.UUID
-	queueInit        bool
+	queueWasInit     bool
 	lastQueueErr     error
 	lastQueueRun     time.Time
 	lastQueueRuntime int64
+	queueTerminate   chan bool
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
@@ -64,15 +65,16 @@ func (i *RemoteIdentity) ServiceID() (id string) {
 	return
 }
 
-func (i *RemoteIdentity) InitQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID) {
+func (i *RemoteIdentity) InitQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID, terminate chan bool) {
 	i.dialer = dialer
 	i.convPort = conversationPort
 	i.roomID = roomID
-	i.queueInit = true
+	i.queueTerminate = terminate
+	i.queueWasInit = true
 }
 
 func (i *RemoteIdentity) QueueMessage(msg *Message) {
-	if i.queueInit {
+	if i.queueWasInit {
 		conn, err := i.dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(i.convPort))
 		if err == nil {
 			dconn := sio.NewDataIO(conn)
@@ -93,7 +95,7 @@ func (i *RemoteIdentity) QueueMessage(msg *Message) {
 }
 
 func (i *RemoteIdentity) RunMessageQueue() error {
-	if !i.queueInit {
+	if !i.queueWasInit {
 		return fmt.Errorf("queue was not initialized")
 	}
 
@@ -103,7 +105,7 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 			continue
 		}
 
-		i.lastQueueRun = time.Now()
+		startTime := time.Now()
 		conn, err := i.dialer.Dial("tcp", i.URL()+":"+strconv.Itoa(i.convPort))
 		if err == nil {
 			dconn := sio.NewDataIO(conn)
@@ -125,10 +127,19 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 			}
 		}
 
-		i.lastQueueRuntime = time.Since(i.lastQueueRun).Nanoseconds()
+		i.lastQueueRun = startTime
+		i.lastQueueRuntime = time.Since(startTime).Nanoseconds()
 		i.lastQueueErr = err
 
+		if <- i.queueTerminate {
+			return fmt.Errorf("queue terminated")
+		}
+
 		time.Sleep(queueTimeout)
+
+		if <- i.queueTerminate {
+			return fmt.Errorf("queue terminated")
+		}
 	}
 }
 

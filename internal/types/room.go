@@ -17,6 +17,8 @@ type Room struct {
 	Peers    []*RemoteIdentity `json:"peers"`
 	ID       uuid.UUID         `json:"uuid"`
 	Messages []*Message        `json:"messages"`
+
+	queueTerminate chan bool
 }
 
 func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
@@ -81,6 +83,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Peers:    peers,
 		ID:       id,
 		Messages: make([]*Message, 0),
+		queueTerminate: make(chan bool),
 	}
 
 	for _, peer := range peers {
@@ -107,8 +110,9 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 }
 
 func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
+	r.queueTerminate <- false
 	for _, peer := range r.Peers {
-		peer.InitQueue(dialer, conversationPort, r.ID)
+		peer.InitQueue(dialer, conversationPort, r.ID, r.queueTerminate)
 		go peer.RunMessageQueue()
 	}
 }
@@ -120,4 +124,8 @@ func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 		}
 	}
 	return nil
+}
+
+func (r *Room) StopQueues() {
+	r.queueTerminate <- true
 }
