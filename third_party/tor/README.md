@@ -1,0 +1,1 @@
+This is the directory which should contain a mostly static tor binary for `go generate -tags runInternal` to create the bindata.go file which makes it possible to run tor internally and not depend on the system tor version.
