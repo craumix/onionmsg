@@ -206,7 +206,7 @@ func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
 
 	room := data.Rooms[uuid]
 	if room == nil {
-		http.Error(w, "No such room "+uuid.String(), http.StatusBadRequest)
+		http.Error(w, "No such room " + uuid.String(), http.StatusBadRequest)
 	}
 
 	raw, _ := json.Marshal(room.Messages)
