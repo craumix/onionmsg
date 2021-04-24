@@ -35,6 +35,8 @@ var (
 	interactive bool
 	unixSocket  bool
 
+	loadFuse bool
+
 	data = SerializableData{
 		ContactIdentities: make(map[string]*types.Identity),
 		Rooms:             make(map[uuid.UUID]*types.Room),
@@ -49,6 +51,14 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 
 	interactive = interactiveArg
 	unixSocket = unixSocketArg
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("Something went seriously wrong:\n%sTrying to perfrom clean exit", err)
+			exitDaemon()
+		}
+	}()
+	startSignalHandler()
 
 	if unixSocket {
 		apiSocket, err = sio.CreateUnixSocket(unixSocketName)
@@ -70,6 +80,7 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatalf(err.Error())
 	}
+	loadFuse = true
 
 	err = loadContactIdentites()
 	if err != nil {
@@ -79,8 +90,6 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-
-	createTermSignalHandler()
 
 	go startContactServer()
 	go startRoomServer()
@@ -100,7 +109,7 @@ func loadData() (err error) {
 	return
 }
 
-func createTermSignalHandler() {
+func startSignalHandler() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -111,7 +120,19 @@ func createTermSignalHandler() {
 }
 
 func exitDaemon() {
-	torInstance.Stop()
-	saveData()
+	if torInstance != nil {
+		err := torInstance.Stop()
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	if loadFuse {
+		err := saveData()
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
+
 	os.Exit(0)
 }
