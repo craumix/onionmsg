@@ -1,7 +1,6 @@
-build/tor
-build/bin
-internal/bindata/bindata.go
+internal/tor/bindata.go
 
+tor
 tordir
 onionmsg
 onionmsg.zstd

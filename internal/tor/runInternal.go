@@ -4,7 +4,6 @@ package tor
 
 import (
 	"fmt"
-	"github.com/Craumix/onionmsg/internal/bindata"
 	"github.com/Craumix/onionmsg/internal/sio"
 	"log"
 	"os"
@@ -74,7 +73,7 @@ func binToMem() (string, error) {
 		return "", err
 	}
 
-	n, err := bindata.WriteToFile(memfd, "build/tor/tor")
+	n, err := WriteToFile(memfd, "build/tor/tor")
 	if err != nil {
 		return "", err
 	}
@@ -83,4 +82,24 @@ func binToMem() (string, error) {
 	torBinMemFD = memfd
 
 	return memfd, nil
+}
+
+func WriteToFile(path, name string) (int, error) {
+	file, err := os.OpenFile(path, os.O_WRONLY, 0600)
+	if err != nil {
+		return 0, err
+	}
+
+	torBinary, err := Asset("build/tor/tor")
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := file.Write(torBinary)
+	if err != nil {
+		return 0, err
+	}
+	file.Close()
+
+	return n, nil
 }
