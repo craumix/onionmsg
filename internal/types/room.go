@@ -18,6 +18,7 @@ type Room struct {
 	Peers    []*RemoteIdentity `json:"peers"`
 	ID       uuid.UUID         `json:"uuid"`
 	Messages []*Message        `json:"messages"`
+	Name     string            `json:"name"`
 
 	queueTerminate chan bool
 }
@@ -162,6 +163,14 @@ func (r *Room) HandleCommand(cmd string) {
 
 		r.Peers = append(r.Peers, newPeer)
 		log.Printf("New peer %s added to room %s\n", newPeer.Fingerprint(), r.ID)
+	case "name_room":
+		if len(args) < 2 {
+			log.Printf("Not enough args for command \"%s\"\n", cmd)
+			break
+		}
+
+		r.Name = args[1]
+		log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}

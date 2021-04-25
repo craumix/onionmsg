@@ -132,18 +132,18 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 		i.lastQueueErr = err
 
 		select {
-            case <-i.queueTerminate:
-                return fmt.Errorf("queue terminated")
-			default:
-        }
+		case <-i.queueTerminate:
+			return fmt.Errorf("queue terminated")
+		default:
+		}
 
 		time.Sleep(queueTimeout)
 
 		select {
-            case <-i.queueTerminate:
-                return fmt.Errorf("queue terminated")
-			default:
-        }
+		case <-i.queueTerminate:
+			return fmt.Errorf("queue terminated")
+		default:
+		}
 	}
 }
 
