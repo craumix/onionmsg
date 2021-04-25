@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -101,7 +102,7 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 	}
 	msg.Sign(r.Self.Key)
 
-	r.Messages = append(r.Messages, msg)
+	r.LogMessage(msg)
 
 	for _, peer := range r.Peers {
 		go peer.QueueMessage(msg)
@@ -127,4 +128,41 @@ func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 
 func (r *Room) StopQueues() {
 	close(r.queueTerminate)
+}
+
+func (r *Room) LogMessage(msg *Message) {
+	if msg.Type == MTYPE_CMD {
+		if msg.Content != nil {
+			r.HandleCommand(string(msg.Content))
+		}
+	}
+
+	r.Messages = append(r.Messages, msg)
+}
+
+func (r *Room) HandleCommand(cmd string) {
+	args := strings.Split(cmd, " ")
+	switch args[0] {
+	case "join":
+		if len(args) < 2 {
+			log.Printf("Not enough args for command \"%s\"\n", cmd)
+			break
+		}
+
+		if r.PeerByFingerprint(args[1]) != nil || args[1] == r.Self.Fingerprint() {
+			//User already added, or self
+			break
+		}
+
+		newPeer, err := NewRemoteIdentity(args[1])
+		if err != nil {
+			log.Println(err.Error())
+			break
+		}
+
+		r.Peers = append(r.Peers, newPeer)
+		log.Printf("New peer %s added to room %s\n", newPeer.Fingerprint(), r.ID)
+	default:
+		log.Printf("Received invalid command \"%s\"\n", cmd)
+	}
 }

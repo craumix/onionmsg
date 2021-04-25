@@ -30,7 +30,7 @@ func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorIns
 		return
 	}
 
-	log.Printf("Tor seems to be runnning pid: %d\n", torproc.Pid)
+	log.Printf("Tor seems to be runnning, pid: %d\n", torproc.Pid)
 
 	controller, err := WaitForController(pw, "127.0.0.1:"+strconv.Itoa(controlPort), time.Second, 30)
 	if err != nil {
