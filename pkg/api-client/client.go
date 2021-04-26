@@ -27,10 +27,6 @@ type addContactIDResponse struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-type createRoomRequest []string
-
-type sendMessageRequest []byte
-
 var (
 	socketType string
 	client     *http.Client
