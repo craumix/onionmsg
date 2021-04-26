@@ -3,7 +3,7 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -46,7 +46,7 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	logs, err := io.ReadAll(logfile)
+	logs, err := ioutil.ReadAll(logfile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,7 +107,7 @@ func rmContactIDRoute(w http.ResponseWriter, req *http.Request) {
 func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 	var fingerprints []string
 
-	body, err := io.ReadAll(req.Body)
+	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -188,7 +188,7 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(req.Body)
+	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
