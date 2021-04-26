@@ -60,7 +60,7 @@ func Init(socketType, location string) error {
 			},
 		}
 	default:
-		return fmt.Errorf("Invalid socket type %s. Must be either tcp or unix. (default tcp)", socketType)
+		return fmt.Errorf("Invalid socket type %s. Must be either tcp or unix. (default tcp)\n", socketType)
 	}
 	SocketType = socketType
 	return nil
@@ -163,7 +163,9 @@ func postRequest(path string, body []byte, v interface{}) error {
 	}
 	defer resp.Body.Close()
 	respBody, err := ioutil.ReadAll(resp.Body)
-	if v != nil {
+	if err != nil {
+		return err
+	} else if v != nil {
 		return json.Unmarshal(respBody, v)
 	}
 	return nil
