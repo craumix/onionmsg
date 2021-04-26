@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"io/ioutil"
 	"net"
 	"net/http"
