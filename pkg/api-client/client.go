@@ -60,7 +60,7 @@ func Init(socketType, location string) error {
 			},
 		}
 	default:
-		return fmt.Errorf("Invalid socket type %s. Must be either tcp or unix. (default tcp)\n", socketType)
+		return fmt.Errorf("invalid socket type %s\nmust be either tcp or unix (default tcp)", socketType)
 	}
 	SocketType = socketType
 	return nil
