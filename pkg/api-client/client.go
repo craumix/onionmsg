@@ -11,37 +11,37 @@ import (
 	"net/http"
 )
 
-type StatusResponse struct {
+type statusResponse struct {
 	Status string `json:"status"`
 }
 
-type TorlogResponse struct {
+type torlogResponse struct {
 	Log string `json:"log"`
 }
 
-type ListContactIDsResponse []string
+type listContactIDsResponse []string
 
-type ListRoomsResponse []string
+type listRoomsResponse []string
 
-type AddContactIDResponse struct {
+type addContactIDResponse struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-type CreateRoomRequest []string
+type createRoomRequest []string
 
-type SendMessageRequest []byte
+type sendMessageRequest []byte
 
 var (
-	SocketType string
+	socketType string
 	client     *http.Client
 	address    string
 )
 
-func Init(socketType, location string) error {
+func Init(connectionType, location string) error {
 	switch socketType {
 	case "tcp":
 		address = "http://" + location
-		SocketType = socketType
+		socketType = connectionType
 		client = &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -51,7 +51,7 @@ func Init(socketType, location string) error {
 		}
 	case "unix":
 		address = "http://unix"
-		SocketType = socketType
+		socketType = connectionType
 		client = &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -62,12 +62,11 @@ func Init(socketType, location string) error {
 	default:
 		return fmt.Errorf("invalid socket type %s\nmust be either tcp or unix (default tcp)", socketType)
 	}
-	SocketType = socketType
 	return nil
 }
 
 func Status() (bool, error) {
-	var resp StatusResponse
+	var resp statusResponse
 	err := getRequest("/v1/status", &resp)
 	if err != nil {
 		return false, err
@@ -76,7 +75,7 @@ func Status() (bool, error) {
 }
 
 func Torlog() (string, error) {
-	var resp TorlogResponse
+	var resp torlogResponse
 	err := getRequest("/v1/torlog", &resp)
 	if err != nil {
 		return "", err
@@ -85,7 +84,7 @@ func Torlog() (string, error) {
 }
 
 func ListContactIDs() ([]string, error) {
-	var resp ListContactIDsResponse
+	var resp listContactIDsResponse
 	err := getRequest("/v1/contact/list", &resp)
 	if err != nil {
 		return nil, err
@@ -94,7 +93,7 @@ func ListContactIDs() ([]string, error) {
 }
 
 func ListRooms() ([]string, error) {
-	var resp ListRoomsResponse
+	var resp listRoomsResponse
 	err := getRequest("/v1/room/list", &resp)
 	if err != nil {
 		return nil, err
@@ -103,7 +102,7 @@ func ListRooms() ([]string, error) {
 }
 
 func AddContactID() (string, error) {
-	var resp AddContactIDResponse
+	var resp addContactIDResponse
 	err := getRequest("/v1/contact/add", &resp)
 	if err != nil {
 		return "", err
