@@ -1,0 +1,170 @@
+package client
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/Craumix/onionmsg/internal/types"
+	"io/ioutil"
+	"net"
+	"net/http"
+)
+
+type StatusResponse struct {
+	Status string `json:"status"`
+}
+
+type TorlogResponse struct {
+	Log string `json:"log"`
+}
+
+type ListContactIDsResponse []string
+
+type ListRoomsResponse []string
+
+type AddContactIDResponse struct {
+	Fingerprint string `json:"fingerprint"`
+}
+
+type CreateRoomRequest []string
+
+type SendMessageRequest []byte
+
+var (
+	SocketType string
+	client     *http.Client
+	address    string
+)
+
+func Init(socketType, location string) error {
+	switch socketType {
+	case "tcp":
+		address = "http://" + location
+		SocketType = socketType
+		client = &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial(socketType, location)
+				},
+			},
+		}
+	case "unix":
+		address = "http://unix"
+		SocketType = socketType
+		client = &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial(socketType, location)
+				},
+			},
+		}
+	default:
+		return fmt.Errorf("Invalid socket type %s. Must be either tcp or unix. (default tcp)", socketType)
+	}
+	SocketType = socketType
+	return nil
+}
+
+func Status() (bool, error) {
+	var resp StatusResponse
+	err := getRequest("/v1/status", &resp)
+	if err != nil {
+		return false, err
+	}
+	return resp.Status == "ok", nil
+}
+
+func Torlog() (string, error) {
+	var resp TorlogResponse
+	err := getRequest("/v1/torlog", &resp)
+	if err != nil {
+		return "", err
+	}
+	return resp.Log, nil
+}
+
+func ListContactIDs() ([]string, error) {
+	var resp ListContactIDsResponse
+	err := getRequest("/v1/contact/list", &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func ListRooms() ([]string, error) {
+	var resp ListRoomsResponse
+	err := getRequest("/v1/room/list", &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func AddContactID() (string, error) {
+	var resp AddContactIDResponse
+	err := getRequest("/v1/contact/add", &resp)
+	if err != nil {
+		return "", err
+	}
+	return resp.Fingerprint, nil
+}
+
+func RemoveContactID(fingerprint string) error {
+	return getRequest(fmt.Sprintf("/v1/contact/remove?fingerprint=%s", fingerprint), nil)
+}
+
+func CreateRoom(fingerprints []string) error {
+	req, err := json.Marshal(fingerprints)
+	if err != nil {
+		return err
+	}
+	return postRequest("/v1/room/create", req, nil)
+}
+
+func DeleteRoom(uuid string) error {
+	return getRequest(fmt.Sprintf("/v1/room/delete?uuid=%s", uuid), nil)
+}
+
+func SendMessage(uuid string, mtype int, msg []byte) error {
+	return postRequest(fmt.Sprintf("/v1/room/send?uuid=%s&mtype=%d", uuid, mtype), msg, nil)
+}
+
+func ListMessages(uuid string) ([]types.Message, error) {
+	var resp []types.Message
+	err := getRequest(fmt.Sprintf("/v1/room/messages?uuid=%s", uuid), &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func getRequest(path string, v interface{}) error {
+	resp, err := client.Get(address + path)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if v != nil {
+		return json.Unmarshal(body, v)
+	}
+	return nil
+}
+
+func postRequest(path string, body []byte, v interface{}) error {
+	resp, err := client.Post(address+path, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if v != nil {
+		return json.Unmarshal(respBody, v)
+	}
+	return nil
+}
