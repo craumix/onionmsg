@@ -1,4 +1,4 @@
-module github.com/Craumix/onionmsg
+module github.com/craumix/onionmsg
 
 go 1.16
 
