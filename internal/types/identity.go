@@ -12,6 +12,8 @@ import (
 
 type Identity struct {
 	Key ed25519.PrivateKey `json:"key"`
+
+	service *HiddenService
 }
 
 func NewIdentity() *Identity {
@@ -48,7 +50,9 @@ func (i *Identity) Sign(data []byte) []byte {
 	return ed25519.Sign(i.Key, data)
 }
 
-func (i *Identity) Service() (service *HiddenService) {
-	service = NewHiddenServiceFromKey(i.Key)
-	return
+func (i *Identity) Service() *HiddenService {
+	if i.service == nil {
+		i.service = NewHiddenServiceFromKey(i.Key)
+	}
+	return i.service
 }
