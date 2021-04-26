@@ -2,7 +2,7 @@
 
 [![DeepSource](https://deepsource.io/gh/Craumix/onionmsg.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Craumix/onionmsg/?ref=repository-badge)
 [![Go Report Card](https://goreportcard.com/badge/github.com/craumix/onionmsg)](https://goreportcard.com/report/github.com/craumix/onionmsg)
-[![Tests](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml/badge.svg)](https://github.com/Craumix/onionmsg/actions/workflows/test.yaml)
+[![Tests](https://github.com/Craumix/onionmsg/actions/workflows/main.yaml/badge.svg)](https://github.com/Craumix/onionmsg/actions/workflows/main.yaml)
 
 **⚠️ This programm is not considered stable atm, and will receive breaking changes. ⚠️**
 
