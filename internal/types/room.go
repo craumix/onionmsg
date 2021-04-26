@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
 
-	"github.com/Craumix/onionmsg/internal/sio"
+	"github.com/craumix/onionmsg/internal/sio"
 )
 
 type Room struct {

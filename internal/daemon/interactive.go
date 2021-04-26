@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 

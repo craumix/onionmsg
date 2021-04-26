@@ -4,7 +4,7 @@ import (
 	"flag"
 	"time"
 
-	"github.com/Craumix/onionmsg/internal/daemon"
+	"github.com/craumix/onionmsg/internal/daemon"
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Craumix/onionmsg/internal/sio"
+	"github.com/craumix/onionmsg/internal/sio"
 	"github.com/google/uuid"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
