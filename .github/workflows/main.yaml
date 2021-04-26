@@ -20,9 +20,12 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
+    - name: Fetch dependencies
+      run: |
+      go get -d
     - name: Build Releases
       run: |
-        go build -ldflags="-s -w" -o onionmsgd-latest-linux ./cmd/onionmsgd
+        GOOS=linux go build -ldflags="-s -w" -o onionmsgd-latest-linux ./cmd/onionmsgd
         GOOS=windows go build -ldflags="-s -w" -o onionmsgd-latest-windows.exe ./cmd/onionmsgd
         GOOS=windows go build -ldflags="-s -w -H=windowsgui" -o onionmsgd-latest-windows-nogui.exe ./cmd/onionmsgd
     - name: Run UPX
@@ -33,7 +36,7 @@ jobs:
           ./onionmsgd*
         args: -fq --best
     - name: Release
-      uses: "marvinpinto/action-automatic-releases@latest"
+      uses: marvinpinto/action-automatic-releases@latest
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "latest"
