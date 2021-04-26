@@ -52,8 +52,15 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	msg := fmt.Sprintf("{\"log\":\"%s\"}", string(logs))
-
+	var torlogResp struct {
+		Log string `json:"log"`
+	}
+	torlogResp.Log = string(logs)
+	msg, err := json.Marshal(torlogResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Write([]byte(msg))
 }
 
