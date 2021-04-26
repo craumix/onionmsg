@@ -73,7 +73,7 @@ func binToMem() (string, error) {
 		return "", err
 	}
 
-	n, err := WriteToFile(memfd, "third_party/tor/tor")
+	n, err := WriteToFile(memfd, "../../third_party/tor/tor")
 	if err != nil {
 		return "", err
 	}

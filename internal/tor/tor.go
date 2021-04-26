@@ -1,5 +1,7 @@
 package tor
 
+//go:generate go-bindata -nometadata -nocompress -tags internalTor -o bindata.go -pkg tor ../../third_party/tor/tor
+
 import (
 	"io"
 	"log"
