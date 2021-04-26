@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Fetch dependencies
-      run: go get -d
+      run: go get -d ./...
     - name: Build Releases
       run: |
         GOOS=linux go build -ldflags="-s -w" -o onionmsgd-latest-linux ./cmd/onionmsgd
