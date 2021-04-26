@@ -19,6 +19,7 @@ type Room struct {
 	ID       uuid.UUID         `json:"uuid"`
 	Messages []*Message        `json:"messages"`
 	Name     string            `json:"name"`
+	Nicks    map[string]string `json:"nicks"`
 
 	queueTerminate chan bool
 }
@@ -85,10 +86,11 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Peers:    peers,
 		ID:       id,
 		Messages: make([]*Message, 0),
+		Nicks: make(map[string]string),
 	}
 
 	for _, peer := range peers {
-		room.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
+		room.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
 	}
 
 	return room, nil
@@ -134,14 +136,16 @@ func (r *Room) StopQueues() {
 func (r *Room) LogMessage(msg *Message) {
 	if msg.Type == MTYPE_CMD {
 		if msg.Content != nil {
-			r.HandleCommand(string(msg.Content))
+			r.handleCommand(msg)
 		}
 	}
 
 	r.Messages = append(r.Messages, msg)
 }
 
-func (r *Room) HandleCommand(cmd string) {
+func (r *Room) handleCommand(msg *Message) {
+	cmd := string(msg.Content)
+
 	args := strings.Split(cmd, " ")
 	switch args[0] {
 	case "join":
@@ -171,6 +175,21 @@ func (r *Room) HandleCommand(cmd string) {
 
 		r.Name = args[1]
 		log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
+	case "nick":
+		if len(args) < 3 {
+			log.Printf("Not enough args for command \"%s\"\n", cmd)
+			break
+		}
+
+		fingerprint := args[1]
+		nickname := args[2]
+
+		if(fingerprint == msg.Sender) {
+			r.Nicks[fingerprint] = nickname
+			log.Printf("Set nickname fro %s to %s", fingerprint, nickname)
+		}else {
+			log.Printf("%s tried to set nickname %s for %s this shouldn't happen!", msg.Sender, nickname, fingerprint)
+		}		
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
