@@ -2,5 +2,5 @@ internal/tor/bindata.go
 third_party/tor/tor
 
 tordir
-onionmsg
+onionmsgd
 onionmsg.zstd
