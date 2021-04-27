@@ -3,7 +3,7 @@ package daemon
 import (
 	"log"
 
-	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 )
 

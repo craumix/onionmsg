@@ -5,19 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/types"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
 )
-
-type Message struct {
-	Sender    string    `json:"sender"`
-	Time      time.Time `json:"time"`
-	Type      byte      `json:"type"`
-	Content   []byte    `json:"content"`
-	Signature []byte    `json:"signature"`
-}
 
 type statusResponse struct {
 	Status string `json:"status"`
@@ -105,17 +97,17 @@ func ListRooms() ([]string, error) {
 	return resp, nil
 }
 
-func AddContactID() (string, error) {
+func CreateContactID() (string, error) {
 	var resp addContactIDResponse
-	err := getRequest("/v1/contact/add", &resp)
+	err := getRequest("/v1/contact/create", &resp)
 	if err != nil {
 		return "", err
 	}
 	return resp.Fingerprint, nil
 }
 
-func RemoveContactID(fingerprint string) error {
-	return getRequest(fmt.Sprintf("/v1/contact/remove?fingerprint=%s", fingerprint), nil)
+func DeleteContactID(fingerprint string) error {
+	return getRequest(fmt.Sprintf("/v1/contact/delete?fingerprint=%s", fingerprint), nil)
 }
 
 func CreateRoom(fingerprints []string) error {
@@ -134,8 +126,8 @@ func SendMessage(uuid string, mtype int, msg []byte) error {
 	return postRequest(fmt.Sprintf("/v1/room/send?uuid=%s&mtype=%d", uuid, mtype), msg, nil)
 }
 
-func ListMessages(uuid string) ([]Message, error) {
-	var resp []Message
+func ListMessages(uuid string) ([]types.Message, error) {
+	var resp []types.Message
 	err := getRequest(fmt.Sprintf("/v1/room/messages?uuid=%s", uuid), &resp)
 	if err != nil {
 		return nil, err

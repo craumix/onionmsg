@@ -1,35 +1,35 @@
-package daemon
+package api
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
-	"os"
 	"strconv"
 
-	"github.com/craumix/onionmsg/internal/types"
-	"github.com/google/uuid"
+	"github.com/craumix/onionmsg/internal/daemon"
+	"github.com/craumix/onionmsg/pkg/types"
 )
 
-func startAPIServer() {
-	log.Printf("Starting API-Server %s\n", apiSocket.Addr())
+func Start(listener net.Listener) {
+	log.Printf("Starting API-Server %s\n", listener.Addr())
 
 	http.HandleFunc("/v1/status", statusRoute)
 	http.HandleFunc("/v1/torlog", torlogRoute)
 
 	http.HandleFunc("/v1/contact/list", listContactIDsRoute)
-	http.HandleFunc("/v1/contact/add", addContactIDRoute)
-	http.HandleFunc("/v1/contact/remove", rmContactIDRoute)
+	http.HandleFunc("/v1/contact/create", createContactIDRoute)
+	http.HandleFunc("/v1/contact/delete", deleteContactIDRoute)
 
 	http.HandleFunc("/v1/room/list", listRoomsRoute)
 	http.HandleFunc("/v1/room/create", createRoomRoute)
 	http.HandleFunc("/v1/room/delete", deleteRoomRoute)
 	http.HandleFunc("/v1/room/send", sendMessageRoute)
-	http.HandleFunc("/v1/room/messages", listRoomMessagesRoute)
+	http.HandleFunc("/v1/room/messages", listMessagesRoute)
 
-	err := http.Serve(apiSocket, nil)
+	err := http.Serve(listener, nil)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -40,13 +40,7 @@ func statusRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func torlogRoute(w http.ResponseWriter, req *http.Request) {
-	logfile, err := os.OpenFile(tordir+"/tor.log", os.O_RDONLY, 0600)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	logs, err := ioutil.ReadAll(logfile)
+	logs, err := daemon.GetTorlog()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -65,46 +59,39 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
-	contIDs := make([]string, 0)
-	for _, id := range data.ContactIdentities {
-		contIDs = append(contIDs, id.Fingerprint())
-	}
 
+	contIDs := daemon.ListContactIDs()
 	raw, _ := json.Marshal(&contIDs)
 
 	w.Write(raw)
 }
 
 func listRoomsRoute(w http.ResponseWriter, req *http.Request) {
-	rooms := make([]string, 0)
-	for key := range data.Rooms {
-		rooms = append(rooms, key.String())
-	}
 
+	rooms := daemon.ListRooms()
 	raw, _ := json.Marshal(&rooms)
 
 	w.Write(raw)
 }
 
-func addContactIDRoute(w http.ResponseWriter, req *http.Request) {
-	id := types.NewIdentity()
-	err := registerContactIdentity(id)
+func createContactIDRoute(w http.ResponseWriter, req *http.Request) {
+	fp, err := daemon.CreateContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", id.Fingerprint())))
+	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", fp)))
 }
 
-func rmContactIDRoute(w http.ResponseWriter, req *http.Request) {
+func deleteContactIDRoute(w http.ResponseWriter, req *http.Request) {
 	fp := req.FormValue("fingerprint")
 	if fp == "" {
 		http.Error(w, "Missing parameter \"fingerprint\"", http.StatusBadRequest)
 		return
 	}
 
-	err := deregisterContactIdentity(fp)
+	err := daemon.DeleteContactID(fp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -130,41 +117,14 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Must provide at least one contactID", http.StatusBadRequest)
 		return
 	}
-
-	ids := make([]*types.RemoteIdentity, 0)
-	for _, f := range fingerprints {
-		p, err := types.NewRemoteIdentity(f)
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-
-		ids = append(ids, p)
+	if err := daemon.CreateRoom(fingerprints); err != nil {
+		http.Error(w, "Must provide at least one contactID", http.StatusBadRequest)
+		return
 	}
-
-	go func() {
-		room, err := types.NewRoom(ids, torInstance.Proxy, contactPort, conversationPort)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-
-		err = registerRoom(room)
-		if err != nil {
-			log.Println(err.Error())
-			return
-		}
-	}()
 }
 
 func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
-	uuid, err := uuid.Parse(req.FormValue("uuid"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = deregisterRoom(uuid)
+	err := daemon.DeleteRoom(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -172,51 +132,40 @@ func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
-	uuid, err := uuid.Parse(req.FormValue("uuid"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	msgType := byte(types.MTYPE_TEXT)
 
-	var mtype int
-	if req.FormValue("type") == "" {
-		mtype = types.MTYPE_TEXT
-	} else {
-		mtype, err = strconv.Atoi(req.FormValue("type"))
+	if req.FormValue("type") != "" {
+		mtype, err := strconv.Atoi(req.FormValue("type"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if types.MTYPE_TEXT <= mtype && mtype <= types.MTYPE_BLOB {
+			msgType = byte(mtype)
+		}
 	}
 
-	room := data.Rooms[uuid]
-	if room == nil {
-		http.Error(w, "No such room "+uuid.String(), http.StatusBadRequest)
-		return
-	}
-
-	body, err := ioutil.ReadAll(req.Body)
+	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	room.SendMessage(byte(mtype), body)
+	err = daemon.SendMessage(req.FormValue("uuid"), msgType, content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 }
 
-func listRoomMessagesRoute(w http.ResponseWriter, req *http.Request) {
-	uuid, err := uuid.Parse(req.FormValue("uuid"))
+func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
+	messages, err := daemon.ListMessages(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	room := data.Rooms[uuid]
-	if room == nil {
-		http.Error(w, "No such room "+uuid.String(), http.StatusBadRequest)
-	}
-
-	raw, _ := json.Marshal(room.Messages)
+	raw, _ := json.Marshal(messages)
 
 	w.Write(raw)
 }

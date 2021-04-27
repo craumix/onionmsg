@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
 )

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"time"
 
+	"github.com/craumix/onionmsg/internal/api"
 	"github.com/craumix/onionmsg/internal/daemon"
 )
 
@@ -18,6 +19,7 @@ func main() {
 	flag.Parse()
 
 	daemon.StartDaemon(interactive, useUnixSocket)
+	api.Start(daemon.ApiSocket)
 
 	for {
 		time.Sleep(time.Second * 10)
