@@ -2,29 +2,16 @@ package openssh
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"log"
 )
 
-type OpenSSHKeyfile struct {
-	AuthMagic  string
-	Ciphername string
-	KDFName    string
-	KDFOpts    []byte
-	Comment    string
-
-	PublicKey  OpenSSHKey
-	PrivateKey OpenSSHKey
-}
-
-type OpenSSHKey struct {
-	Type    string
-	Content []byte
-}
-
-func FromFile(filename string) (*OpenSSHKeyfile, error) {
+func FromFile(filename string) (ed25519.PrivateKey, error) {
 	pemBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -33,7 +20,7 @@ func FromFile(filename string) (*OpenSSHKeyfile, error) {
 	return FromPem(pemBytes)
 }
 
-func FromPem(pemBytes []byte) (*OpenSSHKeyfile, error) {
+func FromPem(pemBytes []byte) (ed25519.PrivateKey, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
 		return nil, fmt.Errorf("unable to get pem block")
@@ -42,48 +29,67 @@ func FromPem(pemBytes []byte) (*OpenSSHKeyfile, error) {
 	return FromBytes(block.Bytes)
 }
 
-func FromBytes(raw []byte) (*OpenSSHKeyfile, error) {
-	keyfile := &OpenSSHKeyfile{}
-
+func FromBytes(raw []byte) (ed25519.PrivateKey, error) {
 	magicNullterm := bytes.Index(raw, []byte{0x00})
-	keyfile.AuthMagic = string(raw[:magicNullterm])
+	authMagic := string(raw[:magicNullterm])
 	raw = raw[magicNullterm+1:]
+	if authMagic != "openssh-key-v1" {
+		return nil, fmt.Errorf("invalid auth magic %s", authMagic)
+	}
 
-	raw, keyfile.Ciphername = readNextString(raw)
-	raw, keyfile.KDFName = readNextString(raw)
-	raw, keyfile.KDFOpts = readNextBytes(raw)
+	raw, ciphername := readNextString(raw)
+	_ = ciphername
+	raw, kdfname := readNextString(raw)
+	raw, kdfopts := readNextBytes(raw)
 	raw, num := readNextInt(raw)
 	if num != 0x01 {
 		return nil, fmt.Errorf("invalid value for number of keys %d", num)
+	}
+	
+	if kdfname == "bcrypt" && len(kdfopts) == 24 {
+		foo, salt := readNextBytes(kdfopts)
+		log.Println(hex.EncodeToString(salt))
+		_, work := readNextInt(foo)
+		log.Println(work)
 	}
 
 	//Skip Public-Key length
 	raw = raw[4:]
 
-	raw, publicType := readNextString(raw)
-	raw, publicContent := readNextBytes(raw)
-	keyfile.PublicKey = OpenSSHKey{
-		Type:    publicType,
-		Content: publicContent,
-	}
-
-	//Skip payload size
-	raw = raw[4:]
-	//Skip weird 8 bytes
-	raw = raw[8:]
-
-	raw, privateType := readNextString(raw)
-	//Skip what is probably a duplicate of the public key
+	//Skip Public Key
+	raw, _ = readNextString(raw)
 	raw, _ = readNextBytes(raw)
-	raw, privateContent := readNextBytes(raw)
-	keyfile.PrivateKey = OpenSSHKey{
-		Type:    privateType,
-		Content: privateContent,
+
+	raw, payloadSize := readNextInt(raw)
+
+	if ciphername == "none" && kdfname == "none" {
+		return keyFromPayload(raw[:payloadSize])
+	}else {
+		return nil, nil
+	}
+}
+
+func keyFromPayload(payload []byte) (ed25519.PrivateKey, error) {
+	//Skip weird 8 bytes
+	payload = payload[8:]
+
+	payload, keytype := readNextString(payload)
+	if keytype != "ssh-ed25519" {
+		return nil, fmt.Errorf("key is not of type ssh-ed25519 but of %s", keytype)
 	}
 
-	raw, keyfile.Comment = readNextString(raw)
+	//Skip what is probably a duplicate of the public key
+	payload, _ = readNextBytes(payload)
 
-	return keyfile, nil
+	payload, privatekey := readNextBytes(payload)
+	if len(privatekey) != 64 {
+		return nil, fmt.Errorf("length of private key is not 64 but %d", len(privatekey))
+	}
+
+	//Comment
+	payload, _ = readNextString(payload)
+
+	return ed25519.PrivateKey(privatekey), nil
 }
 
 func readNextInt(raw []byte) (newRaw []byte, length int) {
