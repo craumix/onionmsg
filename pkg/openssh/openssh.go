@@ -13,11 +13,13 @@ type OpenSSHKeyfile struct {
 	Ciphername string
 	KDFName    string
 	KDFOpts    []byte
+	Comment    string
 
-	PublicKey OpenSSHPublicKey
+	PublicKey  OpenSSHKey
+	PrivateKey OpenSSHKey
 }
 
-type OpenSSHPublicKey struct {
+type OpenSSHKey struct {
 	Type    string
 	Content []byte
 }
@@ -56,14 +58,30 @@ func FromBytes(raw []byte) (*OpenSSHKeyfile, error) {
 	}
 
 	//Skip Public-Key length
-	raw, _ = readNextInt(raw)
+	raw = raw[4:]
 
-	raw, keyType := readNextString(raw)
-	raw, keyContent := readNextBytes(raw)
-	keyfile.PublicKey = OpenSSHPublicKey{
-		Type: keyType,
-		Content: keyContent,
+	raw, publicType := readNextString(raw)
+	raw, publicContent := readNextBytes(raw)
+	keyfile.PublicKey = OpenSSHKey{
+		Type:    publicType,
+		Content: publicContent,
 	}
+
+	//Skip payload size
+	raw = raw[4:]
+	//Skip weird 8 bytes
+	raw = raw[8:]
+
+	raw, privateType := readNextString(raw)
+	//Skip what is probably a duplicate of the public key
+	raw, _ = readNextBytes(raw)
+	raw, privateContent := readNextBytes(raw)
+	keyfile.PrivateKey = OpenSSHKey{
+		Type:    privateType,
+		Content: privateContent,
+	}
+
+	raw, keyfile.Comment = readNextString(raw)
 
 	return keyfile, nil
 }
