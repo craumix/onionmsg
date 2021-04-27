@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"encoding/json"
 	"log"
 	"net"
 	"strconv"
@@ -61,8 +60,7 @@ func startRoomServer() error {
 					continue
 				}
 
-				msg := &types.Message{}
-				err = json.Unmarshal(raw, msg)
+				msg, err := types.MessageFromRealContentJSON(raw)
 				if err != nil {
 					log.Println(err.Error())
 					dconn.WriteBytes([]byte{0x01})

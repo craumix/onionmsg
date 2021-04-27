@@ -79,7 +79,7 @@ func (m *Message) GetContent() (res []byte) {
 	return m.RawContent
 }
 
-func (m *Message) MarshalJSON() ([]byte, error) {
+func (m *Message) AsRealContentJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Sender    string    `json:"sender"`
 		Time      time.Time `json:"time"`
@@ -95,33 +95,21 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (m *Message) UnmarshalJSON(b []byte) error {
-	i := struct {
-		Sender    string    `json:"sender"`
-		Time      time.Time `json:"time"`
-		Type      byte      `json:"type"`
-		Content   []byte    `json:"content"`
-		Signature []byte    `json:"signature"`
-	}{}
-	err := json.Unmarshal(b, &i)
+func MessageFromRealContentJSON(b []byte) (*Message, error) {
+	msg := &Message{}
+	err := json.Unmarshal(b, msg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	content, err := parseNewContent(i.Content, i.Type)
+	content, err := parseNewContent(msg.RawContent, msg.Type)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	*m = Message{
-		Sender:     i.Sender,
-		Time:       i.Time,
-		Type:       i.Type,
-		RawContent: content,
-		Signature:  i.Signature,
-	}
+	msg.RawContent = content
 
-	return nil
+	return msg, nil
 }
 
 func int64ToBytes(i int64) []byte {

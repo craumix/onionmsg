@@ -3,7 +3,6 @@ package types
 import (
 	"crypto/ed25519"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -148,7 +147,7 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 }
 
 func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) (err error) {
-	raw, _ := json.Marshal(msg)
+	raw, _ := msg.AsRealContentJSON()
 
 	_, err = dconn.WriteBytes(raw)
 	if err != nil {
