@@ -42,7 +42,7 @@ var (
 )
 
 func Init(connectionType, location string) error {
-	switch socketType {
+	switch connectionType {
 	case "tcp":
 		address = "http://" + location
 		socketType = connectionType
