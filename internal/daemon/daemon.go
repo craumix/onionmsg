@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/internal/sio"
 	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/google/uuid"
 )
 
