@@ -95,7 +95,7 @@ func keyFromPayload(payload []byte) (ed25519.PrivateKey, error) {
 	}
 
 	//Comment
-	payload, _ = readNextString(payload)
+	_, _ = readNextString(payload)
 
 	return ed25519.PrivateKey(privatekey), nil
 }
