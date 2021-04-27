@@ -105,17 +105,17 @@ func ListRooms() ([]string, error) {
 	return resp, nil
 }
 
-func AddContactID() (string, error) {
+func CreateContactID() (string, error) {
 	var resp addContactIDResponse
-	err := getRequest("/v1/contact/add", &resp)
+	err := getRequest("/v1/contact/create", &resp)
 	if err != nil {
 		return "", err
 	}
 	return resp.Fingerprint, nil
 }
 
-func RemoveContactID(fingerprint string) error {
-	return getRequest(fmt.Sprintf("/v1/contact/remove?fingerprint=%s", fingerprint), nil)
+func DeleteContactID(fingerprint string) error {
+	return getRequest(fmt.Sprintf("/v1/contact/delete?fingerprint=%s", fingerprint), nil)
 }
 
 func CreateRoom(fingerprints []string) error {

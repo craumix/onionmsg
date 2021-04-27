@@ -4,7 +4,7 @@ package tor
 
 import (
 	"fmt"
-	"github.com/craumix/onionmsg/internal/sio"
+	"github.com/craumix/onionmsg/pkg/sio"
 	"log"
 	"os"
 	"runtime"

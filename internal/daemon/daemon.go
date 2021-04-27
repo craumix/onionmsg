@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/craumix/onionmsg/internal/sio"
 	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
+	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 )
 
@@ -45,7 +45,7 @@ var (
 	}
 
 	torInstance *tor.TorInstance
-	apiSocket   net.Listener
+	ApiSocket   net.Listener
 )
 
 func StartDaemon(interactiveArg, unixSocketArg bool) {
@@ -68,15 +68,15 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	}
 
 	if unixSocket {
-		apiSocket, err = sio.CreateUnixSocket(unixSocketName)
+		ApiSocket, err = sio.CreateUnixSocket(unixSocketName)
 	} else {
-		apiSocket, err = sio.CreateTCPSocket(apiPort)
+		ApiSocket, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {
 		log.Panicln(err.Error())
 	}
 
-	go startAPIServer()
+	//go startAPIServer()
 
 	torInstance, err = tor.NewTorInstance(tordir, socksPort, controlPort)
 	if err != nil {

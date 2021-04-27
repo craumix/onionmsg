@@ -6,8 +6,8 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/craumix/onionmsg/internal/sio"
 	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 )
 
