@@ -1,5 +1,5 @@
-on: [push, pull_request, workflow_dispatch]
-name: Tests
+on: [workflow_dispatch]
+name: Release
 jobs:
   test:
     strategy:
