@@ -55,13 +55,13 @@ func FromBytes(raw []byte, password string) (ed25519.PrivateKey, error) {
 
 	if ciphername == "none" && kdfname == "none" {
 		return keyFromPayload(raw[:payloadSize])
-	}else if kdfname == "bcrypt" {
+	} else if kdfname == "bcrypt" {
 		/*
-		For reference:
-		https://peterlyons.com/problog/2017/12/openssh-ed25519-private-key-file-format/
-		https://crypto.stackexchange.com/questions/58536/how-does-openssh-use-bcrypt-to-set-ivs
-		https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
-		https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/sshkey.c?rev=1.64&content-type=text/x-cvsweb-markup&only_with_tag=MAIN
+			For reference:
+			https://peterlyons.com/problog/2017/12/openssh-ed25519-private-key-file-format/
+			https://crypto.stackexchange.com/questions/58536/how-does-openssh-use-bcrypt-to-set-ivs
+			https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
+			https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/sshkey.c?rev=1.64&content-type=text/x-cvsweb-markup&only_with_tag=MAIN
 		*/
 
 		salt := kdfopts[4:20]
@@ -69,7 +69,7 @@ func FromBytes(raw []byte, password string) (ed25519.PrivateKey, error) {
 		log.Println(salt)
 		log.Println(rounds)
 		return nil, fmt.Errorf("encrypted keys are currently not supported")
-	}else {
+	} else {
 		return nil, fmt.Errorf("unable to decrypt cipher %s with kdf %s", ciphername, kdfname)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
@@ -96,13 +95,12 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 	return room, nil
 }
 
-func (r *Room) SendMessage(mtype byte, content []byte) {
-	msg := &Message{
-		Sender:  r.Self.Fingerprint(),
-		Time:    time.Now(),
-		Type:    mtype,
-		Content: content,
+func (r *Room) SendMessage(mtype byte, content []byte) error {
+	msg, err := NewMessage(r.Self.Fingerprint(), mtype, content)
+	if err != nil {
+		return err
 	}
+
 	msg.Sign(r.Self.Key)
 
 	r.LogMessage(msg)
@@ -110,6 +108,8 @@ func (r *Room) SendMessage(mtype byte, content []byte) {
 	for _, peer := range r.Peers {
 		go peer.QueueMessage(msg)
 	}
+
+	return nil
 }
 
 func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
@@ -135,7 +135,7 @@ func (r *Room) StopQueues() {
 
 func (r *Room) LogMessage(msg *Message) {
 	if msg.Type == MTYPE_CMD {
-		if msg.Content != nil {
+		if msg.GetContent() != nil {
 			r.handleCommand(msg)
 		}
 	}
@@ -144,7 +144,7 @@ func (r *Room) LogMessage(msg *Message) {
 }
 
 func (r *Room) handleCommand(msg *Message) {
-	cmd := string(msg.Content)
+	cmd := string(msg.GetContent())
 
 	args := strings.Split(cmd, " ")
 	switch args[0] {

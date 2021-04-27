@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/internal/sio"
 	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/internal/types"
@@ -27,6 +28,7 @@ const (
 	apiPort          = 10052
 
 	tordir         = "tordir"
+	blobdir        = "onionblobs"
 	datafile       = "onionmsg.zstd"
 	unixSocketName = "onionmsg.sock"
 )
@@ -60,35 +62,40 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	}()
 	startSignalHandler()
 
+	err = blobmngr.Initialize(blobdir)
+	if err != nil {
+		log.Panicln(err.Error())
+	}
+
 	if unixSocket {
 		apiSocket, err = sio.CreateUnixSocket(unixSocketName)
 	} else {
 		apiSocket, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicln(err.Error())
 	}
 
 	go startAPIServer()
 
 	torInstance, err = tor.NewTorInstance(tordir, socksPort, controlPort)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicln(err.Error())
 	}
 
 	err = loadData()
 	if err != nil && !os.IsNotExist(err) {
-		log.Fatalf(err.Error())
+		log.Panicln(err.Error())
 	}
 	loadFuse = true
 
 	err = loadContactIdentites()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicln(err.Error())
 	}
 	err = loadRooms()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicln(err.Error())
 	}
 
 	go startContactServer()

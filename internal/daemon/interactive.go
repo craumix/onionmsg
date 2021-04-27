@@ -160,7 +160,7 @@ func startInteractive() {
 
 			for _, msg := range room.Messages {
 				log.Printf("From %s, at %s\n", msg.Sender, msg.Time)
-				log.Printf("Type %d, Content \"%s\"\n", msg.Type, string(msg.Content))
+				log.Printf("Type %d, Content \"%s\"\n", msg.Type, string(msg.GetContent()))
 			}
 
 		default:

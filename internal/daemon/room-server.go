@@ -86,7 +86,7 @@ func startRoomServer() error {
 				}
 
 				log.Printf("Read %d for message with type %d\n", len(raw), msg.Type)
-				log.Printf("For room %s with content \"%s\"\n", uid, string(msg.Content))
+				log.Printf("For room %s with content \"%s\"\n", uid, string(msg.GetContent()))
 
 				room.LogMessage(msg)
 
