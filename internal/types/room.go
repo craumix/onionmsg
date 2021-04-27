@@ -86,11 +86,11 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Peers:    peers,
 		ID:       id,
 		Messages: make([]*Message, 0),
-		Nicks: make(map[string]string),
+		Nicks:    make(map[string]string),
 	}
 
 	for _, peer := range peers {
-		room.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
+		room.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
 	}
 
 	return room, nil
@@ -184,12 +184,12 @@ func (r *Room) handleCommand(msg *Message) {
 		fingerprint := args[1]
 		nickname := args[2]
 
-		if(fingerprint == msg.Sender) {
+		if fingerprint == msg.Sender {
 			r.Nicks[fingerprint] = nickname
 			log.Printf("Set nickname fro %s to %s", fingerprint, nickname)
-		}else {
+		} else {
 			log.Printf("%s tried to set nickname %s for %s this shouldn't happen!", msg.Sender, nickname, fingerprint)
-		}		
+		}
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
