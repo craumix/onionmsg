@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/types"
 	uid "github.com/google/uuid"
 )
 

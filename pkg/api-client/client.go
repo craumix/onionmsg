@@ -5,19 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/types"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
 )
-
-type Message struct {
-	Sender    string    `json:"sender"`
-	Time      time.Time `json:"time"`
-	Type      byte      `json:"type"`
-	Content   []byte    `json:"content"`
-	Signature []byte    `json:"signature"`
-}
 
 type statusResponse struct {
 	Status string `json:"status"`
@@ -134,8 +126,8 @@ func SendMessage(uuid string, mtype int, msg []byte) error {
 	return postRequest(fmt.Sprintf("/v1/room/send?uuid=%s&mtype=%d", uuid, mtype), msg, nil)
 }
 
-func ListMessages(uuid string) ([]Message, error) {
-	var resp []Message
+func ListMessages(uuid string) ([]types.Message, error) {
+	var resp []types.Message
 	err := getRequest(fmt.Sprintf("/v1/room/messages?uuid=%s", uuid), &resp)
 	if err != nil {
 		return nil, err

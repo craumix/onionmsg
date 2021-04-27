@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
-	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/types"
 )
 
 func Start(listener net.Listener) {

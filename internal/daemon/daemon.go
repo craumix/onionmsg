@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/craumix/onionmsg/internal/tor"
-	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
