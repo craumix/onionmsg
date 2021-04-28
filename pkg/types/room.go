@@ -62,11 +62,12 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 
 	return room, nil
 }
+
 /*
 AddUser adds a user to the Room, and if successfull syncs the PeerLists.
 If not successfull returns the error.
 */
-func(r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
+func (r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
 	err := r.addUserWithContactID(contact, dialer, contactPort)
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ This only adds users, but can remove users from peers.
 */
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
-		r.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
+		r.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
 	}
 }
 
@@ -92,56 +93,56 @@ This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
 func (r *Room) addUserWithContactID(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
-	conn, err := dialer.Dial("tcp", contact.URL() + ":" + strconv.Itoa(contactPort))
-		if err != nil {
-			return err
-		}
+	conn, err := dialer.Dial("tcp", contact.URL()+":"+strconv.Itoa(contactPort))
+	if err != nil {
+		return err
+	}
 
-		dconn := sio.NewDataIO(conn)
+	dconn := sio.NewDataIO(conn)
 
-		_, err = dconn.WriteString(contact.Fingerprint())
-		if err != nil {
-			return err
-		}
+	_, err = dconn.WriteString(contact.Fingerprint())
+	if err != nil {
+		return err
+	}
 
-		_, err = dconn.WriteString(r.Self.Fingerprint())
-		if err != nil {
-			return err
-		}
+	_, err = dconn.WriteString(r.Self.Fingerprint())
+	if err != nil {
+		return err
+	}
 
-		_, err = dconn.WriteBytes(r.ID[:])
-		if err != nil {
-			return err
-		}
+	_, err = dconn.WriteBytes(r.ID[:])
+	if err != nil {
+		return err
+	}
 
-		dconn.Flush()
+	dconn.Flush()
 
-		remoteConv, err := dconn.ReadString()
-		if err != nil {
-			return err
-		}
+	remoteConv, err := dconn.ReadString()
+	if err != nil {
+		return err
+	}
 
-		sig, err := dconn.ReadBytes()
-		if err != nil {
-			return err
-		}
+	sig, err := dconn.ReadBytes()
+	if err != nil {
+		return err
+	}
 
-		dconn.Close()
+	dconn.Close()
 
-		if !contact.Verify(append([]byte(remoteConv), r.ID[:]...), sig) {
-			return fmt.Errorf("invalid signature from remote %s", contact.URL())
-		}
+	if !contact.Verify(append([]byte(remoteConv), r.ID[:]...), sig) {
+		return fmt.Errorf("invalid signature from remote %s", contact.URL())
+	}
 
-		remote, err := NewRemoteIdentity(remoteConv)
-		if err != nil {
-			return err
-		}
+	remote, err := NewRemoteIdentity(remoteConv)
+	if err != nil {
+		return err
+	}
 
-		log.Printf("Validated %s\n", contact.URL())
-		log.Printf("Conversiation ID %s\n", remoteConv)
+	log.Printf("Validated %s\n", contact.URL())
+	log.Printf("Conversiation ID %s\n", remoteConv)
 
-		r.Peers = append(r.Peers, remote)
-		return nil
+	r.Peers = append(r.Peers, remote)
+	return nil
 }
 
 func (r *Room) SendMessage(mtype byte, content []byte) error {
