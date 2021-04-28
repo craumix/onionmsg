@@ -10,7 +10,9 @@ import (
 	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/google/uuid"
 )
 
 func Start(listener net.Listener) {
@@ -18,6 +20,8 @@ func Start(listener net.Listener) {
 
 	http.HandleFunc("/v1/status", statusRoute)
 	http.HandleFunc("/v1/torlog", torlogRoute)
+
+	http.HandleFunc("/v1/blob", getBlob)
 
 	http.HandleFunc("/v1/contact/list", listContactIDsRoute)
 	http.HandleFunc("/v1/contact/create", createContactIDRoute)
@@ -56,6 +60,22 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Write([]byte(msg))
+}
+
+func getBlob(w http.ResponseWriter, req *http.Request) {
+	id, err := uuid.Parse(req.FormValue("uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	blob, err := blobmngr.GetRessource(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(blob)
 }
 
 func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
