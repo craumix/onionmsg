@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
@@ -28,58 +29,6 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 	peers := make([]*RemoteIdentity, 0)
 	id := uuid.New()
 
-	for _, c := range contactIdentities {
-		conn, err := dialer.Dial("tcp", c.URL()+":"+strconv.Itoa(contactPort))
-		if err != nil {
-			return nil, err
-		}
-
-		dconn := sio.NewDataIO(conn)
-
-		_, err = dconn.WriteString(c.Fingerprint())
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = dconn.WriteString(s.Fingerprint())
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = dconn.WriteBytes(id[:])
-		if err != nil {
-			return nil, err
-		}
-
-		dconn.Flush()
-
-		remoteConv, err := dconn.ReadString()
-		if err != nil {
-			return nil, err
-		}
-
-		sig, err := dconn.ReadBytes()
-		if err != nil {
-			return nil, err
-		}
-
-		dconn.Close()
-
-		if !c.Verify(append([]byte(remoteConv), id[:]...), sig) {
-			return nil, fmt.Errorf("invalid signature from remote %s", c.URL())
-		}
-
-		r, err := NewRemoteIdentity(remoteConv)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Printf("Validated %s\n", c.URL())
-		log.Printf("Conversiation ID %s\n", remoteConv)
-
-		peers = append(peers, r)
-	}
-
 	room := &Room{
 		Self:     s,
 		Peers:    peers,
@@ -88,11 +37,89 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Nicks:    make(map[string]string),
 	}
 
-	for _, peer := range peers {
-		room.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
+	var sharedErr *error
+	var wg sync.WaitGroup
+
+	wg.Add(len(contactIdentities))
+
+	for _, contact := range contactIdentities {
+		go func(c *RemoteIdentity) {
+			err := room.TryAddUser(c, dialer, contactPort)
+			if err != nil {
+				*sharedErr = err
+			}
+			wg.Done()
+		}(contact)
 	}
 
+	wg.Wait()
+
+	if *sharedErr != nil {
+		return nil, *sharedErr
+	}
+
+	room.SyncPeerLists()
+
 	return room, nil
+}
+
+func (r *Room) SyncPeerLists() {
+	for _, peer := range r.Peers {
+		r.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
+	}
+}
+
+func (r *Room) TryAddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
+	conn, err := dialer.Dial("tcp", contact.URL() + ":" + strconv.Itoa(contactPort))
+		if err != nil {
+			return err
+		}
+
+		dconn := sio.NewDataIO(conn)
+
+		_, err = dconn.WriteString(contact.Fingerprint())
+		if err != nil {
+			return err
+		}
+
+		_, err = dconn.WriteString(r.Self.Fingerprint())
+		if err != nil {
+			return err
+		}
+
+		_, err = dconn.WriteBytes(r.ID[:])
+		if err != nil {
+			return err
+		}
+
+		dconn.Flush()
+
+		remoteConv, err := dconn.ReadString()
+		if err != nil {
+			return err
+		}
+
+		sig, err := dconn.ReadBytes()
+		if err != nil {
+			return err
+		}
+
+		dconn.Close()
+
+		if !contact.Verify(append([]byte(remoteConv), r.ID[:]...), sig) {
+			return fmt.Errorf("invalid signature from remote %s", contact.URL())
+		}
+
+		remote, err := NewRemoteIdentity(remoteConv)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Validated %s\n", contact.URL())
+		log.Printf("Conversiation ID %s\n", remoteConv)
+
+		r.Peers = append(r.Peers, remote)
+		return nil
 }
 
 func (r *Room) SendMessage(mtype byte, content []byte) error {
