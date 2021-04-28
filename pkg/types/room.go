@@ -44,7 +44,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 
 	for _, contact := range contactIdentities {
 		go func(c *RemoteIdentity) {
-			err := room.TryAddUser(c, dialer, contactPort)
+			err := room.addUserWithContactID(c, dialer, contactPort)
 			if err != nil {
 				*sharedErr = err
 			}
@@ -58,18 +58,40 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		return nil, *sharedErr
 	}
 
-	room.SyncPeerLists()
+	room.syncPeerLists()
 
 	return room, nil
 }
+/*
+AddUser adds a user to the Room, and if successfull syncs the PeerLists.
+If not successfull returns the error.
+*/
+func(r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
+	err := r.addUserWithContactID(contact, dialer, contactPort)
+	if err != nil {
+		return err
+	}
 
-func (r *Room) SyncPeerLists() {
+	r.syncPeerLists()
+	return nil
+}
+
+/*
+Syncs the user list for all peers.
+This only adds users, but can remove users from peers.
+*/
+func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
 		r.SendMessage(MTYPE_CMD, []byte("join " + peer.Fingerprint()))
 	}
 }
 
-func (r *Room) TryAddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
+/*
+This function tries to add a user with the contactID to the room.
+This only adds the user, so the user lists are then out of sync.
+Call syncPeerLists() to sync them again.
+*/
+func (r *Room) addUserWithContactID(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
 	conn, err := dialer.Dial("tcp", contact.URL() + ":" + strconv.Itoa(contactPort))
 		if err != nil {
 			return err
