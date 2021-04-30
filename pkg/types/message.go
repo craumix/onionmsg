@@ -17,6 +17,11 @@ const (
 	MTYPE_BLOB = 0x02
 )
 
+/*
+Message is a struct that contains the data and metadata for a message.
+The RawContent is usually not the actual content, because for Blobs the Blobmanager is used
+to store them on the disk, in which case only a uuid is saved
+*/
 type Message struct {
 	Sender     string    `json:"sender"`
 	Time       time.Time `json:"time"`
@@ -25,6 +30,10 @@ type Message struct {
 	Signature  []byte    `json:"signature"`
 }
 
+/*
+NewMessage creates a new Message struct and if the Message if of type MTYPE_BLOB,
+saves the Blob to disk using the Blobmanager.
+*/
 func NewMessage(fingerprint string, mtype byte, raw []byte) (*Message, error) {
 	content, err := parseNewContent(raw, mtype)
 	if err != nil {
@@ -39,10 +48,16 @@ func NewMessage(fingerprint string, mtype byte, raw []byte) (*Message, error) {
 	}, nil
 }
 
+/*
+Sign creates a signature from the Sender, Timestamp, Type and Content using the provided PrivateKey.
+*/
 func (m *Message) Sign(priv ed25519.PrivateKey) {
 	m.Signature = ed25519.Sign(priv, m.digestBytes())
 }
 
+/*
+Verify verifies the signature of this Message against the provided PublicKey.
+*/
 func (m *Message) Verify(pub ed25519.PublicKey) bool {
 	if m.Signature == nil {
 		return false
@@ -52,14 +67,20 @@ func (m *Message) Verify(pub ed25519.PublicKey) bool {
 }
 
 func (m *Message) digestBytes() []byte {
+	time := make([]byte, 8)
+	binary.LittleEndian.PutUint64(time, uint64(m.Time.Unix()))
+
 	d := []byte(m.Sender)
-	d = append(d, int64ToBytes(m.Time.Unix())...)
+	d = append(d, time...)
 	d = append(d, m.Type)
 	d = append(d, m.GetContent()...)
 
 	return d
 }
 
+/*
+GetContent returns the real Content from this Message, as opposed to only a uuid if the type is MTYPE_BLOB.
+*/
 func (m *Message) GetContent() (res []byte) {
 	if m.Type == MTYPE_BLOB {
 		blobid, err := uuid.ParseBytes(m.RawContent)
@@ -79,6 +100,9 @@ func (m *Message) GetContent() (res []byte) {
 	return m.RawContent
 }
 
+/*
+AsRealContentJSON returns a marshaled Message struct with the RawContent replaced by the Content from getContent().
+*/
 func (m *Message) AsRealContentJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Sender    string    `json:"sender"`
@@ -95,6 +119,9 @@ func (m *Message) AsRealContentJSON() ([]byte, error) {
 	})
 }
 
+/*
+MessageFromRealContentJSON unmarshals a marshaled Message from AsRealContentJSON().
+*/
 func MessageFromRealContentJSON(b []byte) (*Message, error) {
 	msg := &Message{}
 	err := json.Unmarshal(b, msg)
@@ -112,12 +139,9 @@ func MessageFromRealContentJSON(b []byte) (*Message, error) {
 	return msg, nil
 }
 
-func int64ToBytes(i int64) []byte {
-	bs := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bs, uint64(i))
-	return bs
-}
-
+/*
+Returns the a uuid for the Blobmanager if the type is MTYPE_BLOB, else returns the original bytes.
+*/
 func parseNewContent(raw []byte, mtype byte) (content []byte, err error) {
 	if mtype == MTYPE_BLOB {
 		var id uuid.UUID

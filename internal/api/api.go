@@ -196,5 +196,5 @@ func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func addUserToRoom(w http.ResponseWriter, req *http.Request) {
-	
+
 }
