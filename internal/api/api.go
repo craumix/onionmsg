@@ -160,6 +160,10 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if mtype == types.MTYPE_CMD {
+			http.Error(w, "Raw commands are not allowed", http.StatusForbidden)
+			return
+		}
 		if types.MTYPE_TEXT <= mtype && mtype <= types.MTYPE_BLOB {
 			msgType = byte(mtype)
 		}
