@@ -32,6 +32,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/delete", deleteRoomRoute)
 	http.HandleFunc("/v1/room/send", sendMessageRoute)
 	http.HandleFunc("/v1/room/messages", listMessagesRoute)
+	http.HandleFunc("/v1/room/useradd", addUserToRoom)
 
 	err := http.Serve(listener, nil)
 	if err != nil {
@@ -192,4 +193,8 @@ func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
 	raw, _ := json.Marshal(messages)
 
 	w.Write(raw)
+}
+
+func addUserToRoom(w http.ResponseWriter, req *http.Request) {
+	
 }
