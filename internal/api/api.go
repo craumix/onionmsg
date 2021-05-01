@@ -217,14 +217,14 @@ func addUserToRoom(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func setRoomName(w http.ResponseWriter, req *http.Request)  {
+func setRoomName(w http.ResponseWriter, req *http.Request) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	msg := "name_room "+string(content)
+	msg := "name_room " + string(content)
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -238,7 +238,7 @@ func setNickname(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	msg := "nick "+string(content)
+	msg := "nick " + string(content)
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
 	if err != nil {
