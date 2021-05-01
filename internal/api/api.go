@@ -32,7 +32,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/delete", deleteRoomRoute)
 	http.HandleFunc("/v1/room/send", sendMessageRoute)
 	http.HandleFunc("/v1/room/messages", listMessagesRoute)
-	http.HandleFunc("/v1/room/useradd", addUserToRoom)
+	http.HandleFunc("/v1/room/command/useradd", addUserToRoom)
 
 	err := http.Serve(listener, nil)
 	if err != nil {
