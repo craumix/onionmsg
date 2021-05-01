@@ -226,20 +226,14 @@ func (r *Room) handleCommand(msg *Message) {
 		r.Name = args[1]
 		log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
 	case "nick":
-		if len(args) < 3 {
+		if len(args) < 2 {
 			log.Printf("Not enough args for command \"%s\"\n", cmd)
 			break
 		}
+		nickname := args[1]
 
-		fingerprint := args[1]
-		nickname := args[2]
-
-		if fingerprint == msg.Sender {
-			r.Nicks[fingerprint] = nickname
-			log.Printf("Set nickname fro %s to %s", fingerprint, nickname)
-		} else {
-			log.Printf("%s tried to set nickname %s for %s this shouldn't happen!", msg.Sender, nickname, fingerprint)
-		}
+		r.Nicks[msg.Sender] = nickname
+		log.Printf("Set nickname fro %s to %s", msg.Sender, nickname)
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}

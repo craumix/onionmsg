@@ -33,6 +33,8 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/send", sendMessageRoute)
 	http.HandleFunc("/v1/room/messages", listMessagesRoute)
 	http.HandleFunc("/v1/room/command/useradd", addUserToRoom)
+	http.HandleFunc("/v1/room/command/nameroom", setRoomName)
+	http.HandleFunc("/v1/room/command/setnickanme", setNickname)
 
 	err := http.Serve(listener, nil)
 	if err != nil {
@@ -151,6 +153,7 @@ func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+//Modify this to only send messages and create extra endpoint for blobs
 func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 	msgType := byte(types.MTYPE_TEXT)
 
@@ -210,6 +213,35 @@ func addUserToRoom(w http.ResponseWriter, req *http.Request) {
 	fingerprint := string(content)
 
 	if err := daemon.AddUserToRoom(roomID, fingerprint); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func setRoomName(w http.ResponseWriter, req *http.Request)  {
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	msg := "name_room "+string(content)
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func setNickname(w http.ResponseWriter, req *http.Request) {
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	msg := "nick "+string(content)
+
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
