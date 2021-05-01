@@ -64,8 +64,8 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 }
 
 /*
-AddUser adds a user to the Room, and if successfull syncs the PeerLists.
-If not successfull returns the error.
+AddUser adds a user to the Room, and if successful syncs the PeerLists.
+If not successful returns the error.
 */
 func (r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
 	err := r.addUserWithContactID(contact, dialer, contactPort)

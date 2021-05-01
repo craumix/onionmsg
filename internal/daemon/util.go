@@ -73,7 +73,8 @@ func CreateRoom(fingerprints []string) error {
 
 // Maybe this should be run in a goroutine
 func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
-	if data.Rooms[roomID] == nil {
+	room, ok := data.Rooms[roomID]
+	if !ok {
 		return fmt.Errorf("no such room %s", roomID)
 	}
 
@@ -82,7 +83,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 		return err
 	}
 
-	return data.Rooms[roomID].AddUser(id, torInstance.Proxy, contactPort)
+	return room.AddUser(id, torInstance.Proxy, contactPort)
 }
 
 func DeleteRoom(uuid string) error {
@@ -101,7 +102,7 @@ func SendMessage(uuid string, msgType byte, content []byte) error {
 
 	room, ok := data.Rooms[id]
 	if !ok {
-		return fmt.Errorf("No such room: %s", uuid)
+		return fmt.Errorf("no such room: %s", uuid)
 	}
 
 	return room.SendMessage(msgType, content)
@@ -115,7 +116,7 @@ func ListMessages(uuid string) ([]*types.Message, error) {
 
 	room, ok := data.Rooms[id]
 	if !ok {
-		return nil, fmt.Errorf("No such room: %s", uuid)
+		return nil, fmt.Errorf("no such room: %s", uuid)
 	}
 	return room.Messages, nil
 }
