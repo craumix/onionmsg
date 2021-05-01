@@ -139,8 +139,7 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err := daemon.CreateRoom(fingerprints); err != nil {
-		http.Error(w, "Must provide at least one contactID", http.StatusBadRequest)
-		return
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -196,5 +195,21 @@ func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 func addUserToRoom(w http.ResponseWriter, req *http.Request) {
+	roomID, err := uuid.Parse(req.FormValue("uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	fingerprint := string(content)
+
+	if err := daemon.AddUserToRoom(roomID, fingerprint); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

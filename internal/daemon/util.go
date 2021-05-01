@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/google/uuid"
 	uid "github.com/google/uuid"
 )
 
@@ -68,6 +69,20 @@ func CreateRoom(fingerprints []string) error {
 	}
 
 	return registerRoom(room)
+}
+
+// Maybe this should be run in a goroutine
+func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
+	if data.Rooms[roomID] == nil {
+		return fmt.Errorf("no such room %s", roomID)
+	}
+
+	id, err := types.NewRemoteIdentity(fingerprint)
+	if err != nil {
+		return err
+	}
+
+	return data.Rooms[roomID].AddUser(id, torInstance.Proxy, contactPort)
 }
 
 func DeleteRoom(uuid string) error {
