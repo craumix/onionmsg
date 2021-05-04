@@ -3,6 +3,7 @@ package sio
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/json"
 	"net"
 )
 
@@ -65,6 +66,24 @@ func (d *DataConn) ReadInt() (int, error) {
 	}
 
 	return bytesToInt(msg), nil
+}
+
+func (d *DataConn) WriteStruct(msg *interface{}) (int, error) {
+	m, err := json.Marshal(msg)
+	if err != nil {
+		return 0, err
+	}
+
+	return d.WriteBytes(m)
+}
+
+func (d *DataConn) ReadStruct(target *interface{}) error {
+	raw, err := d.ReadBytes()
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(raw, target)
 }
 
 //Flush writes any buffered data to the underlying io.Writer.
