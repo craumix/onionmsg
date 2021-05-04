@@ -1,13 +1,8 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
-	"image"
-	"image/png"
-
-	qrcode "github.com/skip2/go-qrcode"
 )
 
 type Identity struct {
@@ -26,20 +21,6 @@ func NewIdentity() *Identity {
 
 func (i *Identity) Fingerprint() string {
 	return i.B64PubKey()
-}
-
-func (i *Identity) QR(res int) (image.Image, error) {
-	b, err := qrcode.Encode(i.Fingerprint(), qrcode.Medium, res)
-	if err != nil {
-		return nil, err
-	}
-
-	img, err := png.Decode(bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-
-	return img, nil
 }
 
 func (i *Identity) B64PubKey() string {
