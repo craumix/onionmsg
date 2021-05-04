@@ -92,56 +92,47 @@ This function tries to add a user with the contactID to the room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) addUserWithContactID(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
-	conn, err := dialer.Dial("tcp", contact.URL()+":"+strconv.Itoa(contactPort))
+func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
+	conn, err := dialer.Dial("tcp", remote.URL()+":"+strconv.Itoa(contactPort))
 	if err != nil {
 		return err
 	}
 
 	dconn := sio.NewDataIO(conn)
 
-	_, err = dconn.WriteString(contact.Fingerprint())
-	if err != nil {
-		return err
+	req := &ContactRequest{
+		RemoteFP: remote.Fingerprint(),
+		LocalFP: r.Self.Fingerprint(),
+		ID: r.ID,
 	}
-
-	_, err = dconn.WriteString(r.Self.Fingerprint())
-	if err != nil {
-		return err
-	}
-
-	_, err = dconn.WriteBytes(r.ID[:])
+	_, err = dconn.WriteStruct(req)
 	if err != nil {
 		return err
 	}
 
 	dconn.Flush()
 
-	remoteConv, err := dconn.ReadString()
-	if err != nil {
-		return err
-	}
-
-	sig, err := dconn.ReadBytes()
+	resp := &ContactResponse{}
+	err = dconn.ReadStruct(resp)
 	if err != nil {
 		return err
 	}
 
 	dconn.Close()
 
-	if !contact.Verify(append([]byte(remoteConv), r.ID[:]...), sig) {
-		return fmt.Errorf("invalid signature from remote %s", contact.URL())
+	if !remote.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
+		return fmt.Errorf("invalid signature from remote %s", remote.URL())
 	}
 
-	remote, err := NewRemoteIdentity(remoteConv)
+	peer, err := NewRemoteIdentity(resp.ConvFP)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Validated %s\n", contact.URL())
-	log.Printf("Conversiation ID %s\n", remoteConv)
+	log.Printf("Validated %s\n", remote.URL())
+	log.Printf("Conversiation ID %s\n", resp.ConvFP)
 
-	r.Peers = append(r.Peers, remote)
+	r.Peers = append(r.Peers, peer)
 	return nil
 }
 

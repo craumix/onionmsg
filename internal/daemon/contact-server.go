@@ -7,7 +7,6 @@ import (
 
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/types"
-	"github.com/google/uuid"
 )
 
 func startContactServer() error {
@@ -27,43 +26,28 @@ func startContactServer() error {
 			dconn := sio.NewDataIO(c)
 			defer dconn.Close()
 
-			contactFingerprint, err := dconn.ReadString()
+			req := &types.ContactRequest{}
+			err = dconn.ReadStruct(req)
 			if err != nil {
 				log.Println(err.Error())
 				return
 			}
 
-			if data.ContactIdentities[contactFingerprint] == nil {
-				log.Printf("Contact id %s unknown\n", contactFingerprint)
+			if data.ContactIdentities[req.RemoteFP] == nil {
+				log.Printf("Contact id %s unknown\n", req.RemoteFP)
 				return
 			}
 
-			remoteFingerprint, err := dconn.ReadString()
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-			remoteID, _ := types.NewRemoteIdentity(remoteFingerprint)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			msg, err := dconn.ReadBytes()
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-			id, _ := uuid.FromBytes(msg)
+			remoteID, _ := types.NewRemoteIdentity(req.LocalFP)
 
 			convID := types.NewIdentity()
-			_, err = dconn.WriteString(convID.Fingerprint())
-			if err != nil {
-				log.Println(err.Error())
-				return
+
+			resp := &types.ContactResponse{
+				ConvFP: convID.Fingerprint(),
+				Sig: data.ContactIdentities[req.RemoteFP].Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
 			}
 
-			_, err = dconn.WriteBytes(data.ContactIdentities[contactFingerprint].Sign(append([]byte(convID.Fingerprint()), id[:]...)))
+			_, err = dconn.WriteStruct(resp)
 			if err != nil {
 				log.Println(err.Error())
 				return
@@ -74,7 +58,7 @@ func startContactServer() error {
 			room := &types.Room{
 				Self:     convID,
 				Peers:    []*types.RemoteIdentity{remoteID},
-				ID:       id,
+				ID:       req.ID,
 				Messages: make([]*types.Message, 0),
 			}
 			err = registerRoom(room)

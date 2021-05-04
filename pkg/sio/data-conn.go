@@ -68,7 +68,7 @@ func (d *DataConn) ReadInt() (int, error) {
 	return bytesToInt(msg), nil
 }
 
-func (d *DataConn) WriteStruct(msg *interface{}) (int, error) {
+func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
 	m, err := json.Marshal(msg)
 	if err != nil {
 		return 0, err
@@ -77,7 +77,7 @@ func (d *DataConn) WriteStruct(msg *interface{}) (int, error) {
 	return d.WriteBytes(m)
 }
 
-func (d *DataConn) ReadStruct(target *interface{}) error {
+func (d *DataConn) ReadStruct(target interface{}) error {
 	raw, err := d.ReadBytes()
 	if err != nil {
 		return err
