@@ -18,23 +18,23 @@ import (
 func Start(listener net.Listener) {
 	log.Printf("Starting API-Server %s\n", listener.Addr())
 
-	http.HandleFunc("/v1/status", statusRoute)
-	http.HandleFunc("/v1/torlog", torlogRoute)
+	http.HandleFunc("/v1/status", routeStatus)
+	http.HandleFunc("/v1/torlog", routeTorlog)
 
-	http.HandleFunc("/v1/blob", getBlob)
+	http.HandleFunc("/v1/blob", routeBlob)
 
-	http.HandleFunc("/v1/contact/list", listContactIDsRoute)
-	http.HandleFunc("/v1/contact/create", createContactIDRoute)
-	http.HandleFunc("/v1/contact/delete", deleteContactIDRoute)
+	http.HandleFunc("/v1/contact/list", routeContactList)
+	http.HandleFunc("/v1/contact/create", routeContactCreate)
+	http.HandleFunc("/v1/contact/delete", routeContactDelete)
 
-	http.HandleFunc("/v1/room/list", listRoomsRoute)
-	http.HandleFunc("/v1/room/create", createRoomRoute)
-	http.HandleFunc("/v1/room/delete", deleteRoomRoute)
-	http.HandleFunc("/v1/room/send", sendMessageRoute)
-	http.HandleFunc("/v1/room/messages", listMessagesRoute)
-	http.HandleFunc("/v1/room/command/useradd", addUserToRoom)
-	http.HandleFunc("/v1/room/command/nameroom", setRoomName)
-	http.HandleFunc("/v1/room/command/setnickanme", setNickname)
+	http.HandleFunc("/v1/room/list", routeRoomList)
+	http.HandleFunc("/v1/room/create", routeRoomCreate)
+	http.HandleFunc("/v1/room/delete", routeRoomDelete)
+	http.HandleFunc("/v1/room/send", routeRoomSend)
+	http.HandleFunc("/v1/room/messages", routeRoomMessages)
+	http.HandleFunc("/v1/room/command/useradd", routeRoomCommandUseradd)
+	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
+	http.HandleFunc("/v1/room/command/setnick", routeRoomCommandSetnick)
 
 	err := http.Serve(listener, nil)
 	if err != nil {
@@ -42,11 +42,11 @@ func Start(listener net.Listener) {
 	}
 }
 
-func statusRoute(w http.ResponseWriter, req *http.Request) {
+func routeStatus(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
-func torlogRoute(w http.ResponseWriter, req *http.Request) {
+func routeTorlog(w http.ResponseWriter, req *http.Request) {
 	logs, err := daemon.GetTorlog()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -65,7 +65,7 @@ func torlogRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(msg))
 }
 
-func getBlob(w http.ResponseWriter, req *http.Request) {
+func routeBlob(w http.ResponseWriter, req *http.Request) {
 	id, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -79,7 +79,7 @@ func getBlob(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
+func routeContactList(w http.ResponseWriter, req *http.Request) {
 
 	contIDs := daemon.ListContactIDs()
 	raw, _ := json.Marshal(&contIDs)
@@ -87,15 +87,7 @@ func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write(raw)
 }
 
-func listRoomsRoute(w http.ResponseWriter, req *http.Request) {
-
-	rooms := daemon.ListRooms()
-	raw, _ := json.Marshal(&rooms)
-
-	w.Write(raw)
-}
-
-func createContactIDRoute(w http.ResponseWriter, req *http.Request) {
+func routeContactCreate(w http.ResponseWriter, req *http.Request) {
 	fp, err := daemon.CreateContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -105,7 +97,7 @@ func createContactIDRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", fp)))
 }
 
-func deleteContactIDRoute(w http.ResponseWriter, req *http.Request) {
+func routeContactDelete(w http.ResponseWriter, req *http.Request) {
 	fp := req.FormValue("fingerprint")
 	if fp == "" {
 		http.Error(w, "Missing parameter \"fingerprint\"", http.StatusBadRequest)
@@ -119,7 +111,15 @@ func deleteContactIDRoute(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func createRoomRoute(w http.ResponseWriter, req *http.Request) {
+func routeRoomList(w http.ResponseWriter, req *http.Request) {
+
+	rooms := daemon.ListRooms()
+	raw, _ := json.Marshal(&rooms)
+
+	w.Write(raw)
+}
+
+func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
 	var fingerprints []string
 
 	body, err := ioutil.ReadAll(req.Body)
@@ -143,7 +143,7 @@ func createRoomRoute(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
+func routeRoomDelete(w http.ResponseWriter, req *http.Request) {
 	err := daemon.DeleteRoom(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -152,7 +152,7 @@ func deleteRoomRoute(w http.ResponseWriter, req *http.Request) {
 }
 
 //Modify this to only send messages and create extra endpoint for blobs
-func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
+func routeRoomSend(w http.ResponseWriter, req *http.Request) {
 	msgType := byte(types.MTYPE_TEXT)
 
 	if req.FormValue("type") != "" {
@@ -183,7 +183,7 @@ func sendMessageRoute(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
+func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 	messages, err := daemon.ListMessages(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -195,7 +195,7 @@ func listMessagesRoute(w http.ResponseWriter, req *http.Request) {
 	w.Write(raw)
 }
 
-func addUserToRoom(w http.ResponseWriter, req *http.Request) {
+func routeRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 	roomID, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -215,7 +215,7 @@ func addUserToRoom(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func setRoomName(w http.ResponseWriter, req *http.Request) {
+func routeRoomCommandNameroom(w http.ResponseWriter, req *http.Request) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -229,7 +229,7 @@ func setRoomName(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func setNickname(w http.ResponseWriter, req *http.Request) {
+func routeRoomCommandSetnick(w http.ResponseWriter, req *http.Request) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

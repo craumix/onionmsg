@@ -44,7 +44,7 @@ func Stream(id uuid.UUID, w io.Writer) error {
 	}
 
 	file.Close()
-	
+
 	return nil
 }
 
