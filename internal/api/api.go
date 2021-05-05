@@ -72,13 +72,11 @@ func getBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	blob, err := blobmngr.GetRessource(id)
+	err = blobmngr.Stream(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	w.Write(blob)
 }
 
 func listContactIDsRoute(w http.ResponseWriter, req *http.Request) {

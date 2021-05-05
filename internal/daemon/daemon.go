@@ -49,7 +49,7 @@ var (
 
 	//Set at build time
 	LastCommit = "unknown"
-	BuildVer = "unknown"
+	BuildVer   = "unknown"
 )
 
 func StartDaemon(interactiveArg, unixSocketArg bool) {
