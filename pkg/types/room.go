@@ -94,8 +94,8 @@ func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer,
 
 	req := &ContactRequest{
 		RemoteFP: remote.Fingerprint(),
-		LocalFP: r.Self.Fingerprint(),
-		ID: r.ID,
+		LocalFP:  r.Self.Fingerprint(),
+		ID:       r.ID,
 	}
 	_, err = dconn.WriteStruct(req)
 	if err != nil {

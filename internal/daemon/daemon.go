@@ -46,6 +46,10 @@ var (
 
 	torInstance *tor.TorInstance
 	ApiSocket   net.Listener
+
+	//Set at build time
+	LastCommit = "unknown"
+	BuildVer = "unknown"
 )
 
 func StartDaemon(interactiveArg, unixSocketArg bool) {
@@ -61,6 +65,8 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 		}
 	}()
 	startSignalHandler()
+
+	log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
 
 	err = blobmngr.Initialize(blobdir)
 	if err != nil {

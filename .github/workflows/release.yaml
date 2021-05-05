@@ -14,9 +14,13 @@ jobs:
       run: go get -d ./...
     - name: Build Releases
       run: |
-        GOOS=linux go build -ldflags="-s -w" -o onionmsgd-latest-linux ./cmd/onionmsgd
-        GOOS=windows go build -ldflags="-s -w" -o onionmsgd-latest-windows.exe ./cmd/onionmsgd
-        GOOS=windows go build -ldflags="-s -w -H=windowsgui" -o onionmsgd-latest-windows-nogui.exe ./cmd/onionmsgd
+        export MODULENAME=$(head -n 1 go.mod |  cut -d' ' -f2)
+        export COMMIT_FLAG="-X '$MODULENAME/internal/daemon.LastCommit=$(git rev-list -1 HEAD | head -c 7)'"
+        export BUILDVER_FLAG="-X '$MODULENAME/internal/daemon.BuildVer=$(go version)'"
+        export VARFLAGS="-s -w $COMMIT_FLAG $BUILDVER_FLAG"
+        GOOS=linux go build -ldflags="$VARFLAGS" -o onionmsgd-latest-linux ./cmd/onionmsgd
+        GOOS=windows go build -ldflags="$VARFLAGS" -o onionmsgd-latest-windows.exe ./cmd/onionmsgd
+        GOOS=windows go build -ldflags="$VARFLAGS -H=windowsgui" -o onionmsgd-latest-windows-nogui.exe ./cmd/onionmsgd
     - name: Run UPX
       uses: crazy-max/ghaction-upx@v1
       with:
