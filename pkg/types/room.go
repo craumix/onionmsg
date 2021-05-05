@@ -5,10 +5,10 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/craumix/onionmsg/pkg/sio"
 )
@@ -37,25 +37,17 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		Nicks:    make(map[string]string),
 	}
 
-	var sharedErr *error
-	var wg sync.WaitGroup
-
-	wg.Add(len(contactIdentities))
+	errG := new(errgroup.Group)
 
 	for _, contact := range contactIdentities {
-		go func(c *RemoteIdentity) {
-			err := room.addUserWithContactID(c, dialer, contactPort)
-			if err != nil {
-				*sharedErr = err
-			}
-			wg.Done()
-		}(contact)
+		contact := contact
+		errG.Go(func() error {
+			return room.addUserWithContactID(contact, dialer, contactPort)
+		})
 	}
 
-	wg.Wait()
-
-	if *sharedErr != nil {
-		return nil, *sharedErr
+	if err := errG.Wait(); err != nil {
+		return nil, err
 	}
 
 	room.syncPeerLists()
