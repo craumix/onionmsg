@@ -1,3 +1,5 @@
+// +build darwin windows
+
 package sio
 
 import (
