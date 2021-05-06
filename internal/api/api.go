@@ -72,7 +72,7 @@ func routeBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = blobmngr.Stream(id, w)
+	err = blobmngr.StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

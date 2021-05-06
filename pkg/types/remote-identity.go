@@ -2,12 +2,15 @@ package types
 
 import (
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 	"github.com/wybiral/torgo"
@@ -16,12 +19,14 @@ import (
 
 const (
 	queueTimeout = time.Second * 15
+	blocksize    = 4096
 )
 
 type RemoteIdentity struct {
 	Pub   ed25519.PublicKey `json:"public_key"`
 	Queue []*Message        `json:"queue"`
 
+	sender           *Identity
 	dialer           proxy.Dialer
 	convPort         int
 	roomID           uuid.UUID
@@ -33,13 +38,13 @@ type RemoteIdentity struct {
 }
 
 func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
-	k, err := base64.RawURLEncoding.DecodeString(fingerprint)
+	raw, err := base64.RawURLEncoding.DecodeString(fingerprint)
 	if err != nil {
 		return nil, err
 	}
 
 	return &RemoteIdentity{
-		Pub: ed25519.PublicKey(k),
+		Pub: ed25519.PublicKey(raw),
 	}, nil
 }
 
@@ -64,7 +69,8 @@ func (i *RemoteIdentity) ServiceID() (id string) {
 	return
 }
 
-func (i *RemoteIdentity) InitQueue(dialer proxy.Dialer, conversationPort int, roomID uuid.UUID, terminate chan bool) {
+func (i *RemoteIdentity) InitQueue(sender *Identity, dialer proxy.Dialer, conversationPort int, roomID uuid.UUID, terminate chan bool) {
+	i.sender = sender
 	i.dialer = dialer
 	i.convPort = conversationPort
 	i.roomID = roomID
@@ -146,23 +152,84 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 	}
 }
 
-func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) (err error) {
-	raw, _ := msg.AsRealContentJSON()
+func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
+	meta, _ := json.Marshal(msg.Meta)
 
-	_, err = dconn.WriteBytes(raw)
+	_, err := dconn.WriteBytes(meta)
 	if err != nil {
-		return
+		return err
 	}
+
+	sig := i.sender.Sign(meta)
+	_, err = dconn.WriteBytes(sig)
+	if err != nil {
+		return err
+	}
+
+	hash := sha256.New()
+	hash.Write(sig)
+	if msg.Meta.Type != MTYPE_BLOB {
+		_, err = dconn.WriteBytes(msg.Content)
+		if err != nil {
+			return err
+		}
+
+		hash.Write(msg.Content)
+	} else {
+		id, _ := uuid.ParseBytes(msg.Content)
+		stat, err := blobmngr.StatFromID(id)
+		if err != nil {
+			return err
+		}
+
+		blockcount := int(stat.Size() / blocksize)
+		if stat.Size()%blocksize != 0 {
+			blockcount++
+		}
+
+		_, err = dconn.WriteInt(blockcount)
+		if err != nil {
+			return err
+		}
+
+		file, err := blobmngr.FileFromID(id)
+		if err != nil {
+			return err
+		}
+
+		buf := make([]byte, blocksize)
+		for i := 0; i < blockcount; i++ {
+			n, err := file.Read(buf)
+			if err != nil {
+				return err
+			}
+
+			_, err = dconn.WriteBytes(buf[:n])
+			if err != nil {
+				return err
+			}
+
+			hash.Write(buf[:n])
+		}
+	}
+
+	sig = i.sender.Sign(hash.Sum(nil))
+	_, err = dconn.WriteBytes(sig)
+	if err != nil {
+		return err
+	}
+
 	dconn.Flush()
 
-	state, err := dconn.ReadBytes()
+	resp, err := dconn.ReadInt()
 	if err != nil {
-		return
+		return err
 	}
 
-	if state[0] != 0x00 {
-		err = fmt.Errorf("received invalid state for message %d", state[0])
+	if resp != 0 {
+		return fmt.Errorf("received invalid error response code %d", resp)
+
 	}
 
-	return
+	return nil
 }

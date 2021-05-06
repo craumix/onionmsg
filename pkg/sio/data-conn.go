@@ -4,7 +4,12 @@ import (
 	"bufio"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"net"
+)
+
+const (
+	maxBufSize = 16384
 )
 
 type DataConn struct {
@@ -29,6 +34,11 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 	_, err := d.buffer.Read(l)
 	if err != nil {
 		return nil, err
+	}
+
+	bufSize := bytesToInt(l)
+	if bufSize > maxBufSize {
+		return nil, fmt.Errorf("%d exceeds buffer size limit", bufSize)
 	}
 
 	msg := make([]byte, bytesToInt(l))

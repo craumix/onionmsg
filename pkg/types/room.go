@@ -134,8 +134,6 @@ func (r *Room) SendMessage(mtype byte, content []byte) error {
 		return err
 	}
 
-	msg.Sign(r.Self.Key)
-
 	r.LogMessage(msg)
 
 	for _, peer := range r.Peers {
@@ -148,7 +146,7 @@ func (r *Room) SendMessage(mtype byte, content []byte) error {
 func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
 	r.queueTerminate = make(chan bool)
 	for _, peer := range r.Peers {
-		peer.InitQueue(dialer, conversationPort, r.ID, r.queueTerminate)
+		peer.InitQueue(r.Self, dialer, conversationPort, r.ID, r.queueTerminate)
 		go peer.RunMessageQueue()
 	}
 }
@@ -167,17 +165,15 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) LogMessage(msg *Message) {
-	if msg.Type == MTYPE_CMD {
-		if msg.GetContent() != nil {
-			r.handleCommand(msg)
-		}
+	if msg.Meta.Type == MTYPE_CMD {
+		r.handleCommand(msg)
 	}
 
 	r.Messages = append(r.Messages, msg)
 }
 
 func (r *Room) handleCommand(msg *Message) {
-	cmd := string(msg.GetContent())
+	cmd := string(msg.Content)
 
 	args := strings.Split(cmd, " ")
 	switch args[0] {
@@ -215,8 +211,8 @@ func (r *Room) handleCommand(msg *Message) {
 		}
 		nickname := args[1]
 
-		r.Nicks[msg.Sender] = nickname
-		log.Printf("Set nickname fro %s to %s", msg.Sender, nickname)
+		r.Nicks[msg.Meta.Sender] = nickname
+		log.Printf("Set nickname fro %s to %s", msg.Meta.Sender, nickname)
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
