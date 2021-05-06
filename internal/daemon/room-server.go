@@ -58,7 +58,7 @@ func startRoomServer() error {
 			for i := 0; i < amount; i++ {
 				msg, err := readMessage(dconn, room)
 				if err != nil {
-					log.Printf(err.Error())
+					log.Print(err.Error())
 					dconn.WriteInt(1)
 					dconn.Flush()
 					continue
