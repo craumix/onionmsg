@@ -153,14 +153,19 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 }
 
 func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
-	meta, _ := json.Marshal(msg.Meta)
-
-	_, err := dconn.WriteBytes(meta)
+	sigSalt, err := dconn.ReadBytes()
 	if err != nil {
 		return err
 	}
 
-	sig := i.sender.Sign(meta)
+	meta, _ := json.Marshal(msg.Meta)
+
+	_, err = dconn.WriteBytes(meta)
+	if err != nil {
+		return err
+	}
+
+	sig := i.sender.Sign(append(sigSalt, meta...))
 	_, err = dconn.WriteBytes(sig)
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -76,13 +77,20 @@ func startRoomServer() error {
 }
 
 func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) {
-	rawmeta, err := dconn.ReadBytes()
+	sigSalt := make([]byte, 16)
+	rand.Read(sigSalt)
+	_, err := dconn.WriteBytes(sigSalt)
+	if err != nil {
+		return nil, err
+	}
+
+	rawMeta, err := dconn.ReadBytes()
 	if err != nil {
 		return nil, err
 	}
 
 	meta := types.MessageMeta{}
-	err = json.Unmarshal(rawmeta, &meta)
+	err = json.Unmarshal(rawMeta, &meta)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +105,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		return nil, err
 	}
 
-	if !sender.Verify(rawmeta, sig) {
+	if !sender.Verify(append(sigSalt, rawMeta...), sig) {
 		return nil, fmt.Errorf("invalid sig for meta of message from %s", meta.Sender)
 	}
 
