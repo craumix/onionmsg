@@ -85,7 +85,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 	}
 	dconn.Flush()
 
-	rawMeta, err := dconn.ReadBytes()
+	rawMeta, _ := dconn.ReadBytes()
 	sig, err := dconn.ReadBytes()
 	if err != nil {
 		return nil, err
