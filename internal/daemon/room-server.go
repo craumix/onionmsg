@@ -83,8 +83,10 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 	if err != nil {
 		return nil, err
 	}
+	dconn.Flush()
 
 	rawMeta, err := dconn.ReadBytes()
+	sig, err := dconn.ReadBytes()
 	if err != nil {
 		return nil, err
 	}
@@ -100,14 +102,12 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		return nil, fmt.Errorf("no peer with fingerprint %s in room %s", meta.Sender, room.ID)
 	}
 
-	sig, err := dconn.ReadBytes()
-	if err != nil {
-		return nil, err
-	}
-
 	if !sender.Verify(append(sigSalt, rawMeta...), sig) {
 		return nil, fmt.Errorf("invalid sig for meta of message from %s", meta.Sender)
 	}
+
+	dconn.WriteInt(0)
+	dconn.Flush()
 
 	var content []byte
 

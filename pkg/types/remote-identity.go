@@ -170,6 +170,14 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 	if err != nil {
 		return err
 	}
+	dconn.Flush()
+
+	resp, err := dconn.ReadInt()
+	if err != nil {
+		return err
+	}else if resp != 0 {
+		return fmt.Errorf("received invalid error response code %d", resp)
+	}
 
 	hash := sha256.New()
 	hash.Write(sig)
@@ -226,14 +234,11 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 
 	dconn.Flush()
 
-	resp, err := dconn.ReadInt()
+	resp, err = dconn.ReadInt()
 	if err != nil {
 		return err
-	}
-
-	if resp != 0 {
+	}else if resp != 0 {
 		return fmt.Errorf("received invalid error response code %d", resp)
-
 	}
 
 	return nil
