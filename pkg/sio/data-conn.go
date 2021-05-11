@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	maxBufSize = 16384
+	//16K
+	maxBufSize = 2 ^ ^14
 )
 
 type DataConn struct {

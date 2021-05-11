@@ -175,7 +175,7 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 	resp, err := dconn.ReadInt()
 	if err != nil {
 		return err
-	}else if resp != 0 {
+	} else if resp != 0 {
 		return fmt.Errorf("received invalid error response code %d", resp)
 	}
 
@@ -237,7 +237,7 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 	resp, err = dconn.ReadInt()
 	if err != nil {
 		return err
-	}else if resp != 0 {
+	} else if resp != 0 {
 		return fmt.Errorf("received invalid error response code %d", resp)
 	}
 

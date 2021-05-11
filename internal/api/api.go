@@ -7,12 +7,18 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
+)
+
+const (
+	//8K
+	maxMessageSize = 2 ^ ^13
+	//2G
+	maxFileSize = 2 ^ ^32
 )
 
 func Start(listener net.Listener) {
@@ -30,7 +36,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/list", routeRoomList)
 	http.HandleFunc("/v1/room/create", routeRoomCreate)
 	http.HandleFunc("/v1/room/delete", routeRoomDelete)
-	http.HandleFunc("/v1/room/send", routeRoomSend)
+	http.HandleFunc("/v1/room/send/message", routeRoomSendMessage)
 	http.HandleFunc("/v1/room/messages", routeRoomMessages)
 	http.HandleFunc("/v1/room/command/useradd", routeRoomCommandUseradd)
 	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
@@ -152,31 +158,19 @@ func routeRoomDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 //Modify this to only send messages and create extra endpoint for blobs
-func routeRoomSend(w http.ResponseWriter, req *http.Request) {
-	msgType := byte(types.MTYPE_TEXT)
-
-	if req.FormValue("type") != "" {
-		mtype, err := strconv.Atoi(req.FormValue("type"))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if mtype == types.MTYPE_CMD {
-			http.Error(w, "Raw commands are not allowed", http.StatusForbidden)
-			return
-		}
-		if types.MTYPE_TEXT <= mtype && mtype <= types.MTYPE_BLOB {
-			msgType = byte(mtype)
-		}
-	}
-
+func routeRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), msgType, content)
+	if len(content) > maxMessageSize {
+		http.Error(w, fmt.Sprintf("message to big, cannot be greater %d", maxMessageSize), http.StatusBadRequest)
+		return
+	}
+
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_TEXT, content)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
