@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	daemon.StartDaemon(interactive, useUnixSocket)
-	api.Start(daemon.ApiSocket)
+	api.Start(daemon.APISocket)
 
 	for {
 		time.Sleep(time.Second * 10)

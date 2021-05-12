@@ -45,13 +45,18 @@ var (
 	}
 
 	torInstance *tor.TorInstance
-	ApiSocket   net.Listener
+	//APISocket is the socket that the API for frontend is served on
+	APISocket   net.Listener
 
-	//Set at build time
+	//LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
+	//BuildVer is the Go Version used to build this programm, obviously injected at build time
 	BuildVer   = "unknown"
 )
 
+//StartDaemon is used to start the application for creating identites and rooms.
+//Also sending/receiving messages etc.
+//Basically everything except the frontend API.
 func StartDaemon(interactiveArg, unixSocketArg bool) {
 	var err error
 
@@ -74,9 +79,9 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	}
 
 	if unixSocket {
-		ApiSocket, err = sio.CreateUnixSocket(unixSocketName)
+		APISocket, err = sio.CreateUnixSocket(unixSocketName)
 	} else {
-		ApiSocket, err = sio.CreateTCPSocket(apiPort)
+		APISocket, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {
 		log.Panicln(err.Error())
