@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func loadRooms() (err error) {
+func initExistingRooms() (err error) {
 	for _, i := range data.Rooms {
 		s := i.Self.Service()
 		s.LocalProxy(conversationPort, conversationPort)

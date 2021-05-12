@@ -6,7 +6,7 @@ import (
 	"github.com/craumix/onionmsg/pkg/types"
 )
 
-func loadContactIdentites() (err error) {
+func initExistingContactIDs() (err error) {
 	for _, i := range data.ContactIdentities {
 		s := i.Service()
 		s.LocalProxy(contactPort, contactPort)

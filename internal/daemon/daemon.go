@@ -95,11 +95,11 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	}
 	loadFuse = true
 
-	err = loadContactIdentites()
+	err = initExistingContactIDs()
 	if err != nil {
 		log.Panicln(err.Error())
 	}
-	err = loadRooms()
+	err = initExistingRooms()
 	if err != nil {
 		log.Panicln(err.Error())
 	}
