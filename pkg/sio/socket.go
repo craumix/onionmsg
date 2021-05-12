@@ -9,6 +9,9 @@ import (
 	"strconv"
 )
 
+//CreateUnixSocket tries to create a unix socket with the specified name.
+//Tries to use the path from env XDG_RUNTIME_DIR.
+//If XDG_RUNTIME_DIR is not set, the socket is created in /tmp.
 func CreateUnixSocket(name string) (socket net.Listener, err error) {
 	if runtime.GOOS == "linux" {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
@@ -36,6 +39,7 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 	return
 }
 
+//CreateTCPSocket creates a socket listening on the loopback interface with the specified port.
 func CreateTCPSocket(port int) (socket net.Listener, err error) {
 	address := "127.0.0.1:" + strconv.Itoa(port)
 	log.Printf("Starting socket on on %s\n", address)

@@ -14,8 +14,8 @@ const (
 )
 
 //DataConn is a helper struct to simplify communication over a net.Conn.
-//Also tries to save bandwith by using a manually flushed bufio.ReadWriter.
-//Has a artifical limit of 16K for message size.
+//Also tries to save bandwidth by using a manually flushed bufio.ReadWriter.
+//Has a artificial limit of 16K for message size.
 type DataConn struct {
 	buffer *bufio.ReadWriter
 	conn   net.Conn

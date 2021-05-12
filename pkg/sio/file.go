@@ -9,6 +9,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
+//SaveDataCompressed marshals the provided struct, zstd compresses it and the writes it to the file specified by the provided path.
 func SaveDataCompressed(datafile string, src interface{}) error {
 	file, err := os.OpenFile(datafile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
@@ -31,6 +32,7 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 	return nil
 }
 
+//LoadCompressedData loads the file specified by the path, zstd decompresses it and the tries to unmarshal it into the provided struct.
 func LoadCompressedData(datafile string, dest interface{}) error {
 	file, err := os.OpenFile(datafile, os.O_RDONLY, 0600)
 	if err != nil {
