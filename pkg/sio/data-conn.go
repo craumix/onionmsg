@@ -31,6 +31,9 @@ func NewDataIO(conn net.Conn) *DataConn {
 
 //WriteBytes writes a byte slice with a size of <= 16K to the connection.
 func (d *DataConn) WriteBytes(msg []byte) (int, error) {
+	if len(msg) > maxBufSize {
+		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxBufSize)
+	}
 	n, err := d.buffer.Write(append(intToBytes(len(msg)), msg...))
 	return n, err
 }
