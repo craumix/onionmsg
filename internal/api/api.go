@@ -90,9 +90,7 @@ func routeBlob(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeAvatar(w http.ResponseWriter, req *http.Request) {
-	seedStr := req.FormValue("seed")
-
-	w.Write(adorable.PseudoRandom([]byte(seedStr)))
+	w.Write(adorable.PseudoRandom([]byte(req.FormValue("seed"))))
 }
 
 func routeContactList(w http.ResponseWriter, req *http.Request) {
@@ -216,11 +214,11 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	for {
 		n, err = req.Body.Read(buf)
 		if err != nil || n > 0 {
-			break;
+			break
 		}
 		_, err = file.Write(buf[:n])
 		if err != nil {
-			break;
+			break
 		}
 	}
 	if err != nil {
