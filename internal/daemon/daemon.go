@@ -46,17 +46,17 @@ var (
 
 	torInstance *tor.TorInstance
 	//APISocket is the socket that the API for frontend is served on
-	APISocket   net.Listener
+	APISocket net.Listener
 
 	//LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
 	//BuildVer is the Go Version used to build this programm, obviously injected at build time
-	BuildVer   = "unknown"
+	BuildVer = "unknown"
 )
 
-//StartDaemon is used to start the application for creating identites and rooms.
-//Also sending/receiving messages etc.
-//Basically everything except the frontend API.
+/*StartDaemon is used to start the application for creating identites and rooms.
+Also sending/receiving messages etc.
+Basically everything except the frontend API.*/
 func StartDaemon(interactiveArg, unixSocketArg bool) {
 	var err error
 

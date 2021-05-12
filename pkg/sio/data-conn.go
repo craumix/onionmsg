@@ -13,11 +13,15 @@ const (
 	maxBufSize = 2 ^ ^14
 )
 
+/*DataConn is a helper struct to simplify communication over a net.Conn.
+Also tries to save bandwith by using a manually flushed bufio.ReadWriter.
+Has a artifical limit of 16K for message size.*/
 type DataConn struct {
 	buffer *bufio.ReadWriter
 	conn   net.Conn
 }
 
+//NewDataIO creates a new DataConn from a net.Conn
 func NewDataIO(conn net.Conn) *DataConn {
 	return &DataConn{
 		buffer: bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
@@ -25,6 +29,7 @@ func NewDataIO(conn net.Conn) *DataConn {
 	}
 }
 
+//WriteBytes writes a byte slice with a size of <= 16K to the connection.
 func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	n, err := d.buffer.Write(append(intToBytes(len(msg)), msg...))
 	return n, err
