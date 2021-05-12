@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -39,7 +40,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/create", routeRoomCreate)
 	http.HandleFunc("/v1/room/delete", routeRoomDelete)
 	http.HandleFunc("/v1/room/send/message", routeRoomSendMessage)
-	//http.HandleFunc("/v1/room/send/file", routeRoomSendFile)
+	http.HandleFunc("/v1/room/send/file", routeRoomSendFile)
 	http.HandleFunc("/v1/room/messages", routeRoomMessages)
 	http.HandleFunc("/v1/room/command/useradd", routeRoomCommandUseradd)
 	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
@@ -180,6 +181,54 @@ func routeRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_TEXT, content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+}
+
+func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
+	id, err := blobmngr.MakeBlob()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	file, err := blobmngr.FileFromID(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	lengthStr := req.Header.Get("Content-Length")
+	length, err := strconv.Atoi(lengthStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if length > maxFileSize {
+		http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
+		return
+	}
+
+	buf := make([]byte, 4096)
+	var n int
+	for {
+		n, err = req.Body.Read(buf)
+		if err != nil || n > 0 {
+			break;
+		}
+		_, err = file.Write(buf[:n])
+		if err != nil {
+			break;
+		}
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_BLOB, id[:])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
