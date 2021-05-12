@@ -13,9 +13,9 @@ const (
 	maxBufSize = 2 ^ ^14
 )
 
-/*DataConn is a helper struct to simplify communication over a net.Conn.
-Also tries to save bandwith by using a manually flushed bufio.ReadWriter.
-Has a artifical limit of 16K for message size.*/
+//DataConn is a helper struct to simplify communication over a net.Conn.
+//Also tries to save bandwith by using a manually flushed bufio.ReadWriter.
+//Has a artifical limit of 16K for message size.
 type DataConn struct {
 	buffer *bufio.ReadWriter
 	conn   net.Conn
@@ -29,7 +29,9 @@ func NewDataIO(conn net.Conn) *DataConn {
 	}
 }
 
-//WriteBytes writes a byte slice with a size of <= 16K to the connection.
+//WriteBytes writes a byte slice to the connection.
+//It returns the number of bytes written.
+//If n < len(msg), it also returns an error explaining why the write is short.
 func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	if len(msg) > maxBufSize {
 		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxBufSize)
@@ -38,6 +40,7 @@ func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	return n, err
 }
 
+//ReadBytes reads a byte slice from the underlying connection
 func (d *DataConn) ReadBytes() ([]byte, error) {
 	l := make([]byte, 4)
 	_, err := d.buffer.Read(l)
@@ -59,11 +62,15 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 	return msg, nil
 }
 
+//WriteString writes the specified string to the underlying connectrion
+//It returns the number of bytes written.
+//If n < len(msg), it also returns an error explaining why the write is short.
 func (d *DataConn) WriteString(msg string) (int, error) {
 	n, err := d.WriteBytes([]byte(msg))
 	return n, err
 }
 
+//ReadString reads a string from the underlying connection
 func (d *DataConn) ReadString() (string, error) {
 	msg, err := d.ReadBytes()
 	if err != nil {
@@ -73,11 +80,15 @@ func (d *DataConn) ReadString() (string, error) {
 	return string(msg), nil
 }
 
+//WriteInt writes the specified int to the underlying connection
+//It returns the number of bytes written.
+//If n < 4, it also returns an error explaining why the write is short.
 func (d *DataConn) WriteInt(msg int) (int, error) {
 	n, err := d.WriteBytes(intToBytes(msg))
 	return n, err
 }
 
+//ReadInt reades an int from the underlying connection
 func (d *DataConn) ReadInt() (int, error) {
 	msg, err := d.ReadBytes()
 	if err != nil {
@@ -87,6 +98,9 @@ func (d *DataConn) ReadInt() (int, error) {
 	return bytesToInt(msg), nil
 }
 
+//WriteStruct serializes and then writes the specified struct to the underlying connection
+//It returns the number of bytes written.
+//If n < len(json.Marshal(msg)), it also returns an error explaining why the write is short.
 func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
 	m, err := json.Marshal(msg)
 	if err != nil {
@@ -96,6 +110,7 @@ func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
 	return d.WriteBytes(m)
 }
 
+//ReadStruct reades an serialzed struct from the underlying connection and unmarshals it into the provided struct
 func (d *DataConn) ReadStruct(target interface{}) error {
 	raw, err := d.ReadBytes()
 	if err != nil {

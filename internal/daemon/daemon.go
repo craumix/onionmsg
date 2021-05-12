@@ -54,9 +54,9 @@ var (
 	BuildVer = "unknown"
 )
 
-/*StartDaemon is used to start the application for creating identites and rooms.
-Also sending/receiving messages etc.
-Basically everything except the frontend API.*/
+//StartDaemon is used to start the application for creating identites and rooms.
+//Also sending/receiving messages etc.
+//Basically everything except the frontend API.
 func StartDaemon(interactiveArg, unixSocketArg bool) {
 	var err error
 
