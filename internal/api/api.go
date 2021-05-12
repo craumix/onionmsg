@@ -12,6 +12,7 @@ import (
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
+	"github.com/ipsn/go-adorable"
 )
 
 const (
@@ -28,6 +29,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/torlog", routeTorlog)
 
 	http.HandleFunc("/v1/blob", routeBlob)
+	http.HandleFunc("/v1/avatar", routeAvatar)
 
 	http.HandleFunc("/v1/contact/list", routeContactList)
 	http.HandleFunc("/v1/contact/create", routeContactCreate)
@@ -37,6 +39,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/create", routeRoomCreate)
 	http.HandleFunc("/v1/room/delete", routeRoomDelete)
 	http.HandleFunc("/v1/room/send/message", routeRoomSendMessage)
+	//http.HandleFunc("/v1/room/send/file", routeRoomSendFile)
 	http.HandleFunc("/v1/room/messages", routeRoomMessages)
 	http.HandleFunc("/v1/room/command/useradd", routeRoomCommandUseradd)
 	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
@@ -83,6 +86,12 @@ func routeBlob(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func routeAvatar(w http.ResponseWriter, req *http.Request) {
+	seedStr := req.FormValue("seed")
+
+	w.Write(adorable.PseudoRandom([]byte(seedStr)))
 }
 
 func routeContactList(w http.ResponseWriter, req *http.Request) {
