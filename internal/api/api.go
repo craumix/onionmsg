@@ -18,9 +18,9 @@ import (
 
 const (
 	//8K
-	maxMessageSize = 2 ^ ^13
+	maxMessageSize = 2 << 14
 	//2G
-	maxFileSize = 2 ^ ^32
+	maxFileSize = 2 << 30
 )
 
 func Start(listener net.Listener) {

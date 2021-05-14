@@ -10,7 +10,7 @@ import (
 
 const (
 	//16K
-	maxBufSize = 2 ^ ^14
+	maxBufSize = 2 << 13
 )
 
 //DataConn is a helper struct to simplify communication over a net.Conn.
