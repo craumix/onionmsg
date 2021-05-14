@@ -122,8 +122,8 @@ func DeleteRoom(uuid string) error {
 	return getRequest(fmt.Sprintf("/v1/room/delete?uuid=%s", uuid), nil)
 }
 
-func SendMessage(uuid string, mtype int, msg []byte) error {
-	return postRequest(fmt.Sprintf("/v1/room/send?uuid=%s&mtype=%d", uuid, mtype), msg, nil)
+func SendMessage(uuid string, msg []byte) error {
+	return postRequest(fmt.Sprintf("/v1/room/send/message?uuid=%s", uuid), msg, nil)
 }
 
 func ListMessages(uuid string) ([]types.Message, error) {
