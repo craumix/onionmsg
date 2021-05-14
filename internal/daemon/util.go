@@ -91,7 +91,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 	return room.AddUser(id, torInstance.Proxy, contactPort)
 }
 
-//DeleteRoom deletes the room with the specified uuid
+//DeleteRoom deletes the room with the specified uuid.
 func DeleteRoom(uuid string) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
@@ -127,7 +127,6 @@ func ListMessages(uuid string) ([]*types.Message, error) {
 	return room.Messages, nil
 }
 
-
 func GetRoom(id uuid.UUID) (*types.Room, bool) {
 	for _, r := range data.Rooms {
 		if r.ID == id {
@@ -155,7 +154,7 @@ func deleteRoomFromSlice(item *types.Room) {
 	}
 
 	data.Rooms[len(data.Rooms)-1], data.Rooms[i] = data.Rooms[i], data.Rooms[len(data.Rooms)-1]
-	data.Rooms = data.Rooms[:len(data.Rooms) - 1]
+	data.Rooms = data.Rooms[:len(data.Rooms)-1]
 }
 
 func deleteContactIDFromSlice(item *types.Identity) {
@@ -167,5 +166,5 @@ func deleteContactIDFromSlice(item *types.Identity) {
 	}
 
 	data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
-	data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities) - 1]
+	data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
 }
