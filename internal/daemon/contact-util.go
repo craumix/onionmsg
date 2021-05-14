@@ -31,7 +31,7 @@ func registerContactIdentity(i *types.Identity) error {
 		return err
 	}
 
-	data.ContactIdentities[i.Fingerprint()] = i
+	data.ContactIdentities = append(data.ContactIdentities, i)
 
 	log.Printf("Registered contact identity %s\n", i.Fingerprint())
 
@@ -39,17 +39,17 @@ func registerContactIdentity(i *types.Identity) error {
 }
 
 func deregisterContactIdentity(fingerprint string) error {
-	if data.ContactIdentities[fingerprint] == nil {
+	i, ok := GetContactID(fingerprint)
+	if !ok {
 		return nil
 	}
 
-	i := data.ContactIdentities[fingerprint]
 	err := torInstance.Controller.DeleteOnion(i.Service().Onion().ServiceID)
 	if err != nil {
 		return err
 	}
 
-	delete(data.ContactIdentities, fingerprint)
+	deleteContactIDFromSlice(i)
 
 	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
 

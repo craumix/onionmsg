@@ -36,7 +36,7 @@ func registerRoom(room *types.Room) error {
 		return err
 	}
 
-	data.Rooms[room.ID] = room
+	data.Rooms = append(data.Rooms, room)
 
 	log.Printf("Registered Room %s\n", room.ID)
 
@@ -46,19 +46,18 @@ func registerRoom(room *types.Room) error {
 }
 
 func deregisterRoom(id uuid.UUID) error {
-	if data.Rooms[id] == nil {
+	room, ok := GetRoom(id)
+	if !ok {
 		return nil
 	}
-
-	room := data.Rooms[id]
 	err := torInstance.Controller.DeleteOnion(room.Self.Service().Onion().ServiceID)
 	if err != nil {
 		return err
 	}
 
-	data.Rooms[id].StopQueues()
+	room.StopQueues()
 
-	delete(data.Rooms, id)
+	deleteRoomFromSlice(room)
 
 	log.Printf("Deregistered Room %s\n", id)
 

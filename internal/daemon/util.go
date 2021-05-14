@@ -33,8 +33,8 @@ func ListContactIDs() []string {
 
 func ListRooms() []string {
 	rooms := make([]string, 0)
-	for key := range data.Rooms {
-		rooms = append(rooms, key.String())
+	for _, r := range data.Rooms {
+		rooms = append(rooms, r.ID.String())
 	}
 	return rooms
 }
@@ -73,7 +73,7 @@ func CreateRoom(fingerprints []string) error {
 
 // Maybe this should be run in a goroutine
 func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
-	room, ok := data.Rooms[roomID]
+	room, ok := GetRoom(roomID)
 	if !ok {
 		return fmt.Errorf("no such room %s", roomID)
 	}
@@ -100,7 +100,7 @@ func SendMessage(uuid string, msgType byte, content []byte) error {
 		return err
 	}
 
-	room, ok := data.Rooms[id]
+	room, ok := GetRoom(id)
 	if !ok {
 		return fmt.Errorf("no such room: %s", uuid)
 	}
@@ -114,9 +114,52 @@ func ListMessages(uuid string) ([]*types.Message, error) {
 		return nil, err
 	}
 
-	room, ok := data.Rooms[id]
+	room, ok := GetRoom(id)
 	if !ok {
 		return nil, fmt.Errorf("no such room: %s", uuid)
 	}
 	return room.Messages, nil
+}
+
+
+func GetRoom(id uuid.UUID) (*types.Room, bool) {
+	for _, r := range data.Rooms {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return nil, false
+}
+
+func GetContactID(fingerprint string) (*types.Identity, bool) {
+	for _, i := range data.ContactIdentities {
+		if i.Fingerprint() == fingerprint {
+			return i, true
+		}
+	}
+	return nil, false
+}
+
+func deleteRoomFromSlice(item *types.Room) {
+	var i int
+	for j, e := range data.Rooms {
+		if e == item {
+			i = j
+		}
+	}
+
+	data.Rooms[len(data.Rooms)-1], data.Rooms[i] = data.Rooms[i], data.Rooms[len(data.Rooms)-1]
+	data.Rooms = data.Rooms[:len(data.Rooms) - 1]
+}
+
+func deleteContactIDFromSlice(item *types.Identity) {
+	var i int
+	for j, e := range data.ContactIdentities {
+		if e == item {
+			i = j
+		}
+	}
+
+	data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
+	data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities) - 1]
 }

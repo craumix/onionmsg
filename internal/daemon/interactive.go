@@ -130,8 +130,8 @@ func startInteractive() {
 				continue
 			}
 
-			room := data.Rooms[id]
-			if room == nil {
+			room, ok := GetRoom(id)
+			if !ok {
 				log.Println("No such room")
 				continue
 			}
@@ -152,8 +152,8 @@ func startInteractive() {
 				continue
 			}
 
-			room := data.Rooms[id]
-			if room == nil {
+			room, ok := GetRoom(id)
+			if !ok {
 				log.Println("No such room")
 				continue
 			}

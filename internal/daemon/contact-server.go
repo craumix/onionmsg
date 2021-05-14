@@ -33,7 +33,8 @@ func startContactServer() error {
 				return
 			}
 
-			if data.ContactIdentities[req.RemoteFP] == nil {
+			cont, ok := GetContactID(req.RemoteFP)
+			if !ok {
 				log.Printf("Contact id %s unknown\n", req.RemoteFP)
 				return
 			}
@@ -44,7 +45,7 @@ func startContactServer() error {
 
 			resp := &types.ContactResponse{
 				ConvFP: convID.Fingerprint(),
-				Sig:    data.ContactIdentities[req.RemoteFP].Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
+				Sig:    cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
 			}
 
 			_, err = dconn.WriteStruct(resp)

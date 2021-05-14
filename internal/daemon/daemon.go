@@ -11,13 +11,12 @@ import (
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/types"
-	"github.com/google/uuid"
 )
 
 /*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
-	ContactIdentities map[string]*types.Identity `json:"contact_identities"`
-	Rooms             map[uuid.UUID]*types.Room  `json:"rooms"`
+	ContactIdentities []*types.Identity `json:"contact_identities"`
+	Rooms             []*types.Room     `json:"rooms"`
 }
 
 const (
@@ -40,8 +39,8 @@ var (
 	loadFuse bool
 
 	data = SerializableData{
-		ContactIdentities: make(map[string]*types.Identity),
-		Rooms:             make(map[uuid.UUID]*types.Room),
+		ContactIdentities: make([]*types.Identity, 0),
+		Rooms:             make([]*types.Room, 0),
 	}
 
 	torInstance *tor.TorInstance

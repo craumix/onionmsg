@@ -44,8 +44,8 @@ func startRoomServer() error {
 				return
 			}
 
-			room := data.Rooms[id]
-			if room == nil {
+			room, ok := GetRoom(id)
+			if !ok {
 				log.Printf("Unknown room with %s\n", id)
 				return
 			}
