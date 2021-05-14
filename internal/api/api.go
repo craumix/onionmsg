@@ -212,10 +212,11 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	buf := make([]byte, 4096)
 	var n int
 	for {
-		n, err = req.Body.Read(buf)
-		if err != nil || n > 0 {
+		n, _ = req.Body.Read(buf)
+		if n == 0 {
 			break
 		}
+
 		_, err = file.Write(buf[:n])
 		if err != nil {
 			break

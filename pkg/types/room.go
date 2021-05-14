@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/proxy"
@@ -129,9 +130,13 @@ func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer,
 }
 
 func (r *Room) SendMessage(mtype byte, content []byte) error {
-	msg, err := NewMessage(r.Self.Fingerprint(), mtype, content)
-	if err != nil {
-		return err
+	msg := &Message{
+		Meta: MessageMeta{
+			Sender: r.Self.Fingerprint(),
+			Time: time.Now(),
+			Type: mtype,
+		},
+		Content: content,
 	}
 
 	r.LogMessage(msg)

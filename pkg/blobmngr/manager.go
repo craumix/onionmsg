@@ -49,7 +49,7 @@ func StreamTo(id uuid.UUID, w io.Writer) error {
 }
 
 func FileFromID(id uuid.UUID) (*os.File, error) {
-	return os.OpenFile(resolveResPath(id), os.O_RDONLY, 0600)
+	return os.OpenFile(resolveResPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
 func StatFromID(id uuid.UUID) (fs.FileInfo, error) {

@@ -189,7 +189,11 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 
 		hash.Write(msg.Content)
 	} else {
-		id, _ := uuid.ParseBytes(msg.Content)
+		id, err := uuid.FromBytes(msg.Content)
+		if err != nil {
+			return err
+		}
+		
 		stat, err := blobmngr.StatFromID(id)
 		if err != nil {
 			return err
