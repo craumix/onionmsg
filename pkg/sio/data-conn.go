@@ -53,13 +53,18 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 		return nil, fmt.Errorf("%d exceeds buffer size limit", bufSize)
 	}
 
-	msg := make([]byte, bytesToInt(l))
-	_, err = d.buffer.Read(msg)
-	if err != nil {
-		return nil, err
+	total := make([]byte, 0)
+	for len(total) < bufSize {
+		tmp := make([]byte, bufSize - len(total))
+		n, err := d.buffer.Read(tmp)
+		if err != nil {
+			return nil, err
+		}
+
+		total = append(total, tmp[:n]...)
 	}
 
-	return msg, nil
+	return total, nil
 }
 
 //WriteString writes the specified string to the underlying connectrion
