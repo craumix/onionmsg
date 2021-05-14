@@ -193,7 +193,7 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 		if err != nil {
 			return err
 		}
-		
+
 		stat, err := blobmngr.StatFromID(id)
 		if err != nil {
 			return err

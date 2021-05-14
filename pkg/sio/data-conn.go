@@ -55,7 +55,7 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 
 	total := make([]byte, 0)
 	for len(total) < bufSize {
-		tmp := make([]byte, bufSize - len(total))
+		tmp := make([]byte, bufSize-len(total))
 		n, err := d.buffer.Read(tmp)
 		if err != nil {
 			return nil, err
