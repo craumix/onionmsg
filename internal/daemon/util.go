@@ -10,6 +10,7 @@ import (
 	uid "github.com/google/uuid"
 )
 
+//GetTorlog returns the log of the used to instance.
 func GetTorlog() (string, error) {
 	logfile, err := os.OpenFile(tordir+"/tor.log", os.O_RDONLY, 0600)
 	if err != nil {
@@ -23,6 +24,7 @@ func GetTorlog() (string, error) {
 	return string(logs), nil
 }
 
+//ListContactIDs returns a list of all the contactid's fingerprints.
 func ListContactIDs() []string {
 	contIDs := make([]string, 0)
 	for _, id := range data.ContactIdentities {
@@ -31,6 +33,7 @@ func ListContactIDs() []string {
 	return contIDs
 }
 
+//ListRooms returns a list of all the rooms uuid's formated as strings.
 func ListRooms() []string {
 	rooms := make([]string, 0)
 	for _, r := range data.Rooms {
@@ -39,6 +42,7 @@ func ListRooms() []string {
 	return rooms
 }
 
+//CreateContactID generates and registers a new contact id and returns its fingerprint.
 func CreateContactID() (string, error) {
 	id := types.NewIdentity()
 	err := registerContactIdentity(id)
@@ -48,6 +52,7 @@ func CreateContactID() (string, error) {
 	return id.Fingerprint(), nil
 }
 
+//DeleteContactID deletes and deregisters a contact id.
 func DeleteContactID(fingerprint string) error {
 	return deregisterContactIdentity(fingerprint)
 }
@@ -86,6 +91,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 	return room.AddUser(id, torInstance.Proxy, contactPort)
 }
 
+//DeleteRoom deletes the room with the specified uuid
 func DeleteRoom(uuid string) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
