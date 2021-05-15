@@ -19,7 +19,8 @@ import (
 
 const (
 	queueTimeout = time.Second * 15
-	blocksize    = 4096
+	//512K
+	blocksize    = 1 << 19
 )
 
 type RemoteIdentity struct {
@@ -158,36 +159,23 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 		return err
 	}
 
-	meta, _ := json.Marshal(msg.Meta)
-
-	_, err = dconn.WriteBytes(meta)
-	if err != nil {
-		return err
-	}
-
-	sig := i.sender.Sign(append(sigSalt, meta...))
-	_, err = dconn.WriteBytes(sig)
+	_, err = dconn.WriteString(msg.Meta.Sender)
 	if err != nil {
 		return err
 	}
 	dconn.Flush()
 
-	resp, err := dconn.ReadInt()
+	meta, _ := json.Marshal(msg.Meta)
+	err = i.writeBlock(dconn, sigSalt, meta)
 	if err != nil {
 		return err
-	} else if resp != 0 {
-		return fmt.Errorf("received invalid error response code %d", resp)
 	}
 
-	hash := sha256.New()
-	hash.Write(sig)
 	if msg.Meta.Type != MTYPE_BLOB {
-		_, err = dconn.WriteBytes(msg.Content)
+		err = i.writeBlock(dconn, sigSalt, msg.Content)
 		if err != nil {
 			return err
 		}
-
-		hash.Write(msg.Content)
 	} else {
 		id, err := uuid.FromBytes(msg.Content)
 		if err != nil {
@@ -215,35 +203,50 @@ func (i *RemoteIdentity) sendMessage(msg *Message, dconn *sio.DataConn) error {
 		}
 
 		buf := make([]byte, blocksize)
-		for i := 0; i < blockcount; i++ {
+		for c := 0; c < blockcount; c++ {
 			n, err := file.Read(buf)
 			if err != nil {
 				return err
 			}
 
-			_, err = dconn.WriteBytes(buf[:n])
+			err = i.writeBlock(dconn, sigSalt, buf[:n])
 			if err != nil {
 				return err
 			}
-
-			hash.Write(buf[:n])
 		}
 	}
 
-	sig = i.sender.Sign(hash.Sum(nil))
-	_, err = dconn.WriteBytes(sig)
-	if err != nil {
-		return err
-	}
-
-	dconn.Flush()
-
-	resp, err = dconn.ReadInt()
-	if err != nil {
-		return err
-	} else if resp != 0 {
-		return fmt.Errorf("received invalid error response code %d", resp)
-	}
-
 	return nil
+}
+
+func (i *RemoteIdentity) writeBlock(dconn *sio.DataConn, sigSalt, block []byte) error {
+	for {
+		_, err := dconn.WriteBytes(block)
+		if err != nil {
+			return err
+		}
+
+		hash := sha256.Sum256(block)
+		sig := i.sender.Sign(append(sigSalt, hash[:]...))
+		_, err = dconn.WriteBytes(sig)
+		if err != nil {
+			return err
+		}
+
+		dconn.Flush()
+
+		resp, err := dconn.ReadString()
+		if err != nil {
+			return err
+		}
+		log.Println("Resp " + resp)
+		switch resp {
+		case "ok":
+			return nil
+		case "resend":
+			continue
+		case "abort":
+			return fmt.Errorf("block sending aborted by peer")
+		}
+	}
 }

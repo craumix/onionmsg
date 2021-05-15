@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	//16K
-	maxBufSize = 2 << 13
+	//1M
+	maxBufSize = 1 << 20
 )
 
 //DataConn is a helper struct to simplify communication over a net.Conn.
@@ -36,6 +36,7 @@ func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 	if len(msg) > maxBufSize {
 		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxBufSize)
 	}
+
 	n, err := d.buffer.Write(append(intToBytes(len(msg)), msg...))
 	return n, err
 }
@@ -53,7 +54,7 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 		return nil, fmt.Errorf("%d exceeds buffer size limit", bufSize)
 	}
 
-	total := make([]byte, 0)
+	var total []byte
 	for len(total) < bufSize {
 		tmp := make([]byte, bufSize-len(total))
 		n, err := d.buffer.Read(tmp)
