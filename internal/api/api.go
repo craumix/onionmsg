@@ -53,6 +53,7 @@ func Start(listener net.Listener) {
 }
 
 func routeStatus(w http.ResponseWriter, req *http.Request) {
+	setJSONContentHeader(w)
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
@@ -94,11 +95,7 @@ func routeAvatar(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeContactList(w http.ResponseWriter, req *http.Request) {
-
-	contIDs := daemon.ListContactIDs()
-	raw, _ := json.Marshal(&contIDs)
-
-	w.Write(raw)
+	sendSerialized(w, daemon.ListContactIDs())
 }
 
 func routeContactCreate(w http.ResponseWriter, req *http.Request) {
@@ -108,6 +105,7 @@ func routeContactCreate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	setJSONContentHeader(w)
 	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", fp)))
 }
 
@@ -126,9 +124,7 @@ func routeContactDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeRoomList(w http.ResponseWriter, req *http.Request) {
-	raw, _ := json.Marshal(daemon.ListRooms())
-
-	w.Write(raw)
+	sendSerialized(w, daemon.ListRooms())
 }
 
 func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
@@ -239,9 +235,7 @@ func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	raw, _ := json.Marshal(messages)
-
-	w.Write(raw)
+	sendSerialized(w, messages)
 }
 
 func routeRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
