@@ -19,8 +19,6 @@ type torlogResponse struct {
 	Log string `json:"log"`
 }
 
-type listContactIDsResponse []string
-
 type listRoomsResponse []string
 
 type addContactIDResponse struct {
@@ -79,8 +77,8 @@ func Torlog() (string, error) {
 	return resp.Log, nil
 }
 
-func ListContactIDs() ([]string, error) {
-	var resp listContactIDsResponse
+func ListContactIDs() ([]*types.RoomInfo, error) {
+	var resp []*types.RoomInfo
 	err := getRequest("/v1/contact/list", &resp)
 	if err != nil {
 		return nil, err
