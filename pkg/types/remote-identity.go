@@ -20,7 +20,7 @@ import (
 const (
 	queueTimeout = time.Second * 15
 	//512K
-	blocksize    = 1 << 19
+	blocksize = 1 << 19
 )
 
 type RemoteIdentity struct {
@@ -120,16 +120,17 @@ func (i *RemoteIdentity) RunMessageQueue() error {
 			dconn.WriteBytes(i.roomID[:])
 			dconn.WriteInt(len(i.Queue))
 			dconn.Flush()
+
 			for index, msg := range i.Queue {
 				err = i.sendMessage(msg, dconn)
 				if err != nil {
 					log.Println(err.Error())
+					i.Queue = i.Queue[index:]
 					break
 				}
-
-				copy(i.Queue[index:], i.Queue[index+1:]) // Shift a[i+1:] left one index.
-				i.Queue[len(i.Queue)-1] = nil            // Erase last element (write zero value).
-				i.Queue = i.Queue[:len(i.Queue)-1]       // Truncate slice.
+			}
+			if err == nil {
+				i.Queue = make([]*Message, 0)
 			}
 		}
 
@@ -239,7 +240,7 @@ func (i *RemoteIdentity) writeBlock(dconn *sio.DataConn, sigSalt, block []byte) 
 		if err != nil {
 			return err
 		}
-		log.Println("Resp " + resp)
+
 		switch resp {
 		case "ok":
 			return nil

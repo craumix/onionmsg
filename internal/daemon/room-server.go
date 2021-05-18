@@ -91,11 +91,15 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	meta := types.MessageMeta{}
 	err = json.Unmarshal(rawMeta, &meta)
 	if err != nil {
 		return nil, err
+	}
+
+	if sender.Fingerprint() != meta.Sender {
+		return nil, fmt.Errorf("fingerprint mismatch on msg receive %s and %s", senderFP, room.ID)
 	}
 
 	var content []byte
@@ -120,7 +124,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		if err != nil {
 			return nil, err
 		}
-		
+
 		for i := 0; i < blockcount; i++ {
 			buf, err := readBlock(*dconn, sender, sigSalt)
 			if err != nil {
@@ -158,7 +162,7 @@ func readBlock(dconn sio.DataConn, sender *types.RemoteIdentity, sigSalt []byte)
 			dconn.WriteString("resend")
 			dconn.Flush()
 			continue
-		}else {
+		} else {
 			dconn.WriteString("abort")
 			dconn.Flush()
 			return nil, fmt.Errorf("too many erros while reading block")
