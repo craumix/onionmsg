@@ -126,9 +126,7 @@ func routeContactDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeRoomList(w http.ResponseWriter, req *http.Request) {
-
-	rooms := daemon.ListRooms()
-	raw, _ := json.Marshal(&rooms)
+	raw, _ := json.Marshal(daemon.ListRooms())
 
 	w.Write(raw)
 }

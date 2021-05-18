@@ -25,6 +25,14 @@ type Room struct {
 	queueTerminate chan bool
 }
 
+type RoomInfo struct {
+	Self  string            `json:"self"`
+	Peers []string          `json:"peers"`
+	ID    uuid.UUID         `json:"uuid"`
+	Name  string            `json:"name,omitempty"`
+	Nicks map[string]string `json:"nicks,omitempty"`
+}
+
 func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
 	s := NewIdentity()
 	peers := make([]*RemoteIdentity, 0)
@@ -221,4 +229,20 @@ func (r *Room) handleCommand(msg *Message) {
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
+}
+
+//Info returns a struct with most information about this room
+func (r *Room) Info() *RoomInfo {
+	info := &RoomInfo{
+		Self:  r.Self.Fingerprint(),
+		ID:    r.ID,
+		Name:  r.Name,
+		Nicks: r.Nicks,
+	}
+
+	for _, p := range r.Peers {
+		info.Peers = append(info.Peers, p.Fingerprint())
+	}
+
+	return info
 }

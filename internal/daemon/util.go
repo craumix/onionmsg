@@ -33,12 +33,13 @@ func ListContactIDs() []string {
 	return contIDs
 }
 
-//ListRooms returns a list of all the rooms uuid's formated as strings.
-func ListRooms() []string {
-	rooms := make([]string, 0)
+//ListRooms returns a marshaled list of all the rooms with most information
+func ListRooms() []*types.RoomInfo {
+	rooms := make([]*types.RoomInfo, 0)
 	for _, r := range data.Rooms {
-		rooms = append(rooms, r.ID.String())
+		rooms = append(rooms, r.Info())
 	}
+
 	return rooms
 }
 
