@@ -141,7 +141,7 @@ func (r *Room) SendMessage(mtype byte, content []byte) error {
 	msg := &Message{
 		Meta: MessageMeta{
 			Sender: r.Self.Fingerprint(),
-			Time:   time.Now(),
+			Time:   time.Now().UTC(),
 			Type:   mtype,
 		},
 		Content: content,
