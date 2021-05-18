@@ -170,8 +170,8 @@ func readBlock(dconn sio.DataConn, sender *types.RemoteIdentity, sigSalt []byte)
 	}
 }
 
-func writeRandom(dconn *sio.DataConn, len int) ([]byte, error) {
-	r := make([]byte, len)
+func writeRandom(dconn *sio.DataConn, length int) ([]byte, error) {
+	r := make([]byte, length)
 	rand.Read(r)
 	_, err := dconn.WriteBytes(r)
 	if err != nil {
