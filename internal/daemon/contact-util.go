@@ -9,7 +9,7 @@ import (
 func initExistingContactIDs() (err error) {
 	for _, i := range data.ContactIdentities {
 		s := i.Service()
-		s.LocalProxy(contactPort, contactPort)
+		s.LocalProxy(types.PubContPort, loContPort)
 
 		err = torInstance.Controller.AddOnion(s.Onion())
 		if err != nil {
@@ -23,10 +23,10 @@ func initExistingContactIDs() (err error) {
 }
 
 func registerContactIdentity(i *types.Identity) error {
-	service := i.Service()
-	service.LocalProxy(contactPort, contactPort)
+	s := i.Service()
+	s.LocalProxy(types.PubContPort, loContPort)
 
-	err := torInstance.Controller.AddOnion(service.Onion())
+	err := torInstance.Controller.AddOnion(s.Onion())
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 func startContactServer() error {
-	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(contactPort))
+	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(loContPort))
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func startContactServer() error {
 
 			room := &types.Room{
 				Self:     convID,
-				Peers:    []*types.RemoteIdentity{remoteID},
+				Peers:    []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
 				ID:       req.ID,
 				Messages: make([]*types.Message, 0),
 			}

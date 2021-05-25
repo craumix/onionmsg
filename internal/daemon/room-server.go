@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,7 +15,7 @@ import (
 )
 
 func startRoomServer() error {
-	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(conversationPort))
+	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(loConvPort))
 	if err != nil {
 		return err
 	}
@@ -60,7 +59,8 @@ func startRoomServer() error {
 				msg, err := readMessage(dconn, room)
 				if err != nil {
 					log.Print(err.Error())
-					continue
+					dconn.Close()
+					break
 				}
 
 				log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
@@ -77,17 +77,8 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		return nil, err
 	}
 
-	senderFP, err := dconn.ReadString()
-	if err != nil {
-		return nil, err
-	}
-
-	sender := room.PeerByFingerprint(senderFP)
-	if sender == nil {
-		return nil, fmt.Errorf("no peer with fingerprint %s in room %s", senderFP, room.ID)
-	}
-
-	rawMeta, err := readBlock(*dconn, sender, sigSalt)
+	rawMeta, _ := dconn.ReadBytes()
+	sig, err := dconn.ReadBytes()
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +89,19 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		return nil, err
 	}
 
-	if sender.Fingerprint() != meta.Sender {
-		return nil, fmt.Errorf("fingerprint mismatch on msg receive %s and %s", senderFP, room.ID)
+	sender := room.PeerByFingerprint(meta.Sender)
+	if sender == nil || !sender.Verify(append(sigSalt, rawMeta...), sig) {
+		dconn.WriteString("invalid_meta")
+		dconn.Flush()
+		return nil, fmt.Errorf("received invalid meta for message")
 	}
+
+	dconn.WriteString("ok")
+	dconn.Flush()
 
 	var content []byte
 	if meta.Type != types.MTYPE_BLOB {
-		content, err = readBlock(*dconn, sender, sigSalt)
+		content, err = readDataWithSig(*dconn, sender, sigSalt)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +123,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		}
 
 		for i := 0; i < blockcount; i++ {
-			buf, err := readBlock(*dconn, sender, sigSalt)
+			buf, err := readDataWithSig(*dconn, sender, sigSalt)
 			if err != nil {
 				return nil, err
 			}
@@ -144,30 +141,21 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 	}, nil
 }
 
-func readBlock(dconn sio.DataConn, sender *types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
-	errCount := 0
-	for {
-		block, _ := dconn.ReadBytes()
-		sig, _ := dconn.ReadBytes()
-
-		hash := sha256.Sum256(block)
-		if sender.Verify(append(sigSalt, hash[:]...), sig) {
-			dconn.WriteString("ok")
-			dconn.Flush()
-			return block, nil
-		}
-
-		errCount++
-		if errCount < 10 {
-			dconn.WriteString("resend")
-			dconn.Flush()
-			continue
-		} else {
-			dconn.WriteString("abort")
-			dconn.Flush()
-			return nil, fmt.Errorf("too many erros while reading block")
-		}
+func readDataWithSig(dconn sio.DataConn, sender *types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
+	content, _ := dconn.ReadBytes()
+	sig, err := dconn.ReadBytes()
+	if err != nil {
+		return nil, err
 	}
+
+	defer dconn.Flush()
+	if !sender.Verify(append(sigSalt, content...), sig) {
+		dconn.WriteString("invalid_sig")
+		return nil, fmt.Errorf("invalid signature from remote")
+	}
+
+	dconn.WriteString("ok")
+	return content, nil
 }
 
 func writeRandom(dconn *sio.DataConn, length int) ([]byte, error) {

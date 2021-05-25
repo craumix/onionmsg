@@ -69,7 +69,7 @@ func CreateRoom(fingerprints []string) error {
 		ids = append(ids, id)
 	}
 
-	room, err := types.NewRoom(ids, torInstance.Proxy, contactPort, conversationPort)
+	room, err := types.NewRoom(ids, torInstance.Proxy)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 		return err
 	}
 
-	return room.AddUser(id, torInstance.Proxy, contactPort)
+	return room.AddUser(id, torInstance.Proxy)
 }
 
 //DeleteRoom deletes the room with the specified uuid.

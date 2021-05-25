@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	PubContPort = 10050
+	PubConvPort = 10051
+)
+
 type ContactRequest struct {
 	RemoteFP string
 	LocalFP  string

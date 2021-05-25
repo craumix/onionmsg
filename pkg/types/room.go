@@ -16,11 +16,11 @@ import (
 
 type Room struct {
 	Self     *Identity         `json:"self"`
-	Peers    []*RemoteIdentity `json:"peers"`
+	Peers    []*MessagingPeer  `json:"peers"`
 	ID       uuid.UUID         `json:"uuid"`
-	Messages []*Message        `json:"messages"`
 	Name     string            `json:"name"`
 	Nicks    map[string]string `json:"nicks"`
+	Messages []*Message        `json:"messages"`
 
 	queueTerminate chan bool
 }
@@ -33,9 +33,9 @@ type RoomInfo struct {
 	Nicks map[string]string `json:"nicks,omitempty"`
 }
 
-func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPort, conversationPort int) (*Room, error) {
+func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer) (*Room, error) {
 	s := NewIdentity()
-	peers := make([]*RemoteIdentity, 0)
+	peers := make([]*MessagingPeer, 0)
 	id := uuid.New()
 
 	room := &Room{
@@ -51,7 +51,8 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 	for _, contact := range contactIdentities {
 		contact := contact
 		errG.Go(func() error {
-			return room.addUserWithContactID(contact, dialer, contactPort)
+			_, err := room.addUserWithContactID(contact, dialer)
+			return err
 		})
 	}
 
@@ -59,6 +60,7 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 		return nil, err
 	}
 
+	room.RunRemoteMessageQueues(dialer)
 	room.syncPeerLists()
 
 	return room, nil
@@ -68,11 +70,13 @@ func NewRoom(contactIdentities []*RemoteIdentity, dialer proxy.Dialer, contactPo
 AddUser adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
-	err := r.addUserWithContactID(contact, dialer, contactPort)
+func (r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer) error {
+	q, err := r.addUserWithContactID(contact, dialer)
 	if err != nil {
 		return err
 	}
+
+	q.RunMessageQueue(dialer, r)
 
 	r.syncPeerLists()
 	return nil
@@ -80,11 +84,11 @@ func (r *Room) AddUser(contact *RemoteIdentity, dialer proxy.Dialer, contactPort
 
 /*
 Syncs the user list for all peers.
-This only adds users, but can remove users from peers.
+This only adds users, and cant remove users from peers.
 */
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
-		r.SendMessage(MTYPE_CMD, []byte("join "+peer.Fingerprint()))
+		r.SendMessage(MTYPE_CMD, []byte("join "+peer.RIdentity.Fingerprint()))
 	}
 }
 
@@ -93,10 +97,10 @@ This function tries to add a user with the contactID to the room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer, contactPort int) error {
-	conn, err := dialer.Dial("tcp", remote.URL()+":"+strconv.Itoa(contactPort))
+func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer) (*MessagingPeer, error) {
+	conn, err := dialer.Dial("tcp", remote.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dconn := sio.NewDataIO(conn)
@@ -108,7 +112,7 @@ func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer,
 	}
 	_, err = dconn.WriteStruct(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dconn.Flush()
@@ -116,25 +120,26 @@ func (r *Room) addUserWithContactID(remote *RemoteIdentity, dialer proxy.Dialer,
 	resp := &ContactResponse{}
 	err = dconn.ReadStruct(resp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dconn.Close()
 
 	if !remote.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
-		return fmt.Errorf("invalid signature from remote %s", remote.URL())
+		return nil, fmt.Errorf("invalid signature from remote %s", remote.URL())
 	}
 
-	peer, err := NewRemoteIdentity(resp.ConvFP)
+	peerID, err := NewRemoteIdentity(resp.ConvFP)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Printf("Validated %s\n", remote.URL())
 	log.Printf("Conversiation ID %s\n", resp.ConvFP)
 
+	peer := NewMessagingPeer(peerID)
 	r.Peers = append(r.Peers, peer)
-	return nil
+	return peer, nil
 }
 
 func (r *Room) SendMessage(mtype byte, content []byte) error {
@@ -156,18 +161,17 @@ func (r *Room) SendMessage(mtype byte, content []byte) error {
 	return nil
 }
 
-func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer, conversationPort int) {
+func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer) {
 	r.queueTerminate = make(chan bool)
 	for _, peer := range r.Peers {
-		peer.InitQueue(r.Self, dialer, conversationPort, r.ID, r.queueTerminate)
-		go peer.RunMessageQueue()
+		go peer.RunMessageQueue(dialer, r)
 	}
 }
 
 func (r *Room) PeerByFingerprint(fingerprint string) *RemoteIdentity {
 	for _, peer := range r.Peers {
-		if peer.Fingerprint() == fingerprint {
-			return peer
+		if peer.RIdentity.Fingerprint() == fingerprint {
+			return peer.RIdentity
 		}
 	}
 	return nil
@@ -201,14 +205,15 @@ func (r *Room) handleCommand(msg *Message) {
 			break
 		}
 
-		newPeer, err := NewRemoteIdentity(args[1])
+		peerID, err := NewRemoteIdentity(args[1])
 		if err != nil {
 			log.Println(err.Error())
 			break
 		}
 
+		newPeer := NewMessagingPeer(peerID)
 		r.Peers = append(r.Peers, newPeer)
-		log.Printf("New peer %s added to room %s\n", newPeer.Fingerprint(), r.ID)
+		log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
 	case "name_room":
 		if len(args) < 2 {
 			log.Printf("Not enough args for command \"%s\"\n", cmd)
@@ -241,7 +246,7 @@ func (r *Room) Info() *RoomInfo {
 	}
 
 	for _, p := range r.Peers {
-		info.Peers = append(info.Peers, p.Fingerprint())
+		info.Peers = append(info.Peers, p.RIdentity.Fingerprint())
 	}
 
 	return info

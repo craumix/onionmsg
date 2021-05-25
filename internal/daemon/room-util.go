@@ -10,7 +10,7 @@ import (
 func initExistingRooms() (err error) {
 	for _, i := range data.Rooms {
 		s := i.Self.Service()
-		s.LocalProxy(conversationPort, conversationPort)
+		s.LocalProxy(types.PubConvPort, loConvPort)
 
 		err = torInstance.Controller.AddOnion(s.Onion())
 		if err != nil {
@@ -21,17 +21,17 @@ func initExistingRooms() (err error) {
 	log.Printf("Loaded %d Rooms\n", len(data.Rooms))
 
 	for _, room := range data.Rooms {
-		room.RunRemoteMessageQueues(torInstance.Proxy, conversationPort)
+		room.RunRemoteMessageQueues(torInstance.Proxy)
 	}
 
 	return
 }
 
 func registerRoom(room *types.Room) error {
-	service := room.Self.Service()
-	service.LocalProxy(conversationPort, conversationPort)
+	s := room.Self.Service()
+	s.LocalProxy(types.PubConvPort, loConvPort)
 
-	err := torInstance.Controller.AddOnion(service.Onion())
+	err := torInstance.Controller.AddOnion(s.Onion())
 	if err != nil {
 		return err
 	}
@@ -39,8 +39,6 @@ func registerRoom(room *types.Room) error {
 	data.Rooms = append(data.Rooms, room)
 
 	log.Printf("Registered Room %s\n", room.ID)
-
-	room.RunRemoteMessageQueues(torInstance.Proxy, conversationPort)
 
 	return nil
 }

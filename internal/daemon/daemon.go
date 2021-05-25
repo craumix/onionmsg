@@ -20,11 +20,11 @@ type SerializableData struct {
 }
 
 const (
-	socksPort        = 10048
-	controlPort      = 10049
-	contactPort      = 10050
-	conversationPort = 10051
-	apiPort          = 10052
+	socksPort   = 10048
+	controlPort = 10049
+	loContPort  = 10050
+	loConvPort  = 10051
+	apiPort     = 10052
 
 	tordir         = "tordir"
 	blobdir        = "onionblobs"
