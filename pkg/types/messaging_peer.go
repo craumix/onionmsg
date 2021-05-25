@@ -164,7 +164,7 @@ func (mp *MessagingPeer) sendMessage(msg *Message, dconn *sio.DataConn) error {
 	return nil
 }
 
-func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data []byte, sigSalt []byte) (int, error) {
+func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data, sigSalt []byte) (int, error) {
 	n, err := dconn.WriteBytes(data)
 	if err != nil {
 		return 0, err
@@ -174,7 +174,7 @@ func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data []byte, sigSa
 		return n, err
 	}
 	dconn.Flush()
-	
+
 	resp, err := dconn.ReadString()
 	if err != nil {
 		return m + n, err
