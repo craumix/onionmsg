@@ -146,6 +146,7 @@ func (mp *MessagingPeer) sendMessage(msg *Message, dconn *sio.DataConn) error {
 		if err != nil {
 			return err
 		}
+		defer file.Close()
 
 		buf := make([]byte, blocksize)
 		for c := 0; c < blockcount; c++ {
