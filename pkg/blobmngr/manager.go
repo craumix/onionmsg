@@ -24,7 +24,7 @@ func Initialize(dir string) error {
 }
 
 func GetRessource(id uuid.UUID) ([]byte, error) {
-	return ioutil.ReadFile(resolveResPath(id))
+	return ioutil.ReadFile(blobPath(id))
 }
 
 func StreamTo(id uuid.UUID, w io.Writer) error {
@@ -49,22 +49,26 @@ func StreamTo(id uuid.UUID, w io.Writer) error {
 }
 
 func FileFromID(id uuid.UUID) (*os.File, error) {
-	return os.OpenFile(resolveResPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+	return os.OpenFile(blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
 func StatFromID(id uuid.UUID) (fs.FileInfo, error) {
-	return os.Stat(resolveResPath(id))
+	return os.Stat(blobPath(id))
 }
 
 func SaveRessource(blob []byte) (uuid.UUID, error) {
 	id := uuid.New()
-	return id, ioutil.WriteFile(resolveResPath(id), blob, 0600)
+	return id, ioutil.WriteFile(blobPath(id), blob, 0600)
 }
 
 func MakeBlob() (uuid.UUID, error) {
 	return SaveRessource(make([]byte, 0))
 }
 
-func resolveResPath(id uuid.UUID) string {
+func RemoveBlob(id uuid.UUID) error {
+	return os.Remove(blobPath(id))
+}
+
+func blobPath(id uuid.UUID) string {
 	return blobdir + "/" + id.String() + ".blob"
 }

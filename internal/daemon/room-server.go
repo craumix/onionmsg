@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strconv"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -122,6 +123,14 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 			return nil, err
 		}
 
+		rcvOK := false
+		defer func() {
+			file.Close()
+			if !rcvOK {
+				blobmngr.RemoveBlob(id)
+			}
+		}()
+
 		for i := 0; i < blockcount; i++ {
 			buf, err := readDataWithSig(*dconn, sender, sigSalt)
 			if err != nil {
@@ -133,6 +142,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 				return nil, err
 			}
 		}
+		rcvOK = true
 	}
 
 	return &types.Message{
