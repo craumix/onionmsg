@@ -12,6 +12,9 @@ import (
 
 func launchTor(pw, datadir string, socksPort, controlPort int) (*os.Process, error) {
 	exe, err := getExePath()
+	if err != nil {
+		return nil, err
+	}
 
 	torrc := datadir + "/torrc"
 	logfile := datadir + "/tor.log"
