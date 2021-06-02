@@ -83,7 +83,7 @@ func startInteractive() {
 			}
 		case "add_room":
 			log.Println("Print Contact IDs (one per line, empty line to finish):")
-			ids := make([]*types.RemoteIdentity, 0)
+			ids := make([]types.RemoteIdentity, 0)
 			for {
 				peer, _ := cin.ReadString('\n')
 				peer = strings.Trim(peer, " \n")

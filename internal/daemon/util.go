@@ -60,7 +60,7 @@ func DeleteContactID(fingerprint string) error {
 
 // Maybe this should be run in a goroutine
 func CreateRoom(fingerprints []string) error {
-	var ids []*types.RemoteIdentity
+	var ids []types.RemoteIdentity
 	for _, fingerprint := range fingerprints {
 		id, err := types.NewRemoteIdentity(fingerprint)
 		if err != nil {
@@ -115,7 +115,7 @@ func SendMessage(uuid string, msgType byte, content []byte) error {
 	return room.SendMessage(msgType, content)
 }
 
-func ListMessages(uuid string) ([]*types.Message, error) {
+func ListMessages(uuid string) ([]types.Message, error) {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return nil, err

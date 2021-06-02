@@ -19,14 +19,14 @@ const (
 )
 
 type MessagingPeer struct {
-	MQueue    []*Message      `json:"queue"`
-	RIdentity *RemoteIdentity `json:"identity"`
+	MQueue    []Message      `json:"queue"`
+	RIdentity RemoteIdentity `json:"identity"`
 
 	room   *Room
 	dialer proxy.Dialer
 }
 
-func NewMessagingPeer(rid *RemoteIdentity) *MessagingPeer {
+func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 	return &MessagingPeer{
 		RIdentity: rid,
 	}
@@ -65,14 +65,14 @@ func (mp *MessagingPeer) RunMessageQueue(dialer proxy.Dialer, room *Room) error 
 	}
 }
 
-func (mp *MessagingPeer) QueueMessage(msg *Message) {
+func (mp *MessagingPeer) QueueMessage(msg Message) {
 	_, err := mp.transferMessages(msg)
 	if err != nil {
 		mp.MQueue = append(mp.MQueue, msg)
 	}
 }
 
-func (mp *MessagingPeer) transferMessages(msgs ...*Message) (int, error) {
+func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
 	if mp.dialer == nil || mp.room == nil {
 		return 0, fmt.Errorf("dialer or room not set")
 	}
@@ -104,7 +104,7 @@ func (mp *MessagingPeer) getConvURL() string {
 	return fmt.Sprintf("%s:%d", mp.RIdentity.URL(), PubConvPort)
 }
 
-func (mp *MessagingPeer) sendMessage(msg *Message, dconn *sio.DataConn) error {
+func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 	sigSalt, err := dconn.ReadBytes()
 	if err != nil {
 		return err

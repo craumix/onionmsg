@@ -71,29 +71,29 @@ func startRoomServer() error {
 	}
 }
 
-func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) {
+func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
 	sigSalt, err := writeRandom(dconn, 16)
 	if err != nil {
-		return nil, err
+		return types.Message{}, err
 	}
 
 	rawMeta, _ := dconn.ReadBytes()
 	sig, err := dconn.ReadBytes()
 	if err != nil {
-		return nil, err
+		return types.Message{}, err
 	}
 
 	meta := types.MessageMeta{}
 	err = json.Unmarshal(rawMeta, &meta)
 	if err != nil {
-		return nil, err
+		return types.Message{}, err
 	}
 
-	sender := room.PeerByFingerprint(meta.Sender)
-	if sender == nil || !sender.Verify(append(sigSalt, rawMeta...), sig) {
+	sender, ok := room.PeerByFingerprint(meta.Sender)
+	if !ok || !sender.Verify(append(sigSalt, rawMeta...), sig) {
 		dconn.WriteString("invalid_meta")
 		dconn.Flush()
-		return nil, fmt.Errorf("received invalid meta for message")
+		return types.Message{}, fmt.Errorf("received invalid meta for message")
 	}
 
 	dconn.WriteString("ok")
@@ -103,23 +103,23 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 	if meta.Type != types.MTYPE_BLOB {
 		content, err = readDataWithSig(*dconn, sender, sigSalt)
 		if err != nil {
-			return nil, err
+			return types.Message{}, err
 		}
 	} else {
 		blockcount, err := dconn.ReadInt()
 		if err != nil {
-			return nil, err
+			return types.Message{}, err
 		}
 
 		id, err := blobmngr.MakeBlob()
 		if err != nil {
-			return nil, err
+			return types.Message{}, err
 		}
 		content = id[:]
 
 		file, err := blobmngr.FileFromID(id)
 		if err != nil {
-			return nil, err
+			return types.Message{}, err
 		}
 
 		rcvOK := false
@@ -133,24 +133,24 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (*types.Message, error) 
 		for i := 0; i < blockcount; i++ {
 			buf, err := readDataWithSig(*dconn, sender, sigSalt)
 			if err != nil {
-				return nil, err
+				return types.Message{}, err
 			}
 
 			_, err = file.Write(buf)
 			if err != nil {
-				return nil, err
+				return types.Message{}, err
 			}
 		}
 		rcvOK = true
 	}
 
-	return &types.Message{
+	return types.Message{
 		Meta:    meta,
 		Content: content,
 	}, nil
 }
 
-func readDataWithSig(dconn sio.DataConn, sender *types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
+func readDataWithSig(dconn sio.DataConn, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
 	content, _ := dconn.ReadBytes()
 	sig, err := dconn.ReadBytes()
 	if err != nil {

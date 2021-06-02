@@ -11,13 +11,13 @@ type RemoteIdentity struct {
 	Pub ed25519.PublicKey `json:"public_key"`
 }
 
-func NewRemoteIdentity(fingerprint string) (*RemoteIdentity, error) {
+func NewRemoteIdentity(fingerprint string) (RemoteIdentity, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(fingerprint)
 	if err != nil {
-		return nil, err
+		return RemoteIdentity{}, err
 	}
 
-	return &RemoteIdentity{
+	return RemoteIdentity{
 		Pub: ed25519.PublicKey(raw),
 	}, nil
 }

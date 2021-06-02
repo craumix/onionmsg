@@ -51,7 +51,6 @@ func deregisterRoom(id uuid.UUID) error {
 		return err
 	}
 
-
 	r.StopQueues()
 
 	deleteRoomFromSlice(r)

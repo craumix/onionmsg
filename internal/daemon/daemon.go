@@ -16,7 +16,7 @@ import (
 /*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
 	ContactIdentities []types.Identity `json:"contact_identities"`
-	Rooms             []*types.Room     `json:"rooms"`
+	Rooms             []*types.Room    `json:"rooms"`
 }
 
 const (

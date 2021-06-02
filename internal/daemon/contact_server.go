@@ -60,7 +60,7 @@ func startContactServer() error {
 				Self:     convID,
 				Peers:    []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
 				ID:       req.ID,
-				Messages: make([]*types.Message, 0),
+				Messages: make([]types.Message, 0),
 			}
 			err = registerRoom(room)
 			if err != nil {
