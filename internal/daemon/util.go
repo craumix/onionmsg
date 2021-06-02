@@ -26,7 +26,7 @@ func GetTorlog() (string, error) {
 
 //ListContactIDs returns a list of all the contactid's fingerprints.
 func ListContactIDs() []string {
-	contIDs := make([]string, 0)
+	var contIDs []string
 	for _, id := range data.ContactIdentities {
 		contIDs = append(contIDs, id.Fingerprint())
 	}
@@ -35,7 +35,7 @@ func ListContactIDs() []string {
 
 //ListRooms returns a marshaled list of all the rooms with most information
 func ListRooms() []*types.RoomInfo {
-	rooms := make([]*types.RoomInfo, 0)
+	var rooms []*types.RoomInfo
 	for _, r := range data.Rooms {
 		rooms = append(rooms, r.Info())
 	}

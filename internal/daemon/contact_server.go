@@ -57,10 +57,9 @@ func startContactServer() error {
 			dconn.Flush()
 
 			room := &types.Room{
-				Self:     convID,
-				Peers:    []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
-				ID:       req.ID,
-				Messages: make([]types.Message, 0),
+				Self:  convID,
+				Peers: []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
+				ID:    req.ID,
 			}
 			err = registerRoom(room)
 			if err != nil {

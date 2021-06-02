@@ -35,15 +35,11 @@ type RoomInfo struct {
 
 func NewRoom(contactIdentities []RemoteIdentity, dialer proxy.Dialer) (*Room, error) {
 	s := NewIdentity()
-	peers := make([]*MessagingPeer, 0)
 	id := uuid.New()
 
 	room := &Room{
-		Self:     s,
-		Peers:    peers,
-		ID:       id,
-		Messages: make([]Message, 0),
-		Nicks:    make(map[string]string),
+		Self: s,
+		ID:   id,
 	}
 
 	errG := new(errgroup.Group)

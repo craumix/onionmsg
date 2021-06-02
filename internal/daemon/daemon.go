@@ -38,10 +38,7 @@ var (
 
 	loadFuse bool
 
-	data = SerializableData{
-		ContactIdentities: make([]types.Identity, 0),
-		Rooms:             make([]*types.Room, 0),
-	}
+	data = SerializableData{}
 
 	torInstance *tor.TorInstance
 	//APISocket is the socket that the API for frontend is served on
