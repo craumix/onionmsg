@@ -26,7 +26,7 @@ type TorInstance struct {
 
 func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
 	pw := types.RandomString(64)
-	torproc, err := Run(pw, tordir, socksPort, controlPort)
+	torproc, err := launchTor(pw, tordir, socksPort, controlPort)
 	if err != nil {
 		return
 	}

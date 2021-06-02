@@ -15,52 +15,12 @@ var (
 	torBinMemFD string
 )
 
-func Run(pw, datadir string, socksPort, controlPort int) (*os.Process, error) {
-	var err error
-	var exe string
-
-	torrc := datadir + "/torrc"
-	logfile := datadir + "/tor.log"
-
+func getExePath() (string, error) {
 	if runtime.GOOS != "linux" {
-		return nil, fmt.Errorf("Cannot use internal tor binary on platform \"%s\"", runtime.GOOS)
-	}
-	exe, err = binToMem()
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot use internal tor binary on platform \"%s\"", runtime.GOOS)
 	}
 
-	err = os.MkdirAll(datadir, 0700)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = os.OpenFile(torrc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Printf("Unable to to touch torrc \"%s\"\n%s\n", torrc, err.Error())
-	}
-
-	args := []string{"-f", torrc,
-		"SocksPort", strconv.Itoa(socksPort),
-		"ControlPort", strconv.Itoa(controlPort),
-		"DataDirectory", datadir}
-
-	if pw != "" {
-		hash, err := pwHashFromExe(exe, pw)
-		if err != nil {
-			return nil, err
-		}
-
-		args = append(args, "HashedControlPassword", hash)
-		log.Printf("Password hash set as %s\n", hash)
-	}
-
-	proc, err := runExecutable(exe, args, logfile)
-	if err != nil {
-		return nil, err
-	}
-
-	return proc, nil
+	return binToMem()
 }
 
 func binToMem() (string, error) {
