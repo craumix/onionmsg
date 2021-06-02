@@ -41,23 +41,22 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 }
 
 func versionFromExe(exe string) (string, error) {
-	out, err := exec.Command(exe, "--version").Output()
-	if err != nil {
-		return "", err
-	}
-
-	version := string(out)
-
-	return version[:len(version)-1], nil
+	return runExeWithArgs(exe, "--version")
 }
 
 func pwHashFromExe(exe, pw string) (string, error) {
-	out, err := exec.Command(exe, "--hash-password", pw).Output()
+	return runExeWithArgs(exe, "--hash-password", pw)
+}
+
+func runExeWithArgs(exe string, args ...string) (o string, err error) {
+	var r []byte
+	r, err = exec.Command(exe, args...).Output()
 	if err != nil {
 		return "", err
 	}
 
-	version := string(out)
+	o = string(r)
+	o = o[:len(o)-1]
 
-	return version[:len(version)-1], nil
+	return o, nil
 }
