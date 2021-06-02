@@ -15,7 +15,7 @@ import (
 )
 
 type Room struct {
-	Self     *Identity         `json:"self"`
+	Self     Identity         `json:"self"`
 	Peers    []*MessagingPeer  `json:"peers"`
 	ID       uuid.UUID         `json:"uuid"`
 	Name     string            `json:"name"`

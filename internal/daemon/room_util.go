@@ -7,12 +7,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func initExistingRooms() (err error) {
-	for _, i := range data.Rooms {
-		s := i.Self.Service()
-		s.LocalProxy(types.PubConvPort, loConvPort)
-
-		err = torInstance.Controller.AddOnion(s.Onion())
+func initRooms() (err error) {
+	for _, r := range data.Rooms {
+		err = serveConvIDService(r.Self)
 		if err != nil {
 			return
 		}
@@ -28,34 +25,36 @@ func initExistingRooms() (err error) {
 }
 
 func registerRoom(room *types.Room) error {
-	s := room.Self.Service()
-	s.LocalProxy(types.PubConvPort, loConvPort)
-
-	err := torInstance.Controller.AddOnion(s.Onion())
+	err := serveConvIDService(room.Self)
 	if err != nil {
 		return err
 	}
 
 	data.Rooms = append(data.Rooms, room)
-
 	log.Printf("Registered Room %s\n", room.ID)
 
 	return nil
 }
 
+func serveConvIDService(i types.Identity) error {
+	return torInstance.RegisterService(i.Key, types.PubConvPort, loConvPort)
+}
+
 func deregisterRoom(id uuid.UUID) error {
-	room, ok := GetRoom(id)
+	r, ok := GetRoom(id)
 	if !ok {
 		return nil
 	}
-	err := torInstance.Controller.DeleteOnion(room.Self.Service().Onion().ServiceID)
+
+	err := torInstance.DeregisterService(r.Self.Key)
 	if err != nil {
 		return err
 	}
 
-	room.StopQueues()
 
-	deleteRoomFromSlice(room)
+	r.StopQueues()
+
+	deleteRoomFromSlice(r)
 
 	log.Printf("Deregistered Room %s\n", id)
 

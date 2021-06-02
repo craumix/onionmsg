@@ -1,6 +1,7 @@
 package tor
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"log"
 	"os"
@@ -81,4 +82,34 @@ func (i *TorInstance) Stop() (err error) {
 func (i *TorInstance) cleanup() (err error) {
 	err = os.RemoveAll(i.tordir)
 	return
+}
+
+func (i *TorInstance) RegisterService(key ed25519.PrivateKey, torPort, localPort int) error {
+	s, err := torgo.OnionFromEd25519(key)
+	if err != nil {
+		return err
+	}
+
+	s.Ports[torPort] = "127.0.0.1:" + strconv.Itoa(localPort)
+
+	err = i.Controller.AddOnion(s)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *TorInstance) DeregisterService(key ed25519.PrivateKey) error {
+	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey(key))
+	if err != nil {
+		return err
+	}
+
+	err = i.Controller.DeleteOnion(sid)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

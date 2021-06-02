@@ -15,7 +15,7 @@ import (
 
 /*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
-	ContactIdentities []*types.Identity `json:"contact_identities"`
+	ContactIdentities []types.Identity `json:"contact_identities"`
 	Rooms             []*types.Room     `json:"rooms"`
 }
 
@@ -39,7 +39,7 @@ var (
 	loadFuse bool
 
 	data = SerializableData{
-		ContactIdentities: make([]*types.Identity, 0),
+		ContactIdentities: make([]types.Identity, 0),
 		Rooms:             make([]*types.Room, 0),
 	}
 
@@ -99,11 +99,11 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	}
 	loadFuse = true
 
-	err = initExistingContactIDs()
+	err = initContIDServices()
 	if err != nil {
 		log.Panicln(err.Error())
 	}
-	err = initExistingRooms()
+	err = initRooms()
 	if err != nil {
 		log.Panicln(err.Error())
 	}

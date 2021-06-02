@@ -7,14 +7,12 @@ import (
 
 type Identity struct {
 	Key ed25519.PrivateKey `json:"key"`
-
-	service *HiddenService
 }
 
-func NewIdentity() *Identity {
+func NewIdentity() Identity {
 	_, priv, _ := ed25519.GenerateKey(nil)
 
-	return &Identity{
+	return Identity{
 		Key: priv,
 	}
 }
@@ -29,11 +27,4 @@ func (i *Identity) B64PubKey() string {
 
 func (i *Identity) Sign(data []byte) []byte {
 	return ed25519.Sign(i.Key, data)
-}
-
-func (i *Identity) Service() *HiddenService {
-	if i.service == nil {
-		i.service = NewHiddenServiceFromKey(i.Key)
-	}
-	return i.service
 }

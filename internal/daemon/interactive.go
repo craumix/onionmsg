@@ -55,7 +55,7 @@ func startInteractive() {
 		case "exit":
 			exitDaemon()
 		case "add_cont":
-			err = registerContactIdentity(types.NewIdentity())
+			err = registerContID(types.NewIdentity())
 			if err != nil {
 				log.Println(err.Error())
 				continue
@@ -65,7 +65,7 @@ func startInteractive() {
 			fp, _ := cin.ReadString('\n')
 			fp = strings.Trim(fp, " \n")
 
-			err = deregisterContactIdentity(fp)
+			err = deregisterContID(fp)
 			if err != nil {
 				log.Println(err.Error())
 				continue
