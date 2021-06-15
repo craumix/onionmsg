@@ -1,6 +1,7 @@
 package tor
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"fmt"
 	"log"
@@ -18,6 +19,7 @@ type TorInstance struct {
 	Process    *os.Process
 	Controller *torgo.Controller
 	Proxy      proxy.Dialer
+	LogBuffer  *bytes.Buffer
 
 	tordir      string
 	socksPort   int
@@ -26,7 +28,7 @@ type TorInstance struct {
 
 func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorInstance, err error) {
 	pw := types.RandomString(64)
-	torproc, err := launchTor(pw, tordir, socksPort, controlPort)
+	torproc, logBuffer, err := launchTor(pw, tordir, socksPort, controlPort)
 	if err != nil {
 		return
 	}
@@ -47,6 +49,7 @@ func NewTorInstance(tordir string, socksPort, controlPort int) (instance *TorIns
 		Process:     torproc,
 		Controller:  controller,
 		Proxy:       dialer,
+		LogBuffer:   logBuffer,
 		tordir:      tordir,
 		socksPort:   socksPort,
 		controlPort: controlPort,

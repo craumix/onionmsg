@@ -3,33 +3,28 @@ package tor
 //go:generate go-bindata -nometadata -nocompress -tags internalTor -o bindata.go -pkg tor ../../third_party/tor/tor
 
 import (
-	"io"
+	"bufio"
+	"bytes"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
 )
 
-func launchTor(pw, datadir string, socksPort, controlPort int) (*os.Process, error) {
+func launchTor(pw, datadir string, socksPort, controlPort int) (*os.Process, *bytes.Buffer, error) {
 	exe, err := getExePath()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	torrc := datadir + "/torrc"
-	logfile := datadir + "/tor.log"
 
 	err = os.MkdirAll(datadir, 0700)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	_, err = os.OpenFile(torrc, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Printf("Unable to to touch torrc \"%s\"\n%s\n", torrc, err.Error())
-	}
-
+	torrc := "./torrc"
 	args := []string{"-f", torrc,
+		"--ignore-missing-torrc",
 		"SocksPort", strconv.Itoa(socksPort),
 		"ControlPort", strconv.Itoa(controlPort),
 		"DataDirectory", datadir}
@@ -37,22 +32,23 @@ func launchTor(pw, datadir string, socksPort, controlPort int) (*os.Process, err
 	if pw != "" {
 		hash, err := pwHashFromExe(exe, pw)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		args = append(args, "HashedControlPassword", hash)
 		log.Printf("Password hash set as %s\n", hash)
 	}
 
-	proc, err := runExecutable(exe, args, logfile)
+	logBuffer := new(bytes.Buffer)
+	proc, err := runExecutable(exe, args, logBuffer)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return proc, nil
+	return proc, logBuffer, nil
 }
 
-func runExecutable(exe string, args []string, logpath string) (*os.Process, error) {
+func runExecutable(exe string, args []string, logBuffer *bytes.Buffer) (*os.Process, error) {
 	version, err := versionFromExe(exe)
 	if err != nil {
 		return nil, err
@@ -63,15 +59,10 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 	cmd.Env = os.Environ()
 	cmd.Args = append([]string{"procname"}, args...)
 
-	if logpath != "" {
-		logfile, err := os.OpenFile(logpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			log.Printf("Unable to open logfile \"%s\"\n%s\n", logpath, err.Error())
-		} else {
-			logWriter := io.Writer(logfile)
-			cmd.Stdout = logWriter
-			cmd.Stderr = logWriter
-		}
+	if logBuffer != nil {
+		logWriter := bufio.NewWriter(logBuffer)
+		cmd.Stdout = logWriter
+		cmd.Stderr = logWriter
 	}
 
 	log.Println("Starting Tor...")
@@ -84,14 +75,14 @@ func runExecutable(exe string, args []string, logpath string) (*os.Process, erro
 }
 
 func versionFromExe(exe string) (string, error) {
-	return runExeWithArgs(exe, "--version")
+	return getExeOuput(exe, "--version")
 }
 
 func pwHashFromExe(exe, pw string) (string, error) {
-	return runExeWithArgs(exe, "--hash-password", pw)
+	return getExeOuput(exe, "--hash-password", pw)
 }
 
-func runExeWithArgs(exe string, args ...string) (o string, err error) {
+func getExeOuput(exe string, args ...string) (o string, err error) {
 	var r []byte
 	r, err = exec.Command(exe, args...).Output()
 	if err != nil {

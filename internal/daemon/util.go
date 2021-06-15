@@ -2,8 +2,6 @@ package daemon
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
@@ -12,16 +10,7 @@ import (
 
 //GetTorlog returns the log of the used to instance.
 func GetTorlog() (string, error) {
-	logfile, err := os.OpenFile(tordir+"/tor.log", os.O_RDONLY, 0600)
-	if err != nil {
-		return "", err
-	}
-
-	logs, err := ioutil.ReadAll(logfile)
-	if err != nil {
-		return "", err
-	}
-	return string(logs), nil
+	return string(torInstance.LogBuffer.Bytes()), nil
 }
 
 //ListContactIDs returns a list of all the contactid's fingerprints.
