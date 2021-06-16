@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 func launchTor(pw, datadir string, socksPort, controlPort int) (*os.Process, *bytes.Buffer, error) {
@@ -82,15 +83,11 @@ func pwHashFromExe(exe, pw string) (string, error) {
 	return getExeOuput(exe, "--hash-password", pw)
 }
 
-func getExeOuput(exe string, args ...string) (o string, err error) {
-	var r []byte
-	r, err = exec.Command(exe, args...).Output()
+func getExeOuput(exe string, args ...string) (string, error) {
+	r, err := exec.Command(exe, args...).Output()
 	if err != nil {
 		return "", err
 	}
-
-	o = string(r)
-	o = o[:len(o)-1]
-
-	return o, nil
+	
+	return strings.Trim(string(r), "\n"), nil
 }
