@@ -13,7 +13,7 @@ func StartLocalServer(port int, clientHandler func(net.Conn)) error {
 }
 
 //StartServer opens a listener on the specified interface and port and passes connections
-//to the provided handler, which is the statet as a new goroutine.
+//to the provided handler, which is the startet as a new goroutine.
 //The hostname can be omitted to listen on all interfaces.
 func StartServer(port int, hostname string, clientHandler func(net.Conn)) error {
 	server, err := net.Listen("tcp", hostname+":"+strconv.Itoa(port))
