@@ -105,8 +105,8 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 		log.Panicln(err.Error())
 	}
 
-	go startContactServer()
-	go startRoomServer()
+	go sio.StartLocalServer(loContPort, contClientHandler)
+	go sio.StartLocalServer(loConvPort, convClientHandler)
 
 	if interactive {
 		go startInteractive()

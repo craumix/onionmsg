@@ -85,7 +85,7 @@ func versionFromExe(exe string) (string, error) {
 		raw = raw[:strings.Index(raw, "\n")]
 	}
 
-	return raw[12:len(raw)-1], nil
+	return raw[12 : len(raw)-1], nil
 }
 
 func pwHashFromExe(exe, pw string) (string, error) {

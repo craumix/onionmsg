@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
@@ -14,60 +13,45 @@ import (
 	"github.com/google/uuid"
 )
 
-func startRoomServer() error {
-	server, err := net.Listen("tcp", "localhost:"+strconv.Itoa(loConvPort))
-	if err != nil {
-		return err
-	}
-	defer server.Close()
+func convClientHandler(c net.Conn) {
+	dconn := sio.NewDataIO(c)
+	defer dconn.Close()
 
-	for {
-		c, err := server.Accept()
+	idRaw, err := dconn.ReadBytes()
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
+	id, err := uuid.FromBytes(idRaw)
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
+	room, ok := GetRoom(id)
+	if !ok {
+		log.Printf("Unknown room with %s\n", id)
+		return
+	}
+
+	amount, err := dconn.ReadInt()
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
+	for i := 0; i < amount; i++ {
+		msg, err := readMessage(dconn, room)
 		if err != nil {
-			log.Println(err)
+			log.Print(err.Error())
+			dconn.Close()
+			break
 		}
 
-		go func() {
-			dconn := sio.NewDataIO(c)
-			defer dconn.Close()
+		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
 
-			idRaw, err := dconn.ReadBytes()
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			id, err := uuid.FromBytes(idRaw)
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			room, ok := GetRoom(id)
-			if !ok {
-				log.Printf("Unknown room with %s\n", id)
-				return
-			}
-
-			amount, err := dconn.ReadInt()
-			if err != nil {
-				log.Println(err.Error())
-				return
-			}
-
-			for i := 0; i < amount; i++ {
-				msg, err := readMessage(dconn, room)
-				if err != nil {
-					log.Print(err.Error())
-					dconn.Close()
-					break
-				}
-
-				log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
-
-				room.LogMessage(msg)
-			}
-		}()
+		room.LogMessage(msg)
 	}
 }
 
