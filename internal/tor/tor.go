@@ -54,7 +54,7 @@ func runExecutable(exe string, args []string, logBuffer *bytes.Buffer) (*os.Proc
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Detected %s\n", version)
+	log.Printf("Detected Tor version: %s\n", version)
 
 	cmd := exec.Command(exe)
 	cmd.Env = os.Environ()
@@ -76,7 +76,16 @@ func runExecutable(exe string, args []string, logBuffer *bytes.Buffer) (*os.Proc
 }
 
 func versionFromExe(exe string) (string, error) {
-	return getExeOuput(exe, "--version")
+	raw, err := getExeOuput(exe, "--version")
+	if err != nil {
+		return "", err
+	}
+
+	if strings.Contains(raw, "\n") {
+		raw = raw[:strings.Index(raw, "\n")]
+	}
+
+	return raw[12:len(raw)-1], nil
 }
 
 func pwHashFromExe(exe, pw string) (string, error) {
@@ -88,6 +97,6 @@ func getExeOuput(exe string, args ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	return strings.Trim(string(r), "\n"), nil
 }
