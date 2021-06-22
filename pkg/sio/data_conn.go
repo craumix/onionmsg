@@ -116,7 +116,7 @@ func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
 	return d.WriteBytes(m)
 }
 
-//ReadStruct reades an serialzed struct from the underlying connection and unmarshals it into the provided struct
+//ReadStruct reades an serialized struct from the underlying connection and unmarshals it into the provided struct
 func (d *DataConn) ReadStruct(target interface{}) error {
 	raw, err := d.ReadBytes()
 	if err != nil {
