@@ -3,7 +3,7 @@ module github.com/craumix/onionmsg
 go 1.16
 
 require (
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/ipsn/go-adorable v1.0.0
 	github.com/klauspost/compress v1.13.1
 	github.com/wybiral/torgo v0.0.0-20201209223426-5fd9910eab31
