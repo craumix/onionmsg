@@ -13,7 +13,6 @@ import (
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
-	"github.com/ipsn/go-adorable"
 )
 
 const (
@@ -30,7 +29,6 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/torlog", routeTorlog)
 
 	http.HandleFunc("/v1/blob", routeBlob)
-	http.HandleFunc("/v1/avatar", routeAvatar)
 
 	http.HandleFunc("/v1/contact/list", routeContactList)
 	http.HandleFunc("/v1/contact/create", routeContactCreate)
@@ -88,10 +86,6 @@ func routeBlob(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func routeAvatar(w http.ResponseWriter, req *http.Request) {
-	w.Write(adorable.PseudoRandom([]byte(req.FormValue("seed"))))
 }
 
 func routeContactList(w http.ResponseWriter, req *http.Request) {
