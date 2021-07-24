@@ -10,7 +10,7 @@ import (
 
 //GetTorlog returns the log of the used to instance.
 func GetTorlog() (string, error) {
-	return torInstance.LogBuffer.String(), nil
+	return torInstance.Log(), nil
 }
 
 //ListContactIDs returns a list of all the contactid's fingerprints.

@@ -2,6 +2,6 @@
 
 package tor
 
-func getExePath() (string, error) {
+func torBinaryPath() (string, error) {
 	return "tor", nil
 }

@@ -15,7 +15,7 @@ var (
 	torBinMemFD string
 )
 
-func getExePath() (string, error) {
+func torBinaryPath() (string, error) {
 	if runtime.GOOS != "linux" {
 		return nil, fmt.Errorf("cannot use internal tor binary on platform \"%s\"", runtime.GOOS)
 	}

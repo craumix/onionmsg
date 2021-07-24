@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -40,7 +41,7 @@ var (
 
 	data = SerializableData{}
 
-	torInstance *tor.TorInstance
+	torInstance *tor.Instance
 	//APISocket is the socket that the API for frontend is served on
 	APISocket net.Listener
 
@@ -66,8 +67,10 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 		}
 	}()
 	startSignalHandler()
-
-	log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
+	
+	if LastCommit != "unknown" || BuildVer != "unknown" {
+		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
+	}
 
 	err = blobmngr.Initialize(blobdir)
 	if err != nil {
@@ -85,7 +88,12 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 
 	//go startAPIServer()
 
-	torInstance, err = tor.NewTorInstance(tordir, socksPort, controlPort)
+	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
+		SocksPort:   9050,
+		ControlPort: 9051,
+		DataDir:     "./tordir",
+		TorRC:       "./torrc",
+	})
 	if err != nil {
 		log.Panicln(err.Error())
 	}
@@ -135,10 +143,7 @@ func startSignalHandler() {
 
 func exitDaemon() {
 	if torInstance != nil {
-		err := torInstance.Stop()
-		if err != nil {
-			log.Println(err.Error())
-		}
+		torInstance.Stop()
 	}
 
 	if loadFuse {
