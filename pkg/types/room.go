@@ -209,6 +209,9 @@ func (r *Room) handleCommand(msg Message) {
 
 		newPeer := NewMessagingPeer(peerID)
 		r.Peers = append(r.Peers, newPeer)
+
+		//TODO start queue, how get proxy here? Maybe just make global.
+
 		log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
 	case "name_room":
 		if len(args) < 2 {
