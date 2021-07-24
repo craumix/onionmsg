@@ -67,7 +67,7 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 		}
 	}()
 	startSignalHandler()
-	
+
 	if LastCommit != "unknown" || BuildVer != "unknown" {
 		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
 	}

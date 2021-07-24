@@ -74,10 +74,8 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
 
 	go func() {
-		select {
-		case <-instance.ctx.Done():
-			os.RemoveAll(instance.Config.DataDir)
-		}
+		<-instance.ctx.Done()
+		os.RemoveAll(instance.Config.DataDir)
 	}()
 
 	return instance, nil
