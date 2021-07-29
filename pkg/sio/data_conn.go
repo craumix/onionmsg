@@ -29,7 +29,7 @@ type DataConn struct {
 
 //DialDataConn creates a new connection that uses the, possibly set, proxy
 //and then wraps it in a DataConn
-func DialDataConn(network string, address string) (*DataConn, error) {
+func DialDataConn(network, address string) (*DataConn, error) {
 	var (
 		c net.Conn
 		err error
