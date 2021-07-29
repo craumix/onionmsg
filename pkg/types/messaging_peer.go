@@ -9,7 +9,6 @@ import (
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
-	"golang.org/x/net/proxy"
 )
 
 const (
@@ -23,7 +22,6 @@ type MessagingPeer struct {
 	RIdentity RemoteIdentity `json:"identity"`
 
 	room   *Room
-	dialer proxy.Dialer
 }
 
 func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
@@ -32,8 +30,7 @@ func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 	}
 }
 
-func (mp *MessagingPeer) RunMessageQueue(dialer proxy.Dialer, room *Room) error {
-	mp.dialer = dialer
+func (mp *MessagingPeer) RunMessageQueue(room *Room) error {
 	mp.room = room
 
 	for {
@@ -73,16 +70,14 @@ func (mp *MessagingPeer) QueueMessage(msg Message) {
 }
 
 func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
-	if mp.dialer == nil || mp.room == nil {
-		return 0, fmt.Errorf("dialer or room not set")
+	if mp.room == nil {
+		return 0, fmt.Errorf("room not set")
 	}
 
-	conn, err := mp.dialer.Dial("tcp", mp.getConvURL())
+	dconn, err := sio.DialDataConn("tcp", mp.getConvURL())
 	if err != nil {
 		return 0, err
 	}
-
-	dconn := sio.WrapConnection(conn)
 	defer dconn.Close()
 
 	dconn.WriteBytes(mp.room.ID[:])

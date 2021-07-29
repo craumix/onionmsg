@@ -13,7 +13,7 @@ var (
 	blobdir = "./"
 )
 
-func Initialize(dir string) error {
+func InitializeDir(dir string) error {
 	err := os.Mkdir(dir, 0700)
 	if err != nil && !os.IsExist(err) {
 		return err

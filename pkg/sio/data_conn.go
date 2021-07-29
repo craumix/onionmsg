@@ -6,11 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"golang.org/x/net/proxy"
 )
 
 const (
 	//1M
 	maxBufSize = 1 << 20
+)
+
+var (
+	DataConnProxy proxy.Dialer
 )
 
 //DataConn is a helper struct to simplify communication over a net.Conn.
@@ -19,6 +25,26 @@ const (
 type DataConn struct {
 	buffer *bufio.ReadWriter
 	conn   net.Conn
+}
+
+//DialDataConn creates a new connection that uses the, possibly set, proxy
+//and then wraps it in a DataConn
+func DialDataConn(network string, address string) (*DataConn, error) {
+	var (
+		c net.Conn
+		err error
+	)
+
+	if DataConnProxy != nil {
+		c, err = DataConnProxy.Dial(network, address)
+	}else {
+		c, err = net.Dial(network, address)
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	return WrapConnection(c), nil
 }
 
 //NewDataIO creates a new DataConn from a net.Conn

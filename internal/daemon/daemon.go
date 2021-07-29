@@ -72,7 +72,7 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
 	}
 
-	err = blobmngr.Initialize(blobdir)
+	err = blobmngr.InitializeDir(blobdir)
 	if err != nil {
 		log.Panicln(err.Error())
 	}
@@ -97,6 +97,7 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	if err != nil {
 		log.Panicln(err.Error())
 	}
+	sio.DataConnProxy = torInstance.Proxy
 
 	err = loadData()
 	if err != nil && !os.IsNotExist(err) {

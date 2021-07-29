@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/net/proxy"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/craumix/onionmsg/pkg/sio"
@@ -33,7 +32,7 @@ type RoomInfo struct {
 	Nicks map[string]string `json:"nicks,omitempty"`
 }
 
-func NewRoom(contactIdentities []RemoteIdentity, dialer proxy.Dialer) (*Room, error) {
+func NewRoom(contactIdentities []RemoteIdentity) (*Room, error) {
 	s := NewIdentity()
 	id := uuid.New()
 
@@ -47,7 +46,7 @@ func NewRoom(contactIdentities []RemoteIdentity, dialer proxy.Dialer) (*Room, er
 	for _, contact := range contactIdentities {
 		contact := contact
 		errG.Go(func() error {
-			_, err := room.addUserWithContactID(contact, dialer)
+			_, err := room.addUserWithContactID(contact)
 			return err
 		})
 	}
@@ -56,7 +55,7 @@ func NewRoom(contactIdentities []RemoteIdentity, dialer proxy.Dialer) (*Room, er
 		return nil, err
 	}
 
-	room.RunRemoteMessageQueues(dialer)
+	room.RunRemoteMessageQueues()
 	room.syncPeerLists()
 
 	return room, nil
@@ -66,13 +65,13 @@ func NewRoom(contactIdentities []RemoteIdentity, dialer proxy.Dialer) (*Room, er
 AddUser adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddUser(contact RemoteIdentity, dialer proxy.Dialer) error {
-	q, err := r.addUserWithContactID(contact, dialer)
+func (r *Room) AddUser(contact RemoteIdentity) error {
+	q, err := r.addUserWithContactID(contact)
 	if err != nil {
 		return err
 	}
 
-	q.RunMessageQueue(dialer, r)
+	q.RunMessageQueue(r)
 
 	r.syncPeerLists()
 	return nil
@@ -93,13 +92,12 @@ This function tries to add a user with the contactID to the room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) addUserWithContactID(remote RemoteIdentity, dialer proxy.Dialer) (*MessagingPeer, error) {
-	conn, err := dialer.Dial("tcp", remote.URL()+":"+strconv.Itoa(PubContPort))
+func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, error) {
+	dconn, err := sio.DialDataConn("tcp", remote.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return nil, err
 	}
-
-	dconn := sio.WrapConnection(conn)
+	defer dconn.Close()
 
 	req := &ContactRequest{
 		RemoteFP: remote.Fingerprint(),
@@ -118,8 +116,6 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity, dialer proxy.Dialer) 
 	if err != nil {
 		return nil, err
 	}
-
-	dconn.Close()
 
 	if !remote.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
 		return nil, fmt.Errorf("invalid signature from remote %s", remote.URL())
@@ -157,10 +153,10 @@ func (r *Room) SendMessage(mtype byte, content []byte) error {
 	return nil
 }
 
-func (r *Room) RunRemoteMessageQueues(dialer proxy.Dialer) {
+func (r *Room) RunRemoteMessageQueues() {
 	r.queueTerminate = make(chan bool)
 	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(dialer, r)
+		go peer.RunMessageQueue(r)
 	}
 }
 
@@ -210,7 +206,7 @@ func (r *Room) handleCommand(msg Message) {
 		newPeer := NewMessagingPeer(peerID)
 		r.Peers = append(r.Peers, newPeer)
 
-		//TODO start queue, how get proxy here? Maybe just make global.
+		newPeer.RunMessageQueue(r)
 
 		log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
 	case "name_room":
