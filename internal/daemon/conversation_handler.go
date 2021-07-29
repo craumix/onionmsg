@@ -14,7 +14,7 @@ import (
 )
 
 func convClientHandler(c net.Conn) {
-	dconn := sio.NewDataIO(c)
+	dconn := sio.WrapConnection(c)
 	defer dconn.Close()
 
 	idRaw, err := dconn.ReadBytes()

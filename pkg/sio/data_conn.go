@@ -22,7 +22,7 @@ type DataConn struct {
 }
 
 //NewDataIO creates a new DataConn from a net.Conn
-func NewDataIO(conn net.Conn) *DataConn {
+func WrapConnection(conn net.Conn) *DataConn {
 	return &DataConn{
 		buffer: bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		conn:   conn,

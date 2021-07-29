@@ -82,7 +82,7 @@ func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
 		return 0, err
 	}
 
-	dconn := sio.NewDataIO(conn)
+	dconn := sio.WrapConnection(conn)
 	defer dconn.Close()
 
 	dconn.WriteBytes(mp.room.ID[:])

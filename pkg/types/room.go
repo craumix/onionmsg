@@ -99,7 +99,7 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity, dialer proxy.Dialer) 
 		return nil, err
 	}
 
-	dconn := sio.NewDataIO(conn)
+	dconn := sio.WrapConnection(conn)
 
 	req := &ContactRequest{
 		RemoteFP: remote.Fingerprint(),

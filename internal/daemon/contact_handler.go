@@ -9,7 +9,7 @@ import (
 )
 
 func contClientHandler(c net.Conn) {
-	dconn := sio.NewDataIO(c)
+	dconn := sio.WrapConnection(c)
 	defer dconn.Close()
 
 	req := &types.ContactRequest{}
