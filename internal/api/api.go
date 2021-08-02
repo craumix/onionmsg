@@ -13,6 +13,7 @@ import (
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -22,8 +23,17 @@ const (
 	maxFileSize = 2 << 30
 )
 
+var (
+	wsUpgrader = websocket.Upgrader{
+		//TODO Fixme
+		CheckOrigin: func(r *http.Request) bool {return true},
+	}
+)
+
 func Start(listener net.Listener) {
 	log.Printf("Starting API-Server %s\n", listener.Addr())
+
+	http.HandleFunc("/v1/ws", routeOpenWS)
 
 	http.HandleFunc("/v1/status", routeStatus)
 	http.HandleFunc("/v1/torlog", routeTorlog)
@@ -50,28 +60,28 @@ func Start(listener net.Listener) {
 	}
 }
 
+func routeOpenWS(w http.ResponseWriter, req *http.Request) {
+	c, err := wsUpgrader.Upgrade(w, req, nil)
+	if err != nil {
+		log.Printf("error upgrading connection %s", err.Error())
+	}
+
+	observerList = append(observerList, c)
+}
+
 func routeStatus(w http.ResponseWriter, req *http.Request) {
 	setJSONContentHeader(w)
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
 func routeTorlog(w http.ResponseWriter, req *http.Request) {
-	logs, err := daemon.GetTorlog()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	torlogResp := struct {
+		Log string `json:"log"`
+	}{
+		daemon.GetTorlog(),
 	}
 
-	var torlogResp struct {
-		Log string `json:"log"`
-	}
-	torlogResp.Log = string(logs)
-	msg, err := json.Marshal(torlogResp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write([]byte(msg))
+	sendSerialized(w, torlogResp)
 }
 
 func routeBlob(w http.ResponseWriter, req *http.Request) {

@@ -16,7 +16,7 @@ import (
 
 /*SerializableData struct exists purely for serialaization purposes*/
 type SerializableData struct {
-	ContactIdentities []types.Identity `json:"contact_identities"`
+	ContactIdentities []types.Identity `json:"contactIdentities"`
 	Rooms             []*types.Room    `json:"rooms"`
 }
 

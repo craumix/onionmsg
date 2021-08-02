@@ -13,6 +13,10 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	MessageNotificationListener func(uuid.UUID, types.Message)
+)
+
 func convClientHandler(c net.Conn) {
 	dconn := sio.WrapConnection(c)
 	defer dconn.Close()
@@ -51,6 +55,10 @@ func convClientHandler(c net.Conn) {
 
 		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
 
+		if MessageNotificationListener != nil {
+			MessageNotificationListener(id, msg)
+		}
+		
 		room.LogMessage(msg)
 	}
 }

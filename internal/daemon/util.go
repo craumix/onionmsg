@@ -9,8 +9,8 @@ import (
 )
 
 //GetTorlog returns the log of the used to instance.
-func GetTorlog() (string, error) {
-	return torInstance.Log(), nil
+func GetTorlog() string {
+	return torInstance.Log()
 }
 
 //ListContactIDs returns a list of all the contactid's fingerprints.
