@@ -3,7 +3,6 @@ package daemon
 import (
 	"context"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,12 +24,10 @@ const (
 	controlPort = 10049
 	loContPort  = 10050
 	loConvPort  = 10051
-	apiPort     = 10052
 
 	tordir         = "tordir"
 	blobdir        = "onionblobs"
 	datafile       = "onionmsg.zstd"
-	unixSocketName = "onionmsg.sock"
 )
 
 var (
@@ -42,8 +39,6 @@ var (
 	data = SerializableData{}
 
 	torInstance *tor.Instance
-	//APISocket is the socket that the API for frontend is served on
-	APISocket net.Listener
 
 	//LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
@@ -54,11 +49,10 @@ var (
 //StartDaemon is used to start the application for creating identites and rooms.
 //Also sending/receiving messages etc.
 //Basically everything except the frontend API.
-func StartDaemon(interactiveArg, unixSocketArg bool) {
+func StartDaemon(interactiveArg bool) {
 	var err error
 
 	interactive = interactiveArg
-	unixSocket = unixSocketArg
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -76,17 +70,6 @@ func StartDaemon(interactiveArg, unixSocketArg bool) {
 	if err != nil {
 		log.Panicln(err.Error())
 	}
-
-	if unixSocket {
-		APISocket, err = sio.CreateUnixSocket(unixSocketName)
-	} else {
-		APISocket, err = sio.CreateTCPSocket(apiPort)
-	}
-	if err != nil {
-		log.Panicln(err.Error())
-	}
-
-	//go startAPIServer()
 
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
 		SocksPort:   9050,

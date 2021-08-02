@@ -9,6 +9,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type NotificationType string
+
+const (
+	NotificationTypeNewMessage = "NewMessage"
+)
+
 var (
 	observerList []*websocket.Conn
 )
@@ -26,16 +32,24 @@ func NotifyNewMessage(id uuid.UUID, msg types.Message) {
 		msg,
 	}
 
-	NotifyObservers(n)
+	NotifyObservers(NotificationTypeNewMessage, n)
 }
 
-func NotifyObservers(msg interface{}) {
+func NotifyObservers(ntype NotificationType, msg interface{}) {
+	notification := struct {
+		Type NotificationType `json:"type"`
+		Data interface{}      `json:"data"`
+	}{
+		ntype,
+		msg,
+	}
+
 	go func() {
 		for _, c := range observerList {
-			err := c.WriteJSON(msg)
+			err := c.WriteJSON(notification)
 			if err != nil {
 				//TODO remove dead sockets
-				log.Print(err.Error())
+				log.Print(err)
 				c.Close()
 			}
 		}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
+	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -21,16 +22,33 @@ const (
 	maxMessageSize = 2 << 14
 	//2G
 	maxFileSize = 2 << 30
+
+	apiPort        = 10052
+	unixSocketName = "onionmsg.sock"
 )
 
 var (
 	wsUpgrader = websocket.Upgrader{
 		//TODO Fixme
-		CheckOrigin: func(r *http.Request) bool {return true},
+		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 )
 
-func Start(listener net.Listener) {
+func Start(unixSocket bool) {
+	var (
+		listener net.Listener
+		err      error
+	)
+
+	if unixSocket {
+		listener, err = sio.CreateUnixSocket(unixSocketName)
+	} else {
+		listener, err = sio.CreateTCPSocket(apiPort)
+	}
+	if err != nil {
+		log.Panic(err)
+	}
+
 	log.Printf("Starting API-Server %s\n", listener.Addr())
 
 	http.HandleFunc("/v1/ws", routeOpenWS)
@@ -54,7 +72,7 @@ func Start(listener net.Listener) {
 	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
 	http.HandleFunc("/v1/room/command/setnick", routeRoomCommandSetnick)
 
-	err := http.Serve(listener, nil)
+	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -63,7 +81,7 @@ func Start(listener net.Listener) {
 func routeOpenWS(w http.ResponseWriter, req *http.Request) {
 	c, err := wsUpgrader.Upgrade(w, req, nil)
 	if err != nil {
-		log.Printf("error upgrading connection %s", err.Error())
+		log.Printf("error upgrading connection %s", err)
 	}
 
 	observerList = append(observerList, c)

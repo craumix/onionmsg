@@ -21,7 +21,6 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 		}
 
 		socketPath := runtimeDir + "/" + name
-		log.Printf("Using unix socket with path %s\n", socketPath)
 
 		if _, ferr := os.Stat(socketPath); ferr == nil {
 			log.Printf("Unix socket already exists, removing")
@@ -42,7 +41,6 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 //CreateTCPSocket creates a socket listening on the loopback interface with the specified port.
 func CreateTCPSocket(port int) (socket net.Listener, err error) {
 	address := "127.0.0.1:" + strconv.Itoa(port)
-	log.Printf("Starting socket on on %s\n", address)
 	socket, err = net.Listen("tcp", address)
 	return
 }

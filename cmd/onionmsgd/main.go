@@ -18,8 +18,8 @@ func main() {
 	flag.BoolVar(&useUnixSocket, "u", false, "use a unix socket")
 	flag.Parse()
 
-	daemon.StartDaemon(interactive, useUnixSocket)
-	api.Start(daemon.APISocket)
+	daemon.StartDaemon(interactive)
+	api.Start(useUnixSocket)
 
 	for {
 		time.Sleep(time.Second * 10)
