@@ -83,7 +83,7 @@ This only adds users, and cant remove users from peers.
 */
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
-		r.SendMessage(MTYPE_CMD, []byte("join "+peer.RIdentity.Fingerprint()))
+		r.SendMessage(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()))
 	}
 }
 
@@ -134,7 +134,7 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 	return peer, nil
 }
 
-func (r *Room) SendMessage(mtype byte, content []byte) error {
+func (r *Room) SendMessage(mtype MessageType, content []byte) error {
 	msg := Message{
 		Meta: MessageMeta{
 			Sender: r.Self.Fingerprint(),
@@ -174,7 +174,7 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) LogMessage(msg Message) {
-	if msg.Meta.Type == MTYPE_CMD {
+	if msg.Meta.Type == MessageTypeCmd {
 		r.handleCommand(msg)
 	}
 

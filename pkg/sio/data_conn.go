@@ -31,19 +31,19 @@ type DataConn struct {
 //and then wraps it in a DataConn
 func DialDataConn(network, address string) (*DataConn, error) {
 	var (
-		c net.Conn
+		c   net.Conn
 		err error
 	)
 
 	if DataConnProxy != nil {
 		c, err = DataConnProxy.Dial(network, address)
-	}else {
+	} else {
 		c, err = net.Dial(network, address)
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return WrapConnection(c), nil
 }
 

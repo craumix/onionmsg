@@ -84,7 +84,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
 	dconn.Flush()
 
 	var content []byte
-	if meta.Type != types.MTYPE_BLOB {
+	if meta.Type != types.MessageTypeBlob {
 		content, err = readDataWithSig(*dconn, sender, sigSalt)
 		if err != nil {
 			return types.Message{}, err

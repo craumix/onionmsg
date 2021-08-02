@@ -90,7 +90,7 @@ func DeleteRoom(uuid string) error {
 	return deregisterRoom(id)
 }
 
-func SendMessage(uuid string, msgType byte, content []byte) error {
+func SendMessage(uuid string, msgType types.MessageType, content []byte) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return err

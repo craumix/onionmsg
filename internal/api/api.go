@@ -166,7 +166,7 @@ func routeRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_TEXT, content)
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeText, content)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -215,7 +215,7 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_BLOB, id[:])
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeBlob, id[:])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -260,7 +260,7 @@ func routeRoomCommandNameroom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	msg := "name_room " + string(content)
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeCmd, []byte(msg))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -275,7 +275,7 @@ func routeRoomCommandSetnick(w http.ResponseWriter, req *http.Request) {
 
 	msg := "nick " + string(content)
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MTYPE_CMD, []byte(msg))
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeCmd, []byte(msg))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

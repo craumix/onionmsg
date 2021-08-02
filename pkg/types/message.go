@@ -4,16 +4,18 @@ import (
 	"time"
 )
 
+type MessageType string
+
 const (
-	MTYPE_TEXT = 0x00
-	MTYPE_CMD  = 0x01
-	MTYPE_BLOB = 0x02
+	MessageTypeText MessageType = "mtype.text"
+	MessageTypeCmd MessageType = "mtype.cmd"
+	MessageTypeBlob MessageType = "mtype.blob"
 )
 
 type MessageMeta struct {
-	Sender string    `json:"sender"`
-	Time   time.Time `json:"time"`
-	Type   byte      `json:"type"`
+	Sender string      `json:"sender"`
+	Time   time.Time   `json:"time"`
+	Type   MessageType `json:"type"`
 }
 
 type Message struct {

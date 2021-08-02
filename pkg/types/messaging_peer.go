@@ -21,7 +21,7 @@ type MessagingPeer struct {
 	MQueue    []Message      `json:"queue"`
 	RIdentity RemoteIdentity `json:"identity"`
 
-	room   *Room
+	room *Room
 }
 
 func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
@@ -111,7 +111,7 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 		return nil
 	}
 
-	if msg.Meta.Type != MTYPE_BLOB {
+	if msg.Meta.Type != MessageTypeBlob {
 		_, err = mp.sendDataWithSig(dconn, msg.Content, sigSalt)
 		if err != nil {
 			return nil
