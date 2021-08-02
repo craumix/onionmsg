@@ -32,7 +32,6 @@ const (
 
 var (
 	interactive bool
-	unixSocket  bool
 
 	loadFuse bool
 
