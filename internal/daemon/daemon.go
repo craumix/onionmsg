@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -95,6 +96,7 @@ func StartDaemon(interactiveArg bool) {
 	go sio.StartLocalServer(loConvPort, convClientHandler)
 
 	if interactive {
+		time.Sleep(time.Millisecond * 500)
 		go startInteractive()
 	}
 }
