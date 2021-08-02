@@ -71,12 +71,7 @@ func StartDaemon(interactiveArg bool) {
 		log.Panicln(err.Error())
 	}
 
-	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
-		SocksPort:   9050,
-		ControlPort: 9051,
-		DataDir:     "./tordir",
-		TorRC:       "./torrc",
-	})
+	torInstance, err = tor.NewInstance(context.Background(), tor.DefaultConf)
 	if err != nil {
 		log.Panicln(err.Error())
 	}

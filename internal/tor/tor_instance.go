@@ -14,6 +14,15 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+var (
+	DefaultConf = Conf{
+		SocksPort:   9050,
+		ControlPort: 9051,
+		DataDir:     "./tordir",
+		TorRC:       "./torrc",
+	}
+)
+
 //Instance represents an instance of a Tor process.
 //It can be stopped using the Stop() CancelFunc.
 type Instance struct {
