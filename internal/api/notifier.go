@@ -44,14 +44,12 @@ func NotifyObservers(ntype NotificationType, msg interface{}) {
 		msg,
 	}
 
-	go func() {
-		for _, c := range observerList {
-			err := c.WriteJSON(notification)
-			if err != nil {
-				//TODO remove dead sockets
-				log.Print(err)
-				c.Close()
-			}
+	for _, c := range observerList {
+		err := c.WriteJSON(notification)
+		if err != nil {
+			//TODO remove dead sockets
+			log.Print(err)
+			c.Close()
 		}
-	}()
+	}
 }

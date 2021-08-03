@@ -56,7 +56,7 @@ func convClientHandler(c net.Conn) {
 		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
 
 		if MessageNotificationListener != nil {
-			MessageNotificationListener(id, msg)
+			go MessageNotificationListener(id, msg)
 		}
 		
 		room.LogMessage(msg)
