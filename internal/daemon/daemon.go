@@ -14,7 +14,7 @@ import (
 	"github.com/craumix/onionmsg/pkg/types"
 )
 
-/*SerializableData struct exists purely for serialaization purposes*/
+// SerializableData struct exists purely for serialization purposes
 type SerializableData struct {
 	ContactIdentities []types.Identity `json:"contactIdentities"`
 	Rooms             []*types.Room    `json:"rooms"`
@@ -26,9 +26,9 @@ const (
 	loContPort  = 10050
 	loConvPort  = 10051
 
-	tordir         = "tordir"
-	blobdir        = "onionblobs"
-	datafile       = "onionmsg.zstd"
+	tordir   = "tordir"
+	blobdir  = "onionblobs"
+	datafile = "onionmsg.zstd"
 )
 
 var (
@@ -40,15 +40,15 @@ var (
 
 	torInstance *tor.Instance
 
-	//LastCommit is the first 7 letters of the last commit, injected at build time
+	// LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
-	//BuildVer is the Go Version used to build this programm, obviously injected at build time
+	// BuildVer is the Go Version used to build this program, obviously injected at build time
 	BuildVer = "unknown"
 )
 
-//StartDaemon is used to start the application for creating identites and rooms.
-//Also sending/receiving messages etc.
-//Basically everything except the frontend API.
+// StartDaemon is used to start the application for creating identities and rooms.
+// Also sending/receiving messages etc.
+// Basically everything except the frontend API.
 func StartDaemon(interactiveArg bool) {
 	var err error
 
@@ -80,6 +80,10 @@ func StartDaemon(interactiveArg bool) {
 	err = loadData()
 	if err != nil && !os.IsNotExist(err) {
 		log.Panicln(err.Error())
+	}
+	for _, room := range data.Rooms {
+		// TODO derive this from an actual context
+		room.SetContext(context.TODO())
 	}
 	loadFuse = true
 

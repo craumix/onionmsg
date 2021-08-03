@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -22,30 +23,6 @@ func startInteractive() {
 		cmd = strings.Trim(cmd, " \n")
 
 		switch cmd {
-		/*
-			case "load":
-				err = loadData()
-				if err != nil {
-					log.Println(err.Error())
-					continue
-				}
-				err = torInstance.Stop()
-				if err != nil {
-					log.Println(err.Error())
-					continue
-				}
-				torInstance, err = tor.NewTorInstance(internalTor, tordir, socksPort, controlPort)
-				if err != nil {
-					log.Println(err.Error())
-					continue
-				}
-				err = loadContactIdentites()
-				if err != nil {
-					log.Println(err.Error())
-					continue
-				}
-				runMessageQueues()
-		*/
 		case "save":
 			err = saveData()
 			if err != nil {
@@ -77,9 +54,12 @@ func startInteractive() {
 				continue
 			}
 		case "list_rooms":
-			log.Println("Rooms:")
-			for _, e := range data.Rooms {
-				log.Printf("%s with %d peers\nSelf: %s\n", e.ID, len(e.Peers), e.Self.Fingerprint())
+			for iRoom, room := range data.Rooms {
+				log.Printf("Room %d: %s\n", iRoom, room.ID.String())
+				for iPeer, peer := range room.Peers {
+					log.Printf("\tPeer %d:\t%s\n", iPeer, peer.RIdentity.Fingerprint())
+				}
+				log.Printf("\tSelf:\t%s\n", room.Self.Fingerprint())
 			}
 		case "add_room":
 			log.Println("Print Contact IDs (one per line, empty line to finish):")
@@ -106,7 +86,7 @@ func startInteractive() {
 			}
 
 			log.Printf("Trying to create a room with %d peers\n", len(ids))
-			room, err := types.NewRoom(ids)
+			room, err := types.NewRoom(context.TODO(), ids)
 			if err != nil {
 				log.Println(err.Error())
 				continue
@@ -161,6 +141,24 @@ func startInteractive() {
 			for _, msg := range room.Messages {
 				log.Printf("From %s, at %s\n", msg.Meta.Sender, msg.Meta.Time)
 				log.Printf("Type %s, Content \"%s\"\n", msg.Meta.Type, string(msg.Content))
+			}
+		case "stop_room":
+			log.Println("Enter Room ID:")
+			roomToStop, _ := cin.ReadString('\n')
+			roomToStop = strings.Trim(roomToStop, " \n")
+
+			if roomToStop == "" {
+				break
+			}
+
+			for _, room := range data.Rooms {
+				if room.ID.String() == roomToStop {
+					room.StopQueues()
+				}
+			}
+		case "stop_all_rooms":
+			for _, room := range data.Rooms {
+				room.StopQueues()
 			}
 
 		default:

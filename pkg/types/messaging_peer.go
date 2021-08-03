@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,7 +14,7 @@ import (
 
 const (
 	queueTimeout = time.Second * 15
-	//512K
+	// 512K
 	blocksize = 1 << 19
 )
 
@@ -30,35 +31,30 @@ func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 	}
 }
 
-func (mp *MessagingPeer) RunMessageQueue(room *Room) error {
+func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error {
 	mp.room = room
 
+	queueContext, queueCancel := context.WithCancel(ctx)
+
 	for {
-		if len(mp.MQueue) == 0 {
-			time.Sleep(queueTimeout)
-			continue
-		}
-
-		c, err := mp.transferMessages(mp.MQueue...)
-		if err != nil {
-			log.Println(err)
-		} else {
-			mp.MQueue = mp.MQueue[c:]
-		}
-
 		select {
-		case <-room.queueTerminate:
-			return fmt.Errorf("queue terminated")
+		case <-queueContext.Done():
+			log.Printf("Queue with %s terminated!\n", mp.RIdentity.Fingerprint())
+			queueCancel()
+			return nil
 		default:
-		}
+			if len(mp.MQueue) == 0 {
+				continue
+			}
 
+			c, err := mp.transferMessages(mp.MQueue...)
+			if err != nil {
+				log.Println(err)
+			} else {
+				mp.MQueue = mp.MQueue[c:]
+			}
+		}
 		time.Sleep(queueTimeout)
-
-		select {
-		case <-room.queueTerminate:
-			return fmt.Errorf("queue terminated")
-		default:
-		}
 	}
 }
 

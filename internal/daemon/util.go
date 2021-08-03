@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/craumix/onionmsg/pkg/types"
@@ -8,12 +9,12 @@ import (
 	uid "github.com/google/uuid"
 )
 
-//GetTorlog returns the log of the used to instance.
+// GetTorlog returns the log of the used to instance.
 func GetTorlog() string {
 	return torInstance.Log()
 }
 
-//ListContactIDs returns a list of all the contactid's fingerprints.
+// ListContactIDs returns a list of all the contactId's fingerprints.
 func ListContactIDs() []string {
 	var contIDs []string
 	for _, id := range data.ContactIdentities {
@@ -22,7 +23,7 @@ func ListContactIDs() []string {
 	return contIDs
 }
 
-//ListRooms returns a marshaled list of all the rooms with most information
+// ListRooms returns a marshaled list of all the rooms with most information
 func ListRooms() []*types.RoomInfo {
 	var rooms []*types.RoomInfo
 	for _, r := range data.Rooms {
@@ -32,7 +33,7 @@ func ListRooms() []*types.RoomInfo {
 	return rooms
 }
 
-//CreateContactID generates and registers a new contact id and returns its fingerprint.
+// CreateContactID generates and registers a new contact id and returns its fingerprint.
 func CreateContactID() (string, error) {
 	id := types.NewIdentity()
 	err := registerContID(id)
@@ -42,7 +43,7 @@ func CreateContactID() (string, error) {
 	return id.Fingerprint(), nil
 }
 
-//DeleteContactID deletes and deregisters a contact id.
+// DeleteContactID deletes and deregisters a contact id.
 func DeleteContactID(fingerprint string) error {
 	return deregisterContID(fingerprint)
 }
@@ -58,7 +59,8 @@ func CreateRoom(fingerprints []string) error {
 		ids = append(ids, id)
 	}
 
-	room, err := types.NewRoom(ids)
+	// TODO derive this from an actual context
+	room, err := types.NewRoom(context.TODO(), ids)
 	if err != nil {
 		return err
 	}
@@ -81,7 +83,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 	return room.AddUser(id)
 }
 
-//DeleteRoom deletes the room with the specified uuid.
+// DeleteRoom deletes the room with the specified uuid.
 func DeleteRoom(uuid string) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
@@ -117,7 +119,7 @@ func ListMessages(uuid string, count int) ([]types.Message, error) {
 
 	if count > 0 {
 		return room.Messages[len(room.Messages)-count:], nil
-	}else {
+	} else {
 		return room.Messages, nil
 	}
 }

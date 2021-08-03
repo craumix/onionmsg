@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -21,7 +22,8 @@ type Room struct {
 	Nicks    map[string]string `json:"nicks"`
 	Messages []Message         `json:"messages"`
 
-	queueTerminate chan bool
+	ctx  context.Context
+	stop context.CancelFunc
 }
 
 type RoomInfo struct {
@@ -32,13 +34,18 @@ type RoomInfo struct {
 	Nicks map[string]string `json:"nicks,omitempty"`
 }
 
-func NewRoom(contactIdentities []RemoteIdentity) (*Room, error) {
+func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, error) {
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
 	}
 
-	err := room.addUsers(contactIdentities)
+	err := room.SetContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = room.addUsers(contactIdentities)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +54,14 @@ func NewRoom(contactIdentities []RemoteIdentity) (*Room, error) {
 	room.syncPeerLists()
 
 	return room, nil
+}
+
+func (self *Room) SetContext(ctx context.Context) error {
+	if self.ctx == nil {
+		self.ctx, self.stop = context.WithCancel(ctx)
+		return nil
+	}
+	return fmt.Errorf("%s already has a context", self.ID.String())
 }
 
 func (self *Room) addUsers(contactIdentities []RemoteIdentity) error {
@@ -67,28 +82,28 @@ func (self *Room) addUsers(contactIdentities []RemoteIdentity) error {
 AddUser adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddUser(contact RemoteIdentity) error {
-	q, err := r.addUserWithContactID(contact)
+func (self *Room) AddUser(contact RemoteIdentity) error {
+	peer, err := self.addUserWithContactID(contact)
 	if err != nil {
 		return err
 	}
 
-	err = q.RunMessageQueue(r)
+	err = peer.RunMessageQueue(self.ctx, self)
 	if err != nil {
 		return err
 	}
 
-	r.syncPeerLists()
+	self.syncPeerLists()
 	return nil
 }
 
 /*
 Syncs the user list for all peers.
-This only adds users, and cant remove users from peers.
+This only adds users, and can't remove users from peers.
 */
-func (r *Room) syncPeerLists() {
-	for _, peer := range r.Peers {
-		r.SendMessage(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()))
+func (self *Room) syncPeerLists() {
+	for _, peer := range self.Peers {
+		self.SendMessage(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()))
 	}
 }
 
@@ -97,7 +112,7 @@ This function tries to add a user with the contactID to the room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, error) {
+func (self *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, error) {
 	dconn, err := sio.DialDataConn("tcp", remote.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return nil, err
@@ -106,8 +121,8 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 
 	req := &ContactRequest{
 		RemoteFP: remote.Fingerprint(),
-		LocalFP:  r.Self.Fingerprint(),
-		ID:       r.ID,
+		LocalFP:  self.Self.Fingerprint(),
+		ID:       self.ID,
 	}
 	_, err = dconn.WriteStruct(req)
 	if err != nil {
@@ -122,7 +137,7 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 		return nil, err
 	}
 
-	if !remote.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
+	if !remote.Verify(append([]byte(resp.ConvFP), self.ID[:]...), resp.Sig) {
 		return nil, fmt.Errorf("invalid signature from remote %s", remote.URL())
 	}
 
@@ -135,38 +150,37 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 	log.Printf("Conversiation ID %s\n", resp.ConvFP)
 
 	peer := NewMessagingPeer(peerID)
-	r.Peers = append(r.Peers, peer)
+	self.Peers = append(self.Peers, peer)
 	return peer, nil
 }
 
-func (r *Room) SendMessage(mtype MessageType, content []byte) error {
+func (self *Room) SendMessage(mtype MessageType, content []byte) error {
 	msg := Message{
 		Meta: MessageMeta{
-			Sender: r.Self.Fingerprint(),
+			Sender: self.Self.Fingerprint(),
 			Time:   time.Now().UTC(),
 			Type:   mtype,
 		},
 		Content: content,
 	}
 
-	r.LogMessage(msg)
+	self.LogMessage(msg)
 
-	for _, peer := range r.Peers {
+	for _, peer := range self.Peers {
 		go peer.QueueMessage(msg)
 	}
 
 	return nil
 }
 
-func (r *Room) RunRemoteMessageQueues() {
-	r.queueTerminate = make(chan bool)
-	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(r)
+func (self *Room) RunRemoteMessageQueues() {
+	for _, peer := range self.Peers {
+		go peer.RunMessageQueue(self.ctx, self)
 	}
 }
 
-func (r *Room) PeerByFingerprint(fingerprint string) (RemoteIdentity, bool) {
-	for _, peer := range r.Peers {
+func (self *Room) PeerByFingerprint(fingerprint string) (RemoteIdentity, bool) {
+	for _, peer := range self.Peers {
 		if peer.RIdentity.Fingerprint() == fingerprint {
 			return peer.RIdentity, true
 		}
@@ -174,16 +188,17 @@ func (r *Room) PeerByFingerprint(fingerprint string) (RemoteIdentity, bool) {
 	return RemoteIdentity{}, false
 }
 
-func (r *Room) StopQueues() {
-	close(r.queueTerminate)
+func (self *Room) StopQueues() {
+	log.Printf("Stopping Room %s", self.ID.String())
+	self.stop()
 }
 
-func (r *Room) LogMessage(msg Message) {
+func (self *Room) LogMessage(msg Message) {
 	if msg.Meta.Type == MessageTypeCmd {
-		r.handleCommand(msg)
+		self.handleCommand(msg)
 	}
 
-	r.Messages = append(r.Messages, msg)
+	self.Messages = append(self.Messages, msg)
 }
 
 // Info returns a struct with most information about this room
@@ -209,13 +224,10 @@ func (self *Room) handleCommand(msg Message) {
 	switch args[0] {
 	case "join":
 		self.handleJoin(args)
-		break
 	case "name_room":
 		self.handleNameRoom(args)
-		break
 	case "nick":
 		self.handleNick(args, msg.Meta.Sender)
-		break
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
@@ -240,7 +252,7 @@ func (self *Room) handleJoin(args []string) {
 	newPeer := NewMessagingPeer(peerID)
 	self.Peers = append(self.Peers, newPeer)
 
-	go newPeer.RunMessageQueue(self)
+	go newPeer.RunMessageQueue(self.ctx, self)
 
 	log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), self.ID)
 }
