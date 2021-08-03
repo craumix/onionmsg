@@ -104,7 +104,7 @@ func SendMessage(uuid string, msgType types.MessageType, content []byte) error {
 	return room.SendMessage(msgType, content)
 }
 
-func ListMessages(uuid string) ([]types.Message, error) {
+func ListMessages(uuid string, count int) ([]types.Message, error) {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return nil, err
@@ -114,7 +114,12 @@ func ListMessages(uuid string) ([]types.Message, error) {
 	if !ok {
 		return nil, fmt.Errorf("no such room: %s", uuid)
 	}
-	return room.Messages, nil
+
+	if count > 0 {
+		return room.Messages[len(room.Messages)-count:], nil
+	}else {
+		return room.Messages, nil
+	}
 }
 
 func GetRoom(id uuid.UUID) (*types.Room, bool) {
