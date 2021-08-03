@@ -257,10 +257,9 @@ func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 	)
 
 	id := req.FormValue("uuid")
-	countStr := req.FormValue("count")
 
-	if len(countStr) != 0 {
-		count, err = strconv.Atoi(countStr)
+	if req.FormValue("count") != "" {
+		count, err = strconv.Atoi(req.FormValue("count"))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
