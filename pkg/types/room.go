@@ -33,25 +33,13 @@ type RoomInfo struct {
 }
 
 func NewRoom(contactIdentities []RemoteIdentity) (*Room, error) {
-	s := NewIdentity()
-	id := uuid.New()
-
 	room := &Room{
-		Self: s,
-		ID:   id,
+		Self: NewIdentity(),
+		ID:   uuid.New(),
 	}
 
-	errG := new(errgroup.Group)
-
-	for _, contact := range contactIdentities {
-		contact := contact
-		errG.Go(func() error {
-			_, err := room.addUserWithContactID(contact)
-			return err
-		})
-	}
-
-	if err := errG.Wait(); err != nil {
+	err := room.addUsers(contactIdentities)
+	if err != nil {
 		return nil, err
 	}
 
@@ -59,6 +47,20 @@ func NewRoom(contactIdentities []RemoteIdentity) (*Room, error) {
 	room.syncPeerLists()
 
 	return room, nil
+}
+
+func (self *Room) addUsers(contactIdentities []RemoteIdentity) error {
+	errG := new(errgroup.Group)
+
+	for _, contact := range contactIdentities {
+		contact := contact
+		errG.Go(func() error {
+			_, err := self.addUserWithContactID(contact)
+			return err
+		})
+	}
+
+	return errG.Wait()
 }
 
 /*
@@ -71,7 +73,10 @@ func (r *Room) AddUser(contact RemoteIdentity) error {
 		return err
 	}
 
-	q.RunMessageQueue(r)
+	err = q.RunMessageQueue(r)
+	if err != nil {
+		return err
+	}
 
 	r.syncPeerLists()
 	return nil
@@ -181,68 +186,89 @@ func (r *Room) LogMessage(msg Message) {
 	r.Messages = append(r.Messages, msg)
 }
 
-func (r *Room) handleCommand(msg Message) {
+// Info returns a struct with most information about this room
+func (self *Room) Info() *RoomInfo {
+	info := &RoomInfo{
+		Self:  self.Self.Fingerprint(),
+		ID:    self.ID,
+		Name:  self.Name,
+		Nicks: self.Nicks,
+	}
+
+	for _, p := range self.Peers {
+		info.Peers = append(info.Peers, p.RIdentity.Fingerprint())
+	}
+
+	return info
+}
+
+func (self *Room) handleCommand(msg Message) {
 	cmd := string(msg.Content)
 
 	args := strings.Split(cmd, " ")
 	switch args[0] {
 	case "join":
-		if len(args) < 2 {
-			log.Printf("Not enough args for command \"%s\"\n", cmd)
-			break
-		}
-
-		if _, ok := r.PeerByFingerprint(args[1]); ok || args[1] == r.Self.Fingerprint() {
-			//User already added, or self
-			break
-		}
-
-		peerID, err := NewRemoteIdentity(args[1])
-		if err != nil {
-			log.Println(err.Error())
-			break
-		}
-
-		newPeer := NewMessagingPeer(peerID)
-		r.Peers = append(r.Peers, newPeer)
-
-		newPeer.RunMessageQueue(r)
-
-		log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
+		self.handleJoin(args)
+		break
 	case "name_room":
-		if len(args) < 2 {
-			log.Printf("Not enough args for command \"%s\"\n", cmd)
-			break
-		}
-
-		r.Name = args[1]
-		log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
+		self.handleNameRoom(args)
+		break
 	case "nick":
-		if len(args) < 2 {
-			log.Printf("Not enough args for command \"%s\"\n", cmd)
-			break
-		}
-		nickname := args[1]
-
-		r.Nicks[msg.Meta.Sender] = nickname
-		log.Printf("Set nickname fro %s to %s", msg.Meta.Sender, nickname)
+		self.handleNick(args, msg.Meta.Sender)
+		break
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)
 	}
 }
 
-//Info returns a struct with most information about this room
-func (r *Room) Info() *RoomInfo {
-	info := &RoomInfo{
-		Self:  r.Self.Fingerprint(),
-		ID:    r.ID,
-		Name:  r.Name,
-		Nicks: r.Nicks,
+func (self *Room) handleJoin(args []string) {
+	if !enoughArgs(args, 2) {
+		return
 	}
 
-	for _, p := range r.Peers {
-		info.Peers = append(info.Peers, p.RIdentity.Fingerprint())
+	if _, ok := self.PeerByFingerprint(args[1]); ok || args[1] == self.Self.Fingerprint() {
+		//User already added, or self
+		return
 	}
 
-	return info
+	peerID, err := NewRemoteIdentity(args[1])
+	if err != nil {
+		log.Println(err.Error())
+		return
+	}
+
+	newPeer := NewMessagingPeer(peerID)
+	self.Peers = append(self.Peers, newPeer)
+
+	go newPeer.RunMessageQueue(self)
+
+	log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), self.ID)
+}
+
+func (self *Room) handleNameRoom(args []string) {
+	if !enoughArgs(args, 2) {
+		return
+	}
+
+	self.Name = args[1]
+	log.Printf("Room with id %s renamed to %s", self.ID, self.Name)
+}
+
+func (self Room) handleNick(args []string, sender string) {
+	if !enoughArgs(args, 2) {
+		return
+	}
+
+	nickname := args[1]
+
+	self.Nicks[sender] = nickname
+	log.Printf("Set nickname fro %s to %s", sender, nickname)
+}
+
+func enoughArgs(args []string, needed int) bool {
+	if len(args) < needed {
+		log.Printf("Not enough args for command \"%s\"\n", strings.Join(args, " "))
+		return false
+	}
+	return true
 }
