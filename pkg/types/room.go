@@ -13,12 +13,11 @@ import (
 )
 
 type Room struct {
-	Self     Identity          `json:"self"`
-	Peers    []*MessagingPeer  `json:"peers"`
-	ID       uuid.UUID         `json:"uuid"`
-	Name     string            `json:"name"`
-	Nicks    map[string]string `json:"nicks"`
-	Messages []Message         `json:"messages"`
+	Self     Identity         `json:"self"`
+	Peers    []*MessagingPeer `json:"peers"`
+	ID       uuid.UUID        `json:"uuid"`
+	Name     string           `json:"name"`
+	Messages []Message        `json:"messages"`
 
 	ctx  context.Context
 	stop context.CancelFunc
@@ -190,14 +189,14 @@ func (r *Room) LogMessage(msg Message) {
 // Info returns a struct with most information about this room
 func (r *Room) Info() *RoomInfo {
 	info := &RoomInfo{
-		Self:  r.Self.Fingerprint(),
-		ID:    r.ID,
-		Name:  r.Name,
-		Nicks: r.Nicks,
+		Self: r.Self.Fingerprint(),
+		ID:   r.ID,
+		Name: r.Name,
 	}
 
-	for _, p := range r.Peers {
-		info.Peers = append(info.Peers, p.RIdentity.Fingerprint())
+	for _, peer := range r.Peers {
+		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
+		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick
 	}
 
 	return info
@@ -257,10 +256,15 @@ func (r Room) handleNick(args []string, sender string) {
 		return
 	}
 
-	nickname := args[1]
+	identity, found := r.PeerByFingerprint(sender)
+	if found {
+		nickname := args[1]
+		identity.Nick = nickname
+		log.Printf("Set nickname for %s to %s", sender, nickname)
+	} else {
+		log.Printf("Peer %s not found", sender)
+	}
 
-	r.Nicks[sender] = nickname
-	log.Printf("Set nickname fro %s to %s", sender, nickname)
 }
 
 func enoughArgs(args []string, needed int) bool {
