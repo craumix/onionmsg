@@ -6,7 +6,8 @@ import (
 )
 
 type Identity struct {
-	Key ed25519.PrivateKey `json:"key"`
+	Key  ed25519.PrivateKey `json:"key"`
+	Nick string             `json:"nick"`
 }
 
 func NewIdentity() Identity {
