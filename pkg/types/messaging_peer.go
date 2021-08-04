@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"time"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
-	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 )
 
@@ -76,7 +76,7 @@ func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
 		return 0, fmt.Errorf("room not set")
 	}
 
-	dataConn, err := sio.DialDataConn("tcp", mp.getConvURL())
+	dataConn, err := connection.GetConnFunc("tcp", mp.getConvURL())
 	if err != nil {
 		return 0, err
 	}
@@ -101,7 +101,7 @@ func (mp *MessagingPeer) getConvURL() string {
 	return fmt.Sprintf("%s:%d", mp.RIdentity.URL(), PubConvPort)
 }
 
-func (mp *MessagingPeer) sendMessage(msg Message, dataConn *sio.DataConn) error {
+func (mp *MessagingPeer) sendMessage(msg Message, dataConn connection.ConnWrapper) error {
 	sigSalt, err := dataConn.ReadBytes()
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func (mp *MessagingPeer) sendMessage(msg Message, dataConn *sio.DataConn) error 
 	return nil
 }
 
-func (mp *MessagingPeer) sendDataWithSig(dataConn *sio.DataConn, data, sigSalt []byte) (int, error) {
+func (mp *MessagingPeer) sendDataWithSig(dataConn connection.ConnWrapper, data, sigSalt []byte) (int, error) {
 	n, err := dataConn.WriteBytes(data)
 	if err != nil {
 		return 0, err

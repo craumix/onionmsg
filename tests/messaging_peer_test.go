@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/pkg/types"
 	"os"
 	"testing"
@@ -19,6 +20,10 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
+	connection.GetConnFunc = GetMockedConnWrapper
+
+	MockedConn = MockConnWrapper{}
+
 	identity, _ := types.NewRemoteIdentity("Test")
 	peer = types.NewMessagingPeer(identity)
 
@@ -34,6 +39,7 @@ func setup() {
 }
 
 func TestQueueMessage(t *testing.T) {
+	MockedConn.ReadStringOutputString = "success"
 	if len(peer.MQueue) != 0 {
 		t.Error("Peer doesn't start with an empty Message queue")
 	}

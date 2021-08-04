@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"os"
 	"os/signal"
@@ -54,6 +55,8 @@ func StartDaemon(interactiveArg bool) {
 
 	interactive = interactiveArg
 
+	connection.GetConnFunc = connection.DialDataConn
+
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf("Something went seriously wrong:\n%sTrying to perfrom clean exit", err)
@@ -75,7 +78,7 @@ func StartDaemon(interactiveArg bool) {
 	if err != nil {
 		log.Panicln(err.Error())
 	}
-	sio.DataConnProxy = torInstance.Proxy
+	connection.DataConnProxy = torInstance.Proxy
 
 	err = loadData()
 	if err != nil && !os.IsNotExist(err) {

@@ -3,12 +3,12 @@ package types
 import (
 	"context"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 )
 
@@ -99,7 +99,7 @@ This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
 func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*MessagingPeer, error) {
-	dataConn, err := sio.DialDataConn("tcp", contactIdentity.URL()+":"+strconv.Itoa(PubContPort))
+	dataConn, err := connection.GetConnFunc("tcp", contactIdentity.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return nil, err
 	}
@@ -189,9 +189,10 @@ func (r *Room) LogMessage(msg Message) {
 // Info returns a struct with most information about this room
 func (r *Room) Info() *RoomInfo {
 	info := &RoomInfo{
-		Self: r.Self.Fingerprint(),
-		ID:   r.ID,
-		Name: r.Name,
+		Self:  r.Self.Fingerprint(),
+		ID:    r.ID,
+		Name:  r.Name,
+		Nicks: map[string]string{},
 	}
 
 	for _, peer := range r.Peers {
