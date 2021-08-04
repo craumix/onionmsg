@@ -88,10 +88,7 @@ func (self *Room) AddUser(contact RemoteIdentity) error {
 		return err
 	}
 
-	err = peer.RunMessageQueue(self.ctx, self)
-	if err != nil {
-		return err
-	}
+	go peer.RunMessageQueue(self.ctx, self)
 
 	self.syncPeerLists()
 	return nil

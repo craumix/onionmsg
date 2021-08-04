@@ -19,8 +19,11 @@ const (
 )
 
 type MessagingPeer struct {
-	MQueue    []Message      `json:"queue"`
 	RIdentity RemoteIdentity `json:"identity"`
+	MQueue    []Message      `json:"queue"`
+
+	ctx  context.Context
+	stop context.CancelFunc
 
 	room *Room
 }
@@ -34,13 +37,13 @@ func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error {
 	mp.room = room
 
-	queueContext, queueCancel := context.WithCancel(ctx)
+	mp.ctx, mp.stop = context.WithCancel(ctx)
 
 	for {
 		select {
-		case <-queueContext.Done():
-			log.Printf("Queue with %s terminated!\n", mp.RIdentity.Fingerprint())
-			queueCancel()
+		case <-mp.ctx.Done():
+			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
+			mp.stop()
 			return nil
 		default:
 			if len(mp.MQueue) == 0 {
@@ -123,12 +126,12 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 			return err
 		}
 
-		blockcount := int(stat.Size() / blocksize)
+		blockCount := int(stat.Size() / blocksize)
 		if stat.Size()%blocksize != 0 {
-			blockcount++
+			blockCount++
 		}
 
-		_, err = dconn.WriteInt(blockcount)
+		_, err = dconn.WriteInt(blockCount)
 		if err != nil {
 			return err
 		}
@@ -140,7 +143,7 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 		defer file.Close()
 
 		buf := make([]byte, blocksize)
-		for c := 0; c < blockcount; c++ {
+		for c := 0; c < blockCount; c++ {
 			n, err := file.Read(buf)
 			if err != nil {
 				return err
@@ -175,4 +178,8 @@ func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data, sigSalt []by
 	}
 
 	return m + n, nil
+}
+
+func (mp *MessagingPeer) Stop() {
+	mp.stop()
 }
