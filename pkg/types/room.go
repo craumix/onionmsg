@@ -192,6 +192,7 @@ func (r *Room) Info() *RoomInfo {
 		Self: r.Self.Fingerprint(),
 		ID:   r.ID,
 		Name: r.Name,
+		Nicks: map[string]string{},
 	}
 
 	for _, peer := range r.Peers {
