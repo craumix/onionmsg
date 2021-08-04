@@ -34,6 +34,8 @@ func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 	}
 }
 
+// RunMessageQueue creates a cancellable context for the MessagingPeer
+// and starts a loop that will try to send queued messages every so often.
 func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error {
 	mp.room = room
 
@@ -61,6 +63,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error 
 	}
 }
 
+// QueueMessage tries to send the message right away and if that fails the message will be queued
 func (mp *MessagingPeer) QueueMessage(msg Message) {
 	_, err := mp.transferMessages(msg)
 	if err != nil {
@@ -73,20 +76,20 @@ func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
 		return 0, fmt.Errorf("room not set")
 	}
 
-	dconn, err := sio.DialDataConn("tcp", mp.getConvURL())
+	dataConn, err := sio.DialDataConn("tcp", mp.getConvURL())
 	if err != nil {
 		return 0, err
 	}
-	defer dconn.Close()
+	defer dataConn.Close()
 
-	dconn.WriteBytes(mp.room.ID[:])
-	dconn.WriteInt(len(msgs))
-	dconn.Flush()
+	dataConn.WriteBytes(mp.room.ID[:])
+	dataConn.WriteInt(len(msgs))
+	dataConn.Flush()
 
 	for index, msg := range msgs {
-		err = mp.sendMessage(msg, dconn)
+		err = mp.sendMessage(msg, dataConn)
 		if err != nil {
-			dconn.Close()
+			dataConn.Close()
 			return index, err
 		}
 	}
@@ -98,20 +101,20 @@ func (mp *MessagingPeer) getConvURL() string {
 	return fmt.Sprintf("%s:%d", mp.RIdentity.URL(), PubConvPort)
 }
 
-func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
-	sigSalt, err := dconn.ReadBytes()
+func (mp *MessagingPeer) sendMessage(msg Message, dataConn *sio.DataConn) error {
+	sigSalt, err := dataConn.ReadBytes()
 	if err != nil {
 		return err
 	}
 
 	meta, _ := json.Marshal(msg.Meta)
-	_, err = mp.sendDataWithSig(dconn, meta, sigSalt)
+	_, err = mp.sendDataWithSig(dataConn, meta, sigSalt)
 	if err != nil {
 		return nil
 	}
 
 	if msg.Meta.Type != MessageTypeBlob {
-		_, err = mp.sendDataWithSig(dconn, msg.Content, sigSalt)
+		_, err = mp.sendDataWithSig(dataConn, msg.Content, sigSalt)
 		if err != nil {
 			return nil
 		}
@@ -131,7 +134,7 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 			blockCount++
 		}
 
-		_, err = dconn.WriteInt(blockCount)
+		_, err = dataConn.WriteInt(blockCount)
 		if err != nil {
 			return err
 		}
@@ -149,7 +152,7 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 				return err
 			}
 
-			_, err = mp.sendDataWithSig(dconn, buf[:n], sigSalt)
+			_, err = mp.sendDataWithSig(dataConn, buf[:n], sigSalt)
 			if err != nil {
 				return err
 			}
@@ -159,18 +162,18 @@ func (mp *MessagingPeer) sendMessage(msg Message, dconn *sio.DataConn) error {
 	return nil
 }
 
-func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data, sigSalt []byte) (int, error) {
-	n, err := dconn.WriteBytes(data)
+func (mp *MessagingPeer) sendDataWithSig(dataConn *sio.DataConn, data, sigSalt []byte) (int, error) {
+	n, err := dataConn.WriteBytes(data)
 	if err != nil {
 		return 0, err
 	}
-	m, err := dconn.WriteBytes(mp.room.Self.Sign(append(sigSalt, data...)))
+	m, err := dataConn.WriteBytes(mp.room.Self.Sign(append(sigSalt, data...)))
 	if err != nil {
 		return n, err
 	}
-	dconn.Flush()
+	dataConn.Flush()
 
-	resp, err := dconn.ReadString()
+	resp, err := dataConn.ReadString()
 	if err != nil {
 		return m + n, err
 	} else if resp != "ok" {
@@ -180,6 +183,7 @@ func (mp *MessagingPeer) sendDataWithSig(dconn *sio.DataConn, data, sigSalt []by
 	return m + n, nil
 }
 
-func (mp *MessagingPeer) Stop() {
+// TerminateMessageQueue cancels the context for this MessagingPeer
+func (mp *MessagingPeer) TerminateMessageQueue() {
 	mp.stop()
 }
