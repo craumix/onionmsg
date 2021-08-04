@@ -80,7 +80,7 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 		return err
 	}
 
-	return room.AddUser(id)
+	return room.AddPeers(id)
 }
 
 // DeleteRoom deletes the room with the specified uuid.

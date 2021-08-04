@@ -8,10 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/craumix/onionmsg/pkg/sio"
+	"github.com/google/uuid"
 )
 
 type Room struct {
@@ -45,13 +43,10 @@ func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, er
 		return nil, err
 	}
 
-	err = room.addUsers(contactIdentities)
+	err = room.AddPeers(contactIdentities...)
 	if err != nil {
 		return nil, err
 	}
-
-	room.RunRemoteMessageQueues()
-	room.syncPeerLists()
 
 	return room, nil
 }
@@ -64,33 +59,28 @@ func (r *Room) SetContext(ctx context.Context) error {
 	return fmt.Errorf("%s already has a context", r.ID.String())
 }
 
-func (r *Room) addUsers(contactIdentities []RemoteIdentity) error {
-	errG := new(errgroup.Group)
-
-	for _, contact := range contactIdentities {
-		contact := contact
-		errG.Go(func() error {
-			_, err := r.addUserWithContactID(contact)
-			return err
-		})
-	}
-
-	return errG.Wait()
-}
-
 /*
-AddUser adds a user to the Room, and if successful syncs the PeerLists.
+AddPeers adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddUser(contact RemoteIdentity) error {
-	peer, err := r.addUserWithContactID(contact)
-	if err != nil {
-		return err
+func (r *Room) AddPeers(contactIdentities ...RemoteIdentity) error {
+	var newPeers []*MessagingPeer
+	for _, identity := range contactIdentities {
+		newPeer, err := r.createPeerViaContactID(identity)
+		if err != nil {
+			return err
+		}
+		newPeers = append(newPeers, newPeer)
 	}
 
-	go peer.RunMessageQueue(r.ctx, r)
+	r.Peers = append(r.Peers, newPeers...)
+
+	for _, peer := range newPeers {
+		go peer.RunMessageQueue(r.ctx, r)
+	}
 
 	r.syncPeerLists()
+
 	return nil
 }
 
@@ -109,15 +99,15 @@ This function tries to add a user with the contactID to the room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, error) {
-	dataConn, err := sio.DialDataConn("tcp", remote.URL()+":"+strconv.Itoa(PubContPort))
+func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*MessagingPeer, error) {
+	dataConn, err := sio.DialDataConn("tcp", contactIdentity.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return nil, err
 	}
 	defer dataConn.Close()
 
 	req := &ContactRequest{
-		RemoteFP: remote.Fingerprint(),
+		RemoteFP: contactIdentity.Fingerprint(),
 		LocalFP:  r.Self.Fingerprint(),
 		ID:       r.ID,
 	}
@@ -134,8 +124,8 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 		return nil, err
 	}
 
-	if !remote.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
-		return nil, fmt.Errorf("invalid signature from remote %s", remote.URL())
+	if !contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
+		return nil, fmt.Errorf("invalid signature from contactIdentity %s", contactIdentity.URL())
 	}
 
 	peerID, err := NewRemoteIdentity(resp.ConvFP)
@@ -143,11 +133,10 @@ func (r *Room) addUserWithContactID(remote RemoteIdentity) (*MessagingPeer, erro
 		return nil, err
 	}
 
-	log.Printf("Validated %s\n", remote.URL())
+	log.Printf("Validated %s\n", contactIdentity.URL())
 	log.Printf("Conversiation ID %s\n", resp.ConvFP)
 
 	peer := NewMessagingPeer(peerID)
-	r.Peers = append(r.Peers, peer)
 	return peer, nil
 }
 
