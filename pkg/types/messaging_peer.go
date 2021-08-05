@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	queueTimeout = time.Second * 15
+	QueueTimeout = time.Second * 15
 	// 512K
 	blocksize = 1 << 19
 )
@@ -59,7 +59,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error 
 				mp.MQueue = mp.MQueue[c:]
 			}
 		}
-		time.Sleep(queueTimeout)
+		time.Sleep(QueueTimeout)
 	}
 }
 

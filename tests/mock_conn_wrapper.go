@@ -6,7 +6,6 @@ import (
 )
 
 var MockedConn *MockConnWrapper
-var GetMockedConnWrapperError error
 
 type MockConnWrapper struct {
 	WriteBytesInput       [][]byte
@@ -47,7 +46,9 @@ type MockConnWrapper struct {
 	BufferedInt    int
 	BufferedCalled bool
 
-	Network, Address string
+	Network, Address           string
+	GetMockedConnWrapperCalled bool
+	GetMockedConnWrapperError  error
 }
 
 func (m *MockConnWrapper) WriteBytes(msg []byte) (int, error) {
@@ -106,5 +107,6 @@ func (m *MockConnWrapper) Buffered() int {
 }
 
 func GetMockedConnWrapper(network, address string) (connection.ConnWrapper, error) {
-	return MockedConn, GetMockedConnWrapperError
+	MockedConn.GetMockedConnWrapperCalled = true
+	return MockedConn, MockedConn.GetMockedConnWrapperError
 }
