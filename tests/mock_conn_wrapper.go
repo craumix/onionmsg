@@ -1,6 +1,9 @@
 package tests
 
-import "github.com/craumix/onionmsg/pkg/sio/connection"
+import (
+	"encoding/json"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
+)
 
 var MockedConn MockConnWrapper
 var GetMockedConnWrapperError error
@@ -76,7 +79,8 @@ func (m MockConnWrapper) WriteStruct(msg interface{}) (int, error) {
 
 func (m MockConnWrapper) ReadStruct(target interface{}) error {
 	m.ReadStructTargetStruct = target
-	target = m.ReadStructSourceStruct
+	raw, _ := json.Marshal(m.ReadStructSourceStruct)
+	json.Unmarshal(raw, target)
 	return m.ReadStructOutputError
 }
 
