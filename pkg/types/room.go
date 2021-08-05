@@ -19,7 +19,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	ctx  context.Context
+	Ctx  context.Context `json:"-"`
 	stop context.CancelFunc
 }
 
@@ -51,8 +51,8 @@ func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, er
 }
 
 func (r *Room) SetContext(ctx context.Context) error {
-	if r.ctx == nil {
-		r.ctx, r.stop = context.WithCancel(ctx)
+	if r.Ctx == nil {
+		r.Ctx, r.stop = context.WithCancel(ctx)
 		return nil
 	}
 	return fmt.Errorf("%s already has a context", r.ID.String())
@@ -75,7 +75,7 @@ func (r *Room) AddPeers(contactIdentities ...RemoteIdentity) error {
 	r.Peers = append(r.Peers, newPeers...)
 
 	for _, peer := range newPeers {
-		go peer.RunMessageQueue(r.ctx, r)
+		go peer.RunMessageQueue(r.Ctx, r)
 	}
 
 	r.syncPeerLists()
@@ -160,7 +160,7 @@ func (r *Room) SendMessage(msgType MessageType, content []byte) error {
 
 func (r *Room) RunRemoteMessageQueues() {
 	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(r.ctx, r)
+		go peer.RunMessageQueue(r.Ctx, r)
 	}
 }
 
@@ -238,7 +238,7 @@ func (r *Room) handleJoin(args []string) {
 	newPeer := NewMessagingPeer(peerID)
 	r.Peers = append(r.Peers, newPeer)
 
-	go newPeer.RunMessageQueue(r.ctx, r)
+	go newPeer.RunMessageQueue(r.Ctx, r)
 
 	log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
 }

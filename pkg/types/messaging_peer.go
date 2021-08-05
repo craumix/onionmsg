@@ -52,7 +52,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error 
 				continue
 			}
 
-			c, err := mp.transferMessages(mp.MQueue...)
+			c, err := mp.TransferMessages(mp.MQueue...)
 			if err != nil {
 				log.Println(err)
 			} else {
@@ -65,13 +65,13 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) error 
 
 // QueueMessage tries to send the message right away and if that fails the message will be queued
 func (mp *MessagingPeer) QueueMessage(msg Message) {
-	_, err := mp.transferMessages(msg)
+	_, err := mp.TransferMessages(msg)
 	if err != nil {
 		mp.MQueue = append(mp.MQueue, msg)
 	}
 }
 
-func (mp *MessagingPeer) transferMessages(msgs ...Message) (int, error) {
+func (mp *MessagingPeer) TransferMessages(msgs ...Message) (int, error) {
 	if mp.room == nil {
 		return 0, fmt.Errorf("room not set")
 	}
