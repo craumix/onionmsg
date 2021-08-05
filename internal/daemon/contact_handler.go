@@ -1,15 +1,15 @@
 package daemon
 
 import (
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"net"
 
-	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/types"
 )
 
 func contClientHandler(c net.Conn) {
-	dconn := sio.WrapConnection(c)
+	dconn := connection.WrapConnection(c)
 	defer dconn.Close()
 
 	req := &types.ContactRequest{}

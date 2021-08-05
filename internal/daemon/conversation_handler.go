@@ -4,11 +4,11 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"net"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
-	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 )
@@ -18,7 +18,7 @@ var (
 )
 
 func convClientHandler(c net.Conn) {
-	dconn := sio.WrapConnection(c)
+	dconn := connection.WrapConnection(c)
 	defer dconn.Close()
 
 	idRaw, err := dconn.ReadBytes()
@@ -58,12 +58,12 @@ func convClientHandler(c net.Conn) {
 		if MessageNotificationListener != nil {
 			go MessageNotificationListener(id, msg)
 		}
-		
+
 		room.LogMessage(msg)
 	}
 }
 
-func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
+func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message, error) {
 	sigSalt, err := writeRandom(dconn, 16)
 	if err != nil {
 		return types.Message{}, err
@@ -93,7 +93,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
 
 	var content []byte
 	if meta.Type != types.MessageTypeBlob {
-		content, err = readDataWithSig(*dconn, sender, sigSalt)
+		content, err = readDataWithSig(dconn, sender, sigSalt)
 		if err != nil {
 			return types.Message{}, err
 		}
@@ -123,7 +123,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
 		}()
 
 		for i := 0; i < blockcount; i++ {
-			buf, err := readDataWithSig(*dconn, sender, sigSalt)
+			buf, err := readDataWithSig(dconn, sender, sigSalt)
 			if err != nil {
 				return types.Message{}, err
 			}
@@ -142,7 +142,7 @@ func readMessage(dconn *sio.DataConn, room *types.Room) (types.Message, error) {
 	}, nil
 }
 
-func readDataWithSig(dconn sio.DataConn, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
+func readDataWithSig(dconn connection.ConnWrapper, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
 	content, _ := dconn.ReadBytes()
 	sig, err := dconn.ReadBytes()
 	if err != nil {
@@ -159,7 +159,7 @@ func readDataWithSig(dconn sio.DataConn, sender types.RemoteIdentity, sigSalt []
 	return content, nil
 }
 
-func writeRandom(dconn *sio.DataConn, length int) ([]byte, error) {
+func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
 	r := make([]byte, length)
 	rand.Read(r)
 	_, err := dconn.WriteBytes(r)

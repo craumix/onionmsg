@@ -1,4 +1,4 @@
-package sio
+package connection
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ type DataConn struct {
 
 //DialDataConn creates a new connection that uses the, possibly set, proxy
 //and then wraps it in a DataConn
-func DialDataConn(network, address string) (*DataConn, error) {
+func DialDataConn(network, address string) (ConnWrapper, error) {
 	var (
 		c   net.Conn
 		err error
@@ -48,8 +48,8 @@ func DialDataConn(network, address string) (*DataConn, error) {
 }
 
 //NewDataIO creates a new DataConn from a net.Conn
-func WrapConnection(conn net.Conn) *DataConn {
-	return &DataConn{
+func WrapConnection(conn net.Conn) ConnWrapper {
+	return DataConn{
 		buffer: bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 		conn:   conn,
 	}
@@ -58,7 +58,7 @@ func WrapConnection(conn net.Conn) *DataConn {
 //WriteBytes writes a byte slice to the connection.
 //It returns the number of bytes written.
 //If n < len(msg), it also returns an error explaining why the write is short.
-func (d *DataConn) WriteBytes(msg []byte) (int, error) {
+func (d DataConn) WriteBytes(msg []byte) (int, error) {
 	if len(msg) > maxBufSize {
 		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxBufSize)
 	}
@@ -68,7 +68,7 @@ func (d *DataConn) WriteBytes(msg []byte) (int, error) {
 }
 
 //ReadBytes reads a byte slice from the underlying connection
-func (d *DataConn) ReadBytes() ([]byte, error) {
+func (d DataConn) ReadBytes() ([]byte, error) {
 	l := make([]byte, 4)
 	_, err := d.buffer.Read(l)
 	if err != nil {
@@ -97,13 +97,13 @@ func (d *DataConn) ReadBytes() ([]byte, error) {
 //WriteString writes the specified string to the underlying connectrion
 //It returns the number of bytes written.
 //If n < len(msg), it also returns an error explaining why the write is short.
-func (d *DataConn) WriteString(msg string) (int, error) {
+func (d DataConn) WriteString(msg string) (int, error) {
 	n, err := d.WriteBytes([]byte(msg))
 	return n, err
 }
 
 //ReadString reads a string from the underlying connection
-func (d *DataConn) ReadString() (string, error) {
+func (d DataConn) ReadString() (string, error) {
 	msg, err := d.ReadBytes()
 	if err != nil {
 		return "", err
@@ -115,13 +115,13 @@ func (d *DataConn) ReadString() (string, error) {
 //WriteInt writes the specified int to the underlying connection
 //It returns the number of bytes written.
 //If n < 4, it also returns an error explaining why the write is short.
-func (d *DataConn) WriteInt(msg int) (int, error) {
+func (d DataConn) WriteInt(msg int) (int, error) {
 	n, err := d.WriteBytes(intToBytes(msg))
 	return n, err
 }
 
 //ReadInt reades an int from the underlying connection
-func (d *DataConn) ReadInt() (int, error) {
+func (d DataConn) ReadInt() (int, error) {
 	msg, err := d.ReadBytes()
 	if err != nil {
 		return 0, err
@@ -133,7 +133,7 @@ func (d *DataConn) ReadInt() (int, error) {
 //WriteStruct serializes and then writes the specified struct to the underlying connection
 //It returns the number of bytes written.
 //If n < len(json.Marshal(msg)), it also returns an error explaining why the write is short.
-func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
+func (d DataConn) WriteStruct(msg interface{}) (int, error) {
 	m, err := json.Marshal(msg)
 	if err != nil {
 		return 0, err
@@ -143,7 +143,7 @@ func (d *DataConn) WriteStruct(msg interface{}) (int, error) {
 }
 
 //ReadStruct reades an serialized struct from the underlying connection and unmarshals it into the provided struct
-func (d *DataConn) ReadStruct(target interface{}) error {
+func (d DataConn) ReadStruct(target interface{}) error {
 	raw, err := d.ReadBytes()
 	if err != nil {
 		return err
@@ -153,18 +153,18 @@ func (d *DataConn) ReadStruct(target interface{}) error {
 }
 
 //Flush writes any buffered data to the underlying io.Writer.
-func (d *DataConn) Flush() error {
+func (d DataConn) Flush() error {
 	//log.Printf("Buffered %d bytes before flushing\n", d.Buffered())
 	return d.buffer.Flush()
 }
 
 //Close closes the connection. Any blocked Read or Write operations will be unblocked and return errors.
-func (d *DataConn) Close() error {
+func (d DataConn) Close() error {
 	return d.conn.Close()
 }
 
 //Buffered returns the number of bytes that have been written into the current buffer.
-func (d *DataConn) Buffered() int {
+func (d DataConn) Buffered() int {
 	return d.buffer.Writer.Buffered()
 }
 
