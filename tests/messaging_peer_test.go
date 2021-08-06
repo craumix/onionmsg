@@ -3,11 +3,12 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 	"testing"
 	"time"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"github.com/craumix/onionmsg/pkg/types"
 )
 
 var (
@@ -15,7 +16,8 @@ var (
 	message types.Message
 	room    types.Room
 
-	timeoutCtx context.Context
+	timeoutCtx    context.Context
+	timeoutCancel context.CancelFunc
 
 	testError error
 )
@@ -50,20 +52,72 @@ func setup() {
 
 	room.SetContext(context.TODO())
 
-	timeoutCtx, _ = context.WithTimeout(room.Ctx, types.QueueTimeout/4)
+	peer.Room = &room
+
+	timeoutCtx, timeoutCancel = context.WithTimeout(room.Ctx, time.Second*4)
 }
 
-func TestQueueMessage(t *testing.T) {
+func TestQueueMessageSendMessagesError(t *testing.T) {
 	setup()
 
-	if len(peer.MQueue) != 0 {
-		t.Error("Peer doesn't start with an empty Message queue!")
-	}
+	MockedConn.GetMockedConnWrapperError = testError
 
 	peer.QueueMessage(message)
 
 	if len(peer.MQueue) != 1 {
 		t.Error("Message not queued!")
+	}
+}
+
+func TestQueueMessageSendMessageSuccessful(t *testing.T) {
+	setup()
+
+	peer.QueueMessage(message)
+
+	if len(peer.MQueue) != 0 {
+		t.Error("Message not sent!")
+	}
+}
+
+func TestSendMessages(t *testing.T) {
+	setup()
+
+	_, err := peer.SendMessages(message)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !sameArray(MockedConn.WriteBytesInput[0], room.ID[:]) {
+		t.Error("Wrong room ID was written to connection!")
+	}
+
+	if MockedConn.WriteIntInput[0] != 1 {
+		t.Error("Wrong amount of messages was written to connection!")
+	}
+
+	if !MockedConn.FlushCalled {
+		t.Error("Connection was not flushed!")
+	}
+
+	if !MockedConn.CloseCalled {
+		t.Error("Connection was not closed!")
+	}
+}
+
+func TestSendMessagesNoRoomSet(t *testing.T) {
+	setup()
+
+	peer.Room = nil
+
+	sent, err := peer.SendMessages(message)
+
+	if err == nil {
+		t.Error("SendMessages doesn't error when no room is set!")
+	}
+
+	if sent != 0 {
+		t.Error("SendMessages doesn't return 0 when no room is set!")
 	}
 }
 
@@ -76,43 +130,21 @@ func TestRunMessageQueue(t *testing.T) {
 	time.Sleep(time.Second)
 
 	if len(peer.MQueue) != 0 {
-		t.Error("Message was not transferred!")
+		t.Error("Message was not sent!")
 	}
 }
 
 func TestRunMessageQueueContextCancelled(t *testing.T) {
 	setup()
 
-	room.StopQueues()
+	MockedConn.GetMockedConnWrapperError = testError
+
+	timeoutCancel()
 	peer.QueueMessage(message)
-	peer.RunMessageQueue(room.Ctx, &room)
+	peer.RunMessageQueue(timeoutCtx, &room)
 
 	if len(peer.MQueue) != 1 {
-		t.Error("Message transferred while queue is cancelled!")
-	}
-}
-
-func TestTransferMessage(t *testing.T) {
-	setup()
-
-	room.StopQueues()
-	peer.RunMessageQueue(room.Ctx, &room)
-	peer.TransferMessages(message)
-
-	if !sameArray(MockedConn.WriteBytesInput[0], room.ID[:]) {
-		t.Error("Wrong room ID!")
-	}
-
-	if MockedConn.WriteIntInput[0] != 1 {
-		t.Error("Wrong amount of messages!")
-	}
-
-	if !MockedConn.FlushCalled {
-		t.Error("Connection was not flushed!")
-	}
-
-	if !MockedConn.CloseCalled {
-		t.Error("Connection was not closed!")
+		t.Error("Message sent while queue is cancelled!")
 	}
 }
 
@@ -126,7 +158,7 @@ func TestRunMessageQueueEmpty(t *testing.T) {
 	}
 }
 
-func TestRunMessageQueueTransferMessageError(t *testing.T) {
+func TestRunMessageQueueSendMessagesError(t *testing.T) {
 	setup()
 
 	MockedConn.GetMockedConnWrapperError = testError
@@ -139,27 +171,17 @@ func TestRunMessageQueueTransferMessageError(t *testing.T) {
 	}
 }
 
-func TestTransFerMessagesSendMessageError(t *testing.T) {
+func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
 	setup()
 
-	MockedConn.ReadBytesOutputError = testError
+	peer.MQueue = append(peer.MQueue, message)
 
-	room.StopQueues()
-	peer.RunMessageQueue(room.Ctx, &room)
+	peer.RunMessageQueue(timeoutCtx, &room)
 
-	transferred, err := peer.TransferMessages(message)
-
-	if err == nil {
-		t.Error("Error was not returned!")
+	if len(peer.MQueue) != 0 {
+		t.Error("Message was not sent!")
 	}
 
-	if transferred != 0 {
-		t.Errorf("Wrong return int %d instead of 0!", transferred)
-	}
-
-	if !MockedConn.CloseCalled {
-		t.Error("Connection was not closed!")
-	}
 }
 
 func sameArray(a []byte, b []byte) bool {

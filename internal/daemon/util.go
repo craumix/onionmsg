@@ -103,7 +103,7 @@ func SendMessage(uuid string, msgType types.MessageType, content []byte) error {
 		return fmt.Errorf("no such room: %s", uuid)
 	}
 
-	return room.SendMessage(msgType, content)
+	return room.SendMessageToAllPeers(msgType, content)
 }
 
 func ListMessages(uuid string, count int) ([]types.Message, error) {

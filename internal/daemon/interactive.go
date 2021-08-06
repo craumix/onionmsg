@@ -119,7 +119,7 @@ func startInteractive() {
 			message, _ := cin.ReadString('\n')
 			message = strings.Trim(message, " \n")
 
-			room.SendMessage(types.MessageTypeText, []byte(message))
+			room.SendMessageToAllPeers(types.MessageTypeText, []byte(message))
 			log.Println("Sent message!")
 		case "list_messages":
 			log.Println("Enter a room uid:")

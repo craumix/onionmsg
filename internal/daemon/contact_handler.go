@@ -52,7 +52,7 @@ func contClientHandler(c net.Conn) {
 		log.Println()
 	}
 
-	room.RunRemoteMessageQueues()
+	room.RunMessageQueueForAllPeers()
 
 	//Kinda breaks interactive
 	//log.Printf("Exchange succesfull uuid %s sent id %s", id, convID.Fingerprint())
