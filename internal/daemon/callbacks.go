@@ -7,7 +7,7 @@ import (
 
 var (
 	NewMessageCallback func(uuid.UUID, types.Message)
-	NewRoomCallback func(uuid.UUID)
+	NewRoomCallback func(info *types.RoomInfo)
 	ErrorCallback func(error)
 )
 
@@ -17,9 +17,9 @@ func notifyNewMessage(id uuid.UUID, msg types.Message) {
 	}
 }
 
-func notifyNewRoom(id uuid.UUID) {
+func notifyNewRoom(info *types.RoomInfo) {
 	if NewMessageCallback != nil {
-		go NewRoomCallback(id)
+		go NewRoomCallback(info)
 	}
 }
 

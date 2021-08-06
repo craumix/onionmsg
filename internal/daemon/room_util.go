@@ -33,7 +33,7 @@ func registerRoom(room *types.Room) error {
 	data.Rooms = append(data.Rooms, room)
 	log.Printf("Registered Room %s\n", room.ID)
 
-	notifyNewRoom(room.ID)
+	notifyNewRoom(room.Info())
 
 	return nil
 }

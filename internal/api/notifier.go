@@ -43,11 +43,11 @@ func NotifyNewMessage(id uuid.UUID, msg types.Message) {
 	NotifyObservers(NotificationTypeNewMessage, n)
 }
 
-func NotifyNewRoom(id uuid.UUID) {
+func NotifyNewRoom(info *types.RoomInfo) {
 	n := struct {
-		RoomID  uuid.UUID     `json:"uuid"`
+		RoomID  *types.RoomInfo     `json:"info"`
 	}{
-		id,
+		info,
 	}
 
 	NotifyObservers(NotificationTypeNewRoom, n)
