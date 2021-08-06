@@ -128,13 +128,13 @@ func routeContactCreate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	setJSONContentHeader(w)
-	w.Write([]byte(fmt.Sprintf("{\"fingerprint\":\"%s\"}", fp)))
+	w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", fp)))
 }
 
 func routeContactDelete(w http.ResponseWriter, req *http.Request) {
-	fp := req.FormValue("fingerprint")
+	fp := req.FormValue("id")
 	if fp == "" {
-		http.Error(w, "Missing parameter \"fingerprint\"", http.StatusBadRequest)
+		http.Error(w, "Missing parameter \"id\"", http.StatusBadRequest)
 		return
 	}
 
@@ -150,7 +150,7 @@ func routeRoomList(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
-	var fingerprints []string
+	var ids []string
 
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -158,17 +158,17 @@ func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = json.Unmarshal(body, &fingerprints)
+	err = json.Unmarshal(body, &ids)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if len(fingerprints) == 0 {
+	if len(ids) == 0 {
 		http.Error(w, "Must provide at least one contactID", http.StatusBadRequest)
 		return
 	}
-	if err := daemon.CreateRoom(fingerprints); err != nil {
+	if err := daemon.CreateRoom(ids); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
