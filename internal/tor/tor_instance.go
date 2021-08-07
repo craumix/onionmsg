@@ -133,7 +133,7 @@ func (i *Instance) RegisterService(key ed25519.PrivateKey, torPort, localPort in
 
 //DeregisterService removes a HiddenService.
 func (i *Instance) DeregisterService(key ed25519.PrivateKey) error {
-	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey(key))
+	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey(key[32:]))
 	if err != nil {
 		return err
 	}

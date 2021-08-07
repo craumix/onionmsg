@@ -86,7 +86,7 @@ func startInteractive() {
 			}
 
 			log.Printf("Trying to create a room with %d peers\n", len(ids))
-			room, err := types.NewRoom(context.TODO(), ids...)
+			room, err := types.NewRoom(context.Background(), ids...)
 			if err != nil {
 				log.Println(err.Error())
 				continue

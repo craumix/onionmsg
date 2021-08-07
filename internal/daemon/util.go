@@ -60,7 +60,7 @@ func CreateRoom(fingerprints []string) error {
 	}
 
 	// TODO derive this from an actual context
-	room, err := types.NewRoom(context.TODO(), ids...)
+	room, err := types.NewRoom(context.Background(), ids...)
 	if err != nil {
 		return err
 	}

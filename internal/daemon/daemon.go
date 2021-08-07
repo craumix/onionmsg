@@ -2,12 +2,13 @@ package daemon
 
 import (
 	"context"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -86,7 +87,7 @@ func StartDaemon(interactiveArg bool) {
 	}
 	for _, room := range data.Rooms {
 		// TODO derive this from an actual context
-		room.SetContext(context.TODO())
+		room.SetContext(context.Background())
 	}
 	loadFuse = true
 

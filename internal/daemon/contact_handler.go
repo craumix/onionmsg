@@ -1,9 +1,11 @@
 package daemon
 
 import (
-	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"context"
 	"log"
 	"net"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/craumix/onionmsg/pkg/types"
 )
@@ -47,6 +49,8 @@ func contClientHandler(c net.Conn) {
 		Peers: []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
 		ID:    req.ID,
 	}
+	room.SetContext(context.Background())
+
 	err = registerRoom(room)
 	if err != nil {
 		log.Println()
