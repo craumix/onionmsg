@@ -22,7 +22,7 @@ var (
 	testError error
 )
 
-func setup() {
+func setupMessagingPeerTests() {
 	connection.GetConnFunc = GetMockedConnWrapper
 
 	MockedConn = &MockConnWrapper{}
@@ -58,7 +58,7 @@ func setup() {
 }
 
 func TestQueueMessageSendMessagesError(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	MockedConn.GetMockedConnWrapperError = testError
 
@@ -70,7 +70,7 @@ func TestQueueMessageSendMessagesError(t *testing.T) {
 }
 
 func TestQueueMessageSendMessageSuccessful(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	peer.QueueMessage(message)
 
@@ -80,7 +80,7 @@ func TestQueueMessageSendMessageSuccessful(t *testing.T) {
 }
 
 func TestSendMessages(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	_, err := peer.SendMessages(message)
 
@@ -106,7 +106,7 @@ func TestSendMessages(t *testing.T) {
 }
 
 func TestSendMessagesNoRoomSet(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	peer.Room = nil
 
@@ -122,7 +122,7 @@ func TestSendMessagesNoRoomSet(t *testing.T) {
 }
 
 func TestRunMessageQueue(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	peer.QueueMessage(message)
 	go peer.RunMessageQueue(room.Ctx, &room)
@@ -135,7 +135,7 @@ func TestRunMessageQueue(t *testing.T) {
 }
 
 func TestRunMessageQueueContextCancelled(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	MockedConn.GetMockedConnWrapperError = testError
 
@@ -149,7 +149,7 @@ func TestRunMessageQueueContextCancelled(t *testing.T) {
 }
 
 func TestRunMessageQueueEmpty(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	peer.RunMessageQueue(timeoutCtx, &room)
 
@@ -159,7 +159,7 @@ func TestRunMessageQueueEmpty(t *testing.T) {
 }
 
 func TestRunMessageQueueSendMessagesError(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	MockedConn.GetMockedConnWrapperError = testError
 
@@ -172,7 +172,7 @@ func TestRunMessageQueueSendMessagesError(t *testing.T) {
 }
 
 func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
-	setup()
+	setupMessagingPeerTests()
 
 	peer.MQueue = append(peer.MQueue, message)
 

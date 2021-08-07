@@ -31,7 +31,7 @@ type RoomInfo struct {
 	Nicks map[string]string `json:"nicks,omitempty"`
 }
 
-func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, error) {
+func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
