@@ -184,7 +184,7 @@ func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
 
 }
 
-func sameArray(a []byte, b []byte) bool {
+func sameArray(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
 	}
