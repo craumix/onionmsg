@@ -6,6 +6,8 @@ import (
 	"crypto/ed25519"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -58,9 +60,11 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 		return nil, err
 	}
 
+	absPath, _ := exec.LookPath(torBinary)
+	absPath, _ = filepath.Abs(absPath)
 	instance := &Instance{
 		Config:     conf,
-		binaryPath: torBinary,
+		binaryPath: absPath,
 	}
 	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
