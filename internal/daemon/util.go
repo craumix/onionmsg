@@ -3,19 +3,34 @@ package daemon
 import (
 	"context"
 	"fmt"
-
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 	uid "github.com/google/uuid"
 )
 
-// GetTorlog returns the log of the used to instance.
-func GetTorlog() string {
+var (
+	Log = getTorLog
+
+	ListContactIDs  = listContactIDs
+	CreateContactID = createContactID
+	DeleteContact   = DeleteContactID
+
+	Rooms         = listRooms
+	CreateRoom    = createRoom
+	DeleteRoom    = deleteRoom
+	AddPeerToRoom = addPeerToRoom
+	ListMessages  = listMessages
+
+	SendMessage = sendMessage
+)
+
+// getTorLog returns the log of the used to instance.
+func getTorLog() string {
 	return torInstance.Log()
 }
 
-// ListContactIDs returns a list of all the contactId's fingerprints.
-func ListContactIDs() []string {
+// listContactIDs returns a list of all the contactId's fingerprints.
+func listContactIDs() []string {
 	var contIDs []string
 	for _, id := range data.ContactIdentities {
 		contIDs = append(contIDs, id.Fingerprint())
@@ -23,8 +38,8 @@ func ListContactIDs() []string {
 	return contIDs
 }
 
-// ListRooms returns a marshaled list of all the rooms with most information
-func ListRooms() []*types.RoomInfo {
+// listRooms returns a marshaled list of all the rooms with most information
+func listRooms() []*types.RoomInfo {
 	var rooms []*types.RoomInfo
 	for _, r := range data.Rooms {
 		rooms = append(rooms, r.Info())
@@ -33,8 +48,8 @@ func ListRooms() []*types.RoomInfo {
 	return rooms
 }
 
-// CreateContactID generates and registers a new contact id and returns its fingerprint.
-func CreateContactID() (string, error) {
+// createContactID generates and registers a new contact id and returns its fingerprint.
+func createContactID() (string, error) {
 	id := types.NewIdentity()
 	err := registerContID(id)
 	if err != nil {
@@ -49,7 +64,7 @@ func DeleteContactID(fingerprint string) error {
 }
 
 // Maybe this should be run in a goroutine
-func CreateRoom(fingerprints []string) error {
+func createRoom(fingerprints []string) error {
 	var ids []types.RemoteIdentity
 	for _, fingerprint := range fingerprints {
 		id, err := types.NewRemoteIdentity(fingerprint)
@@ -69,7 +84,7 @@ func CreateRoom(fingerprints []string) error {
 }
 
 // Maybe this should be run in a goroutine
-func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
+func addPeerToRoom(roomID uuid.UUID, fingerprint string) error {
 	room, ok := GetRoom(roomID)
 	if !ok {
 		return fmt.Errorf("no such room %s", roomID)
@@ -83,8 +98,8 @@ func AddUserToRoom(roomID uuid.UUID, fingerprint string) error {
 	return room.AddPeers(id)
 }
 
-// DeleteRoom deletes the room with the specified uuid.
-func DeleteRoom(uuid string) error {
+// deleteRoom deletes the room with the specified uuid.
+func deleteRoom(uuid string) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return err
@@ -92,7 +107,7 @@ func DeleteRoom(uuid string) error {
 	return deregisterRoom(id)
 }
 
-func SendMessage(uuid string, msgType types.MessageType, content []byte) error {
+func sendMessage(uuid string, msgType types.MessageType, content []byte) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return err
@@ -106,7 +121,7 @@ func SendMessage(uuid string, msgType types.MessageType, content []byte) error {
 	return room.SendMessageToAllPeers(msgType, content)
 }
 
-func ListMessages(uuid string, count int) ([]types.Message, error) {
+func listMessages(uuid string, count int) ([]types.Message, error) {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return nil, err
