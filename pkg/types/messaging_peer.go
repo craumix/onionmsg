@@ -39,7 +39,6 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 		select {
 		case <-mp.ctx.Done():
 			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
-			mp.stop()
 			return
 		default:
 			if len(mp.MQueue) == 0 {
@@ -49,11 +48,11 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			c, err := mp.SendMessages(mp.MQueue...)
 			if err != nil {
 				log.Println(err)
-				time.Sleep(queueTimeout)
 			} else {
 				mp.MQueue = mp.MQueue[c:]
 			}
 		}
+		time.Sleep(queueTimeout)
 	}
 }
 
