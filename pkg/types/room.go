@@ -19,7 +19,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	ctx  context.Context
+	Ctx  context.Context `json:"-"`
 	stop context.CancelFunc
 }
 
@@ -31,7 +31,7 @@ type RoomInfo struct {
 	Nicks map[string]string `json:"nicks,omitempty"`
 }
 
-func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, error) {
+func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
@@ -51,8 +51,8 @@ func NewRoom(ctx context.Context, contactIdentities []RemoteIdentity) (*Room, er
 }
 
 func (r *Room) SetContext(ctx context.Context) error {
-	if r.ctx == nil {
-		r.ctx, r.stop = context.WithCancel(ctx)
+	if r.Ctx == nil {
+		r.Ctx, r.stop = context.WithCancel(ctx)
 		return nil
 	}
 	return fmt.Errorf("%s already has a context", r.ID.String())
@@ -75,7 +75,7 @@ func (r *Room) AddPeers(contactIdentities ...RemoteIdentity) error {
 	r.Peers = append(r.Peers, newPeers...)
 
 	for _, peer := range newPeers {
-		go peer.RunMessageQueue(r.ctx, r)
+		go peer.RunMessageQueue(r.Ctx, r)
 	}
 
 	r.syncPeerLists()
@@ -89,12 +89,12 @@ This only adds users, and can't remove users from peers.
 */
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
-		r.SendMessage(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()))
+		r.SendMessageToAllPeers(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()))
 	}
 }
 
 /*
-This function tries to add a user with the contactID to the room.
+This function tries to add a user with the contactID to the Room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
@@ -139,7 +139,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 	return peer, nil
 }
 
-func (r *Room) SendMessage(msgType MessageType, content []byte) error {
+func (r *Room) SendMessageToAllPeers(msgType MessageType, content []byte) error {
 	msg := Message{
 		Meta: MessageMeta{
 			Sender: r.Self.Fingerprint(),
@@ -158,9 +158,9 @@ func (r *Room) SendMessage(msgType MessageType, content []byte) error {
 	return nil
 }
 
-func (r *Room) RunRemoteMessageQueues() {
+func (r *Room) RunMessageQueueForAllPeers() {
 	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(r.ctx, r)
+		go peer.RunMessageQueue(r.Ctx, r)
 	}
 }
 
@@ -173,6 +173,8 @@ func (r *Room) PeerByFingerprint(fingerprint string) (RemoteIdentity, bool) {
 	return RemoteIdentity{}, false
 }
 
+// StopQueues cancels this context and with that all message queues of
+// MessagingPeer's in this Room
 func (r *Room) StopQueues() {
 	log.Printf("Stopping Room %s", r.ID.String())
 	r.stop()
@@ -186,7 +188,7 @@ func (r *Room) LogMessage(msg Message) {
 	r.Messages = append(r.Messages, msg)
 }
 
-// Info returns a struct with most information about this room
+// Info returns a struct with useful information about this Room
 func (r *Room) Info() *RoomInfo {
 	info := &RoomInfo{
 		Self:  r.Self.Fingerprint(),
@@ -238,9 +240,9 @@ func (r *Room) handleJoin(args []string) {
 	newPeer := NewMessagingPeer(peerID)
 	r.Peers = append(r.Peers, newPeer)
 
-	go newPeer.RunMessageQueue(r.ctx, r)
+	go newPeer.RunMessageQueue(r.Ctx, r)
 
-	log.Printf("New peer %s added to room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
+	log.Printf("New peer %s added to Room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
 }
 
 func (r *Room) handleNameRoom(args []string) {
