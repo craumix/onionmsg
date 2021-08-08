@@ -54,7 +54,7 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/ws", routeOpenWS)
 
 	http.HandleFunc("/v1/status", routeStatus)
-	http.HandleFunc("/v1/torlog", routeTorlog)
+	http.HandleFunc("/v1/tor", routeTorlog)
 
 	http.HandleFunc("/v1/blob", routeBlob)
 
@@ -93,10 +93,17 @@ func routeStatus(w http.ResponseWriter, req *http.Request) {
 }
 
 func routeTorlog(w http.ResponseWriter, req *http.Request) {
+	tor := daemon.GetTor()
 	torlogResp := struct {
-		Log string `json:"log"`
+		Log        string `json:"log"`
+		Version    string `json:"version"`
+		PID        int    `json:"pid"`
+		BinaryPath string `json:"path"`
 	}{
-		daemon.GetTorlog(),
+		tor.Log(),
+		tor.Version(),
+		tor.Pid(),
+		tor.BinaryPath(),
 	}
 
 	sendSerialized(w, torlogResp)
@@ -253,7 +260,7 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 	var (
 		count = 0
-		err error
+		err   error
 	)
 
 	id := req.FormValue("uuid")
@@ -271,7 +278,6 @@ func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 
 	sendSerialized(w, messages)
 }

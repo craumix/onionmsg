@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/craumix/onionmsg/internal/tor"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 	uid "github.com/google/uuid"
 )
 
 // GetTorlog returns the log of the used to instance.
-func GetTorlog() string {
-	return torInstance.Log()
+func GetTor() *tor.Instance {
+	return torInstance
 }
 
 // ListContactIDs returns a list of all the contactId's fingerprints.

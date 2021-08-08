@@ -7,8 +7,8 @@ import (
 
 var (
 	NewMessageCallback func(uuid.UUID, types.Message)
-	NewRoomCallback func(info *types.RoomInfo)
-	ErrorCallback func(error)
+	NewRoomCallback    func(info *types.RoomInfo)
+	ErrorCallback      func(error)
 )
 
 func notifyNewMessage(id uuid.UUID, msg types.Message) {
