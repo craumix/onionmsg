@@ -93,9 +93,7 @@ func RouteStatus(w http.ResponseWriter, req *http.Request) {
 }
 
 func RouteTorInfo(w http.ResponseWriter, req *http.Request) {
-	torInfo := daemon.TorInfo()
-
-	sendSerialized(w, torInfo)
+	sendSerialized(w, daemon.TorInfo())
 }
 
 func RouteBlob(w http.ResponseWriter, req *http.Request) {
@@ -181,7 +179,7 @@ func RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
 
 // Modify this to only send messages and create extra endpoint for blobs
 func RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendMessage(req, "")
+	errCode, err := sendMessage(req, "")
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
@@ -269,27 +267,27 @@ func RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 }
 
 func RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendMessage(req, types.RoomCommandNameRoom)
+	errCode, err := sendMessage(req, types.RoomCommandNameRoom)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
 func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendMessage(req, types.RoomCommandNick)
+	errCode, err := sendMessage(req, types.RoomCommandNick)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func sendMessage(req *http.Request, roomCommand types.RoomCommand) (error, int) {
+func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		return err, http.StatusBadRequest
+		return http.StatusBadRequest, err
 	}
 
 	if len(content) > maxMessageSize {
-		return fmt.Errorf("message too big, cannot be greater %d", maxMessageSize), http.StatusBadRequest
+		return http.StatusBadRequest, fmt.Errorf("message too big, cannot be greater %d", maxMessageSize)
 	}
 
 	msgType := types.MessageTypeText
@@ -302,8 +300,8 @@ func sendMessage(req *http.Request, roomCommand types.RoomCommand) (error, int) 
 
 	err = daemon.SendMessage(req.FormValue("uuid"), msgType, []byte(msg))
 	if err != nil {
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 
-	return nil, 0
+	return 0, nil
 }
