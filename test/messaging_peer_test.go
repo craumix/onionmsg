@@ -1,8 +1,9 @@
-package tests
+package test
 
 import (
 	"context"
 	"fmt"
+	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
 	"testing"
 	"time"
@@ -23,9 +24,9 @@ var (
 )
 
 func setupMessagingPeerTests() {
-	connection.GetConnFunc = GetMockedConnWrapper
+	connection.GetConnFunc = mocks.GetMockedConnWrapper
 
-	MockedConn = &MockConnWrapper{}
+	mocks.MockedConn = &mocks.MockConnWrapper{}
 
 	testError = fmt.Errorf("test error")
 
@@ -60,7 +61,7 @@ func setupMessagingPeerTests() {
 func TestQueueMessageSendMessagesError(t *testing.T) {
 	setupMessagingPeerTests()
 
-	MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = testError
 
 	peer.QueueMessage(message)
 
@@ -88,19 +89,19 @@ func TestSendMessages(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !sameArray(MockedConn.WriteBytesInput[0], room.ID[:]) {
+	if !SameByteArray(mocks.MockedConn.WriteBytesInput[0], room.ID[:]) {
 		t.Error("Wrong room ID was written to connection!")
 	}
 
-	if MockedConn.WriteIntInput[0] != 1 {
+	if mocks.MockedConn.WriteIntInput[0] != 1 {
 		t.Error("Wrong amount of messages was written to connection!")
 	}
 
-	if !MockedConn.FlushCalled {
+	if !mocks.MockedConn.FlushCalled {
 		t.Error("Connection was not flushed!")
 	}
 
-	if !MockedConn.CloseCalled {
+	if !mocks.MockedConn.CloseCalled {
 		t.Error("Connection was not closed!")
 	}
 }
@@ -137,7 +138,7 @@ func TestRunMessageQueue(t *testing.T) {
 func TestRunMessageQueueContextCancelled(t *testing.T) {
 	setupMessagingPeerTests()
 
-	MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = testError
 
 	timeoutCancel()
 	peer.QueueMessage(message)
@@ -153,7 +154,7 @@ func TestRunMessageQueueEmpty(t *testing.T) {
 
 	peer.RunMessageQueue(timeoutCtx, &room)
 
-	if MockedConn.GetMockedConnWrapperCalled {
+	if mocks.MockedConn.GetMockedConnWrapperCalled {
 		t.Error("Peer tried to transfer a message!")
 	}
 }
@@ -161,7 +162,7 @@ func TestRunMessageQueueEmpty(t *testing.T) {
 func TestRunMessageQueueSendMessagesError(t *testing.T) {
 	setupMessagingPeerTests()
 
-	MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = testError
 
 	peer.QueueMessage(message)
 	peer.RunMessageQueue(timeoutCtx, &room)
@@ -182,19 +183,4 @@ func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
 		t.Error("Message was not sent!")
 	}
 
-}
-
-func sameArray(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := 0; i < len(a); i++ {
-		// println("%b\n%b", a[i], b[i])
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
 }

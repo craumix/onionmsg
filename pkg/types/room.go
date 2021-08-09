@@ -12,6 +12,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type RoomCommand string
+
+const (
+	RoomCommandJoin     RoomCommand = "join"
+	RoomCommandNameRoom RoomCommand = "name_room"
+	RoomCommandNick     RoomCommand = "nick"
+)
+
 type Room struct {
 	Self     Identity         `json:"self"`
 	Peers    []*MessagingPeer `json:"peers"`
@@ -210,11 +218,11 @@ func (r *Room) handleCommand(msg Message) {
 
 	args := strings.Split(cmd, " ")
 	switch args[0] {
-	case "join":
+	case string(RoomCommandJoin):
 		r.handleJoin(args)
-	case "name_room":
+	case string(RoomCommandNameRoom):
 		r.handleNameRoom(args)
-	case "nick":
+	case string(RoomCommandNick):
 		r.handleNick(args, msg.Meta.Sender)
 	default:
 		log.Printf("Received invalid command \"%s\"\n", cmd)

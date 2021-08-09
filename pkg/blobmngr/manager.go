@@ -10,6 +10,11 @@ import (
 )
 
 var (
+	StreamTo      = streamTo
+	MakeBlob      = makeBlob
+	FileFromID    = fileFromID
+	WriteIntoFile = writeIntoFile
+
 	blobdir = "./"
 )
 
@@ -27,7 +32,7 @@ func GetRessource(id uuid.UUID) ([]byte, error) {
 	return ioutil.ReadFile(blobPath(id))
 }
 
-func StreamTo(id uuid.UUID, w io.Writer) error {
+func streamTo(id uuid.UUID, w io.Writer) error {
 	file, err := FileFromID(id)
 	if err != nil {
 		return err
@@ -48,7 +53,7 @@ func StreamTo(id uuid.UUID, w io.Writer) error {
 	return nil
 }
 
-func FileFromID(id uuid.UUID) (*os.File, error) {
+func fileFromID(id uuid.UUID) (*os.File, error) {
 	return os.OpenFile(blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
@@ -56,12 +61,30 @@ func StatFromID(id uuid.UUID) (fs.FileInfo, error) {
 	return os.Stat(blobPath(id))
 }
 
+func writeIntoFile(from io.Reader, to *os.File) error {
+	buf := make([]byte, 4096)
+	var n int
+	for {
+		n, _ = from.Read(buf)
+		if n == 0 {
+			break
+		}
+
+		_, err := to.Write(buf[:n])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func SaveRessource(blob []byte) (uuid.UUID, error) {
 	id := uuid.New()
 	return id, ioutil.WriteFile(blobPath(id), blob, 0600)
 }
 
-func MakeBlob() (uuid.UUID, error) {
+func makeBlob() (uuid.UUID, error) {
 	return SaveRessource(make([]byte, 0))
 }
 

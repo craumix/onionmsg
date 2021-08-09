@@ -53,24 +53,24 @@ func Start(unixSocket bool) {
 
 	http.HandleFunc("/v1/ws", routeOpenWS)
 
-	http.HandleFunc("/v1/status", routeStatus)
-	http.HandleFunc("/v1/tor", routeTorlog)
+	http.HandleFunc("/v1/status", RouteStatus)
+	http.HandleFunc("/v1/tor", RouteTorInfo)
 
-	http.HandleFunc("/v1/blob", routeBlob)
+	http.HandleFunc("/v1/blob", RouteBlob)
 
-	http.HandleFunc("/v1/contact/list", routeContactList)
-	http.HandleFunc("/v1/contact/create", routeContactCreate)
-	http.HandleFunc("/v1/contact/delete", routeContactDelete)
+	http.HandleFunc("/v1/contact/list", RouteContactList)
+	http.HandleFunc("/v1/contact/create", RouteContactCreate)
+	http.HandleFunc("/v1/contact/delete", RouteContactDelete)
 
-	http.HandleFunc("/v1/room/list", routeRoomList)
-	http.HandleFunc("/v1/room/create", routeRoomCreate)
-	http.HandleFunc("/v1/room/delete", routeRoomDelete)
-	http.HandleFunc("/v1/room/send/message", routeRoomSendMessage)
-	http.HandleFunc("/v1/room/send/file", routeRoomSendFile)
-	http.HandleFunc("/v1/room/messages", routeRoomMessages)
-	http.HandleFunc("/v1/room/command/useradd", routeRoomCommandUseradd)
-	http.HandleFunc("/v1/room/command/nameroom", routeRoomCommandNameroom)
-	http.HandleFunc("/v1/room/command/setnick", routeRoomCommandSetnick)
+	http.HandleFunc("/v1/room/list", RouteRoomList)
+	http.HandleFunc("/v1/room/create", RouteRoomCreate)
+	http.HandleFunc("/v1/room/delete", RouteRoomDelete)
+	http.HandleFunc("/v1/room/send/message", RouteRoomSendMessage)
+	http.HandleFunc("/v1/room/send/file", RouteRoomSendFile)
+	http.HandleFunc("/v1/room/messages", RouteRoomMessages)
+	http.HandleFunc("/v1/room/command/useradd", RouteRoomCommandUseradd)
+	http.HandleFunc("/v1/room/command/nameroom", RouteRoomCommandNameRoom)
+	http.HandleFunc("/v1/room/command/setnick", RouteRoomCommandSetNick)
 
 	err = http.Serve(listener, nil)
 	if err != nil {
@@ -87,29 +87,16 @@ func routeOpenWS(w http.ResponseWriter, req *http.Request) {
 	observerList = append(observerList, c)
 }
 
-func routeStatus(w http.ResponseWriter, req *http.Request) {
+func RouteStatus(w http.ResponseWriter, req *http.Request) {
 	setJSONContentHeader(w)
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
-func routeTorlog(w http.ResponseWriter, req *http.Request) {
-	tor := daemon.GetTor()
-	torlogResp := struct {
-		Log        string `json:"log"`
-		Version    string `json:"version"`
-		PID        int    `json:"pid"`
-		BinaryPath string `json:"path"`
-	}{
-		tor.Log(),
-		tor.Version(),
-		tor.Pid(),
-		tor.BinaryPath(),
-	}
-
-	sendSerialized(w, torlogResp)
+func RouteTorInfo(w http.ResponseWriter, req *http.Request) {
+	sendSerialized(w, daemon.TorInfo())
 }
 
-func routeBlob(w http.ResponseWriter, req *http.Request) {
+func RouteBlob(w http.ResponseWriter, req *http.Request) {
 	id, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -123,11 +110,11 @@ func routeBlob(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func routeContactList(w http.ResponseWriter, req *http.Request) {
+func RouteContactList(w http.ResponseWriter, req *http.Request) {
 	sendSerialized(w, daemon.ListContactIDs())
 }
 
-func routeContactCreate(w http.ResponseWriter, req *http.Request) {
+func RouteContactCreate(w http.ResponseWriter, req *http.Request) {
 	fp, err := daemon.CreateContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -138,25 +125,25 @@ func routeContactCreate(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", fp)))
 }
 
-func routeContactDelete(w http.ResponseWriter, req *http.Request) {
+func RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 	fp := req.FormValue("id")
 	if fp == "" {
 		http.Error(w, "Missing parameter \"id\"", http.StatusBadRequest)
 		return
 	}
 
-	err := daemon.DeleteContactID(fp)
+	err := daemon.DeleteContact(fp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func routeRoomList(w http.ResponseWriter, req *http.Request) {
-	sendSerialized(w, daemon.ListRooms())
+func RouteRoomList(w http.ResponseWriter, req *http.Request) {
+	sendSerialized(w, daemon.Rooms())
 }
 
-func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
+func RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
 	var ids []string
 
 	body, err := ioutil.ReadAll(req.Body)
@@ -175,12 +162,14 @@ func routeRoomCreate(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Must provide at least one contactID", http.StatusBadRequest)
 		return
 	}
-	if err := daemon.CreateRoom(ids); err != nil {
+
+	err = daemon.CreateRoom(ids)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func routeRoomDelete(w http.ResponseWriter, req *http.Request) {
+func RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
 	err := daemon.DeleteRoom(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -188,27 +177,15 @@ func routeRoomDelete(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-//Modify this to only send messages and create extra endpoint for blobs
-func routeRoomSendMessage(w http.ResponseWriter, req *http.Request) {
-	content, err := ioutil.ReadAll(req.Body)
+// Modify this to only send messages and create extra endpoint for blobs
+func RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if len(content) > maxMessageSize {
-		http.Error(w, fmt.Sprintf("message to big, cannot be greater %d", maxMessageSize), http.StatusBadRequest)
-		return
-	}
-
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeText, content)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
+func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	id, err := blobmngr.MakeBlob()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -227,24 +204,13 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if length > maxFileSize {
 		http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
 		return
 	}
 
-	buf := make([]byte, 4096)
-	var n int
-	for {
-		n, _ = req.Body.Read(buf)
-		if n == 0 {
-			break
-		}
-
-		_, err = file.Write(buf[:n])
-		if err != nil {
-			break
-		}
-	}
+	err = blobmngr.WriteIntoFile(req.Body, file)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -257,13 +223,11 @@ func routeRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
+func RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 	var (
 		count = 0
 		err   error
 	)
-
-	id := req.FormValue("uuid")
 
 	if req.FormValue("count") != "" {
 		count, err = strconv.Atoi(req.FormValue("count"))
@@ -273,7 +237,7 @@ func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	messages, err := daemon.ListMessages(id, count)
+	messages, err := daemon.ListMessages(req.FormValue("uuid"), count)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -282,7 +246,7 @@ func routeRoomMessages(w http.ResponseWriter, req *http.Request) {
 	sendSerialized(w, messages)
 }
 
-func routeRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
+func RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 	roomID, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -297,36 +261,47 @@ func routeRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 
 	fingerprint := string(content)
 
-	if err := daemon.AddUserToRoom(roomID, fingerprint); err != nil {
+	if err := daemon.AddPeerToRoom(roomID, fingerprint); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func routeRoomCommandNameroom(w http.ResponseWriter, req *http.Request) {
-	content, err := ioutil.ReadAll(req.Body)
+func RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, types.RoomCommandNameRoom)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	msg := "name_room " + string(content)
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeCmd, []byte(msg))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func routeRoomCommandSetnick(w http.ResponseWriter, req *http.Request) {
+func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, types.RoomCommandNick)
+	if err != nil {
+		http.Error(w, err.Error(), errCode)
+	}
+}
+
+func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, err
 	}
 
-	msg := "nick " + string(content)
+	if len(content) > maxMessageSize {
+		return http.StatusBadRequest, fmt.Errorf("message too big, cannot be greater %d", maxMessageSize)
+	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeCmd, []byte(msg))
+	msgType := types.MessageTypeText
+	msg := ""
+	if roomCommand != "" {
+		msgType = types.MessageTypeCmd
+		msg += string(roomCommand) + " "
+	}
+	msg += string(content)
+
+	err = daemon.SendMessage(req.FormValue("uuid"), msgType, []byte(msg))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return http.StatusInternalServerError, err
 	}
+
+	return 0, nil
 }
