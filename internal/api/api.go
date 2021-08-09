@@ -54,7 +54,7 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/ws", routeOpenWS)
 
 	http.HandleFunc("/v1/status", RouteStatus)
-	http.HandleFunc("/v1/torlog", RouteTorlog)
+	http.HandleFunc("/v1/tor", RouteTorInfo)
 
 	http.HandleFunc("/v1/blob", RouteBlob)
 
@@ -92,14 +92,10 @@ func RouteStatus(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
-func RouteTorlog(w http.ResponseWriter, req *http.Request) {
-	torlogResp := struct {
-		Log string `json:"log"`
-	}{
-		daemon.Log(),
-	}
+func RouteTorInfo(w http.ResponseWriter, req *http.Request) {
+	torInfo := daemon.TorInfo()
 
-	sendSerialized(w, torlogResp)
+	sendSerialized(w, torInfo)
 }
 
 func RouteBlob(w http.ResponseWriter, req *http.Request) {

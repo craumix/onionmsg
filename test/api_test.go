@@ -40,24 +40,51 @@ func TestRouteStatus(t *testing.T) {
 func TestRouteTorLog(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	daemon.Log = func() string {
-		return "Test Log"
+	expected := struct {
+		Log        string `json:"log"`
+		Version    string `json:"version"`
+		PID        int    `json:"pid"`
+		BinaryPath string `json:"path"`
+	}{
+		Log:        "Test Log",
+		Version:    "1.0",
+		PID:        420,
+		BinaryPath: "binary/tor",
 	}
 
-	api.RouteTorlog(resWriter, nil)
+	daemon.TorInfo = func() interface{} {
+		return expected
+	}
 
-	written := struct {
-		Log string `json:"log"`
+	api.RouteTorInfo(resWriter, nil)
+
+	actual := struct {
+		Log        string `json:"log"`
+		Version    string `json:"version"`
+		PID        int    `json:"pid"`
+		BinaryPath string `json:"path"`
 	}{}
 
-	json.Unmarshal(resWriter.WriteInput[0], &written)
+	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
 	if resWriter.StatusCode != 0 {
 		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
 	}
 
-	if written.Log != "Test Log" {
-		t.Error("Not Logged Correctly!")
+	if actual.Log != expected.Log {
+		t.Error("Incorrect Log!")
+	}
+
+	if actual.Version != expected.Version {
+		t.Error("Incorrect Version!")
+	}
+
+	if actual.PID != expected.PID {
+		t.Error("Incorrect PID!")
+	}
+
+	if actual.BinaryPath != expected.BinaryPath {
+		t.Error("Incorrect Binary Path!")
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	Log = getTorLog
+	TorInfo = getTorInfo
 
 	ListContactIDs  = listContactIDs
 	CreateContactID = createContactID
@@ -24,9 +24,19 @@ var (
 	SendMessage = sendMessage
 )
 
-// getTorLog returns the log of the used to instance.
-func getTorLog() string {
-	return torInstance.Log()
+// GetTorlog returns the log of the used to instance.
+func getTorInfo() interface{} {
+	return struct {
+		Log        string `json:"log"`
+		Version    string `json:"version"`
+		PID        int    `json:"pid"`
+		BinaryPath string `json:"path"`
+	}{
+		torInstance.Log(),
+		torInstance.Version(),
+		torInstance.Pid(),
+		torInstance.BinaryPath(),
+	}
 }
 
 // listContactIDs returns a list of all the contactId's fingerprints.

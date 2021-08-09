@@ -52,10 +52,10 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 				mp.MQueue = mp.MQueue[c:]
 			}
 		}
-		 select{
-		 case <-ctx.Done(): //context cancelled
-		 case <-time.After(queueTimeout): //timeout
-		 }
+		select {
+		case <-ctx.Done(): //context cancelled
+		case <-time.After(queueTimeout): //timeout
+		}
 	}
 }
 

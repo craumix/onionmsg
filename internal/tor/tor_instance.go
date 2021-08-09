@@ -6,6 +6,8 @@ import (
 	"crypto/ed25519"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -26,16 +28,16 @@ var (
 //Instance represents an instance of a Tor process.
 //It can be stopped using the Stop() CancelFunc.
 type Instance struct {
-	Proxy      proxy.Dialer
-	Config     Conf
-	BinaryPath string
-	Stop       context.CancelFunc
+	Proxy  proxy.Dialer
+	Config Conf
+	Stop   context.CancelFunc
 
 	controller *torgo.Controller
 	process    *os.Process
 	logBuffer  *bytes.Buffer
 	ctx        context.Context
 	controlPW  string
+	binaryPath string
 }
 
 //Conf is used to pass config values to create a Tor Instance.
@@ -58,9 +60,11 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 		return nil, err
 	}
 
+	absPath, _ := exec.LookPath(torBinary)
+	absPath, _ = filepath.Abs(absPath)
 	instance := &Instance{
 		Config:     conf,
-		BinaryPath: torBinary,
+		binaryPath: absPath,
 	}
 	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
@@ -102,7 +106,7 @@ func (i *Instance) runBinary() error {
 		"DataDirectory", i.Config.DataDir}
 
 	if i.controlPW != "" {
-		hash, err := pwHashFromBinary(i.BinaryPath, i.controlPW)
+		hash, err := pwHashFromBinary(i.binaryPath, i.controlPW)
 		if err != nil {
 			return err
 		}
@@ -110,7 +114,7 @@ func (i *Instance) runBinary() error {
 		args = append(args, "HashedControlPassword", hash)
 	}
 
-	i.process, i.logBuffer, err = runExecutable(i.ctx, i.BinaryPath, args, true)
+	i.process, i.logBuffer, err = runExecutable(i.ctx, i.binaryPath, args, true)
 	return err
 }
 
@@ -180,4 +184,20 @@ func (i *Instance) connectController(ctx context.Context) (*torgo.Controller, er
 //Log returns the ouput of STDOUT and STDERR from the Tor process.
 func (i *Instance) Log() string {
 	return i.logBuffer.String()
+}
+
+func (i *Instance) Pid() int {
+	return i.process.Pid
+}
+
+func (i *Instance) Version() string {
+	v, err := i.controller.GetVersion()
+	if err != nil {
+		return "error"
+	}
+	return v
+}
+
+func (i *Instance) BinaryPath() string {
+	return i.binaryPath
 }

@@ -13,8 +13,8 @@ type NotificationType string
 
 const (
 	NotificationTypeNewMessage = "NewMessage"
-	NotificationTypeNewRoom = "NewRoom"
-	NotificationTypeError = "Error"
+	NotificationTypeNewRoom    = "NewRoom"
+	NotificationTypeError      = "Error"
 )
 
 var (
@@ -45,7 +45,7 @@ func NotifyNewMessage(id uuid.UUID, msg types.Message) {
 
 func NotifyNewRoom(info *types.RoomInfo) {
 	n := struct {
-		RoomID  *types.RoomInfo     `json:"info"`
+		RoomID *types.RoomInfo `json:"info"`
 	}{
 		info,
 	}
