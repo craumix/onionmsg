@@ -1,4 +1,4 @@
-package tests
+package test
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
-	"github.com/craumix/onionmsg/tests/mocks"
+	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
 	"io"
 	"net/http"
@@ -18,18 +18,8 @@ import (
 	"testing"
 )
 
-var (
-	resWriter *mocks.MockResponseWriter
-)
-
-func setupApiTest() {
-	resWriter = &mocks.MockResponseWriter{
-		Head: http.Header{},
-	}
-}
-
 func TestRouteStatus(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	api.RouteStatus(resWriter, nil)
 
@@ -48,7 +38,7 @@ func TestRouteStatus(t *testing.T) {
 }
 
 func TestRouteTorLog(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.Log = func() string {
 		return "Test Log"
@@ -72,7 +62,7 @@ func TestRouteTorLog(t *testing.T) {
 }
 
 func TestRouteContactList(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.ListContactIDs = func() []string {
 		return []string{"Contact1"}
@@ -94,7 +84,7 @@ func TestRouteContactList(t *testing.T) {
 }
 
 func TestRouteRoomList(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.Rooms = func() []*types.RoomInfo {
 		return []*types.RoomInfo{
@@ -124,7 +114,7 @@ func TestRouteRoomList(t *testing.T) {
 }
 
 func TestRouteRoomCreate(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	var actual []string
 	daemon.CreateRoom = func(fingerprints []string) error {
@@ -134,7 +124,7 @@ func TestRouteRoomCreate(t *testing.T) {
 
 	expected := []string{"id1", "id2"}
 
-	req := getRequest(expected, false, true)
+	req := GetRequest(expected, false, true)
 
 	api.RouteRoomCreate(resWriter, req)
 
@@ -142,7 +132,7 @@ func TestRouteRoomCreate(t *testing.T) {
 		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
 	}
 
-	if !sameStringArray(expected, actual) {
+	if !SameStringArray(expected, actual) {
 		t.Errorf("Got %v instead of %v!", actual, expected)
 	}
 }
@@ -155,22 +145,22 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAll error",
-			req:               getRequest(nil, true, true),
+			req:               GetRequest(nil, true, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "Unmarshal error",
-			req:               getRequest("", false, true),
+			req:               GetRequest("", false, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "No ids error",
-			req:               getRequest([]string{}, false, true),
+			req:               GetRequest([]string{}, false, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "CreateRoom error",
-			req:               getRequest([]string{"id1"}, false, true),
+			req:               GetRequest([]string{"id1"}, false, true),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
@@ -180,7 +170,7 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		api.RouteRoomCreate(resWriter, testCase.req)
 
@@ -191,7 +181,7 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 }
 
 func TestDeleteRoom(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	actual := ""
 	daemon.DeleteRoom = func(uuid string) error {
@@ -199,7 +189,7 @@ func TestDeleteRoom(t *testing.T) {
 		return nil
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	expected := "test id"
 	req.Form.Add("uuid", expected)
@@ -216,13 +206,13 @@ func TestDeleteRoom(t *testing.T) {
 }
 
 func TestDeleteRoomError(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteRoom = func(uuid string) error {
 		return errors.New("test error")
 	}
 
-	api.RouteRoomDelete(resWriter, getRequest(nil, false, true))
+	api.RouteRoomDelete(resWriter, GetRequest(nil, false, true))
 
 	if resWriter.StatusCode != http.StatusInternalServerError {
 		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
@@ -230,7 +220,7 @@ func TestDeleteRoomError(t *testing.T) {
 }
 
 func TestRouteContactCreate(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	expected := "test-id"
 	daemon.CreateContactID = func() (string, error) {
@@ -258,7 +248,7 @@ func TestRouteContactCreate(t *testing.T) {
 }
 
 func TestRouteContactCreateError(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.CreateContactID = func() (string, error) {
 		return "", errors.New("test error")
@@ -272,7 +262,7 @@ func TestRouteContactCreateError(t *testing.T) {
 }
 
 func TestRouteContactDelete(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	actual := ""
 	daemon.DeleteContact = func(fingerprint string) error {
@@ -280,7 +270,7 @@ func TestRouteContactDelete(t *testing.T) {
 		return nil
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	expected := "test id"
 	req.Form.Add("id", expected)
@@ -297,7 +287,7 @@ func TestRouteContactDelete(t *testing.T) {
 }
 
 func TestRouteContactDeleteNoID(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	called := false
 	daemon.DeleteContact = func(fingerprint string) error {
@@ -305,7 +295,7 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 		return nil
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	api.RouteContactDelete(resWriter, req)
 
@@ -319,13 +309,13 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 }
 
 func TestRouteContactDeleteError(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteContact = func(fingerprint string) error {
 		return errors.New("test error")
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	req.Form.Add("id", "test id")
 
@@ -337,7 +327,7 @@ func TestRouteContactDeleteError(t *testing.T) {
 }
 
 func TestRouteRoomCommandUseradd(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	var (
 		calledID = ""
@@ -351,7 +341,7 @@ func TestRouteRoomCommandUseradd(t *testing.T) {
 	}
 
 	expectedFp := "test content"
-	req := getRequest(expectedFp, false, false)
+	req := GetRequest(expectedFp, false, false)
 
 	expectedID := "00000000-0000-0000-0000-000000000000"
 	req.Form.Add("uuid", expectedID)
@@ -381,19 +371,19 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAll error",
-			req:               getRequest(nil, true, true),
+			req:               GetRequest(nil, true, true),
 			uuid:              "00000000-0000-0000-0000-000000000000",
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "Uuid parse error",
-			req:               getRequest(nil, false, true),
+			req:               GetRequest(nil, false, true),
 			uuid:              "abc",
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "AddPeerToRoom error",
-			req:               getRequest([]string{"test content"}, false, true),
+			req:               GetRequest([]string{"test content"}, false, true),
 			uuid:              "00000000-0000-0000-0000-000000000000",
 			expectedErrorCode: http.StatusInternalServerError,
 		},
@@ -404,7 +394,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		testCase.req.Form.Add("uuid", testCase.uuid)
 
@@ -418,7 +408,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 }
 
 func TestRoomSendFile(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	blobId := uuid.New()
 	blobmngr.MakeBlob = func() (uuid.UUID, error) {
@@ -447,7 +437,7 @@ func TestRoomSendFile(t *testing.T) {
 		return nil
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	expectedID := "test id"
 	req.Form.Add("uuid", expectedID)
@@ -473,7 +463,7 @@ func TestRoomSendFile(t *testing.T) {
 		t.Errorf("Got wrong Message txpe got %s instead of %s", calledType, types.MessageTypeBlob)
 	}
 
-	if !sameArray(calledContent, blobId[:]) {
+	if !SameByteArray(calledContent, blobId[:]) {
 		t.Errorf("Got wrong content got %s instead of %s", calledContent, blobId.String())
 	}
 
@@ -522,7 +512,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		blobmngr.MakeBlob = func() (uuid.UUID, error) {
 			return uuid.UUID{}, tc.MakeBlobErr
@@ -544,7 +534,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 			tc.fileLength = "42"
 		}
 
-		req := getRequest(nil, false, true)
+		req := GetRequest(nil, false, true)
 		req.Header.Set("Content-Length", tc.fileLength)
 
 		api.RouteRoomSendFile(resWriter, req)
@@ -584,7 +574,7 @@ func TestRouteRoomMessages(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		var (
 			calledID    string
@@ -596,7 +586,7 @@ func TestRouteRoomMessages(t *testing.T) {
 			return nil, tc.ListMessagesErr
 		}
 
-		req := getRequest(nil, false, true)
+		req := GetRequest(nil, false, true)
 
 		req.Form.Add("count", tc.expectedCount)
 
@@ -618,7 +608,7 @@ func TestRouteRoomMessages(t *testing.T) {
 }
 
 func TestRouteBlob(t *testing.T) {
-	setupApiTest()
+	resWriter := mocks.GetMockResponseWriter()
 
 	var (
 		calledID string
@@ -629,7 +619,7 @@ func TestRouteBlob(t *testing.T) {
 		return nil
 	}
 
-	req := getRequest(nil, false, true)
+	req := GetRequest(nil, false, true)
 
 	expectedID := "00000000-0000-0000-0000-000000000000"
 	req.Form.Add("uuid", expectedID)
@@ -666,13 +656,13 @@ func TestRouteBlobErrors(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		blobmngr.StreamTo = func(id uuid.UUID, w io.Writer) error {
 			return tc.StreamToErr
 		}
 
-		req := getRequest(nil, false, true)
+		req := GetRequest(nil, false, true)
 		req.Form.Add("uuid", tc.id)
 
 		api.RouteBlob(resWriter, req)
@@ -724,7 +714,7 @@ func TestSendTextFunctions(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		setupApiTest()
+		resWriter := mocks.GetMockResponseWriter()
 
 		reader := mocks.MockReadCloser{}
 		reader.ReadReturnError = io.EOF
@@ -735,7 +725,7 @@ func TestSendTextFunctions(t *testing.T) {
 			expectedContent = string(tc.command) + " " + expectedContent
 		}
 
-		req, _ := http.NewRequest("", "", reader)
+		req, _ := http.NewRequest("", "", &reader)
 
 		expectedID := "test id"
 		req.Form = url.Values{}
@@ -755,7 +745,7 @@ func TestSendTextFunctions(t *testing.T) {
 			t.Errorf("%s got wrong Message txpe got %s instead of %s", tc.name, calledType, tc.expectedMsgType)
 		}
 
-		if !sameArray(calledContent, []byte(expectedContent)) {
+		if !SameByteArray(calledContent, []byte(expectedContent)) {
 			t.Errorf("%s got wrong content got %s instead of %s", tc.name, calledContent, expectedContent)
 		}
 	}
@@ -787,12 +777,12 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAllError",
-			req:               getRequest(nil, true, true),
+			req:               GetRequest(nil, true, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "SendError",
-			req:               getRequest([]string{"test content"}, false, true),
+			req:               GetRequest([]string{"test content"}, false, true),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
@@ -803,7 +793,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 
 	for _, tc := range testcases {
 		for _, te := range testErrors {
-			setupApiTest()
+			resWriter := mocks.GetMockResponseWriter()
 
 			tc.testFunc(resWriter, te.req)
 
@@ -816,40 +806,4 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 			}
 		}
 	}
-}
-
-func sameStringArray(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := 0; i < len(a); i++ {
-		// println("%b\n%b", a[i], b[i])
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func getRequest(body interface{}, readShouldError, marshal bool) *http.Request {
-	reader := mocks.MockReadCloser{}
-
-	if readShouldError {
-		reader.ReadReturnError = errors.New("test error")
-	} else {
-		reader.ReadReturnError = io.EOF
-	}
-
-	if marshal {
-		bodyM, _ := json.Marshal(body)
-		reader.ReadFrom = bodyM
-	} else {
-		reader.ReadFrom = []byte(body.(string))
-	}
-
-	req, _ := http.NewRequest("", "", reader)
-	req.Form = url.Values{}
-	return req
 }

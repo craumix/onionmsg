@@ -185,7 +185,7 @@ func RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
 
 // Modify this to only send messages and create extra endpoint for blobs
 func RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendText(req, "")
+	err, errCode := sendMessage(req, "")
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
@@ -273,20 +273,20 @@ func RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 }
 
 func RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendText(req, types.RoomCommandNameRoom)
+	err, errCode := sendMessage(req, types.RoomCommandNameRoom)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
 func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
-	err, errCode := sendText(req, types.RoomCommandNick)
+	err, errCode := sendMessage(req, types.RoomCommandNick)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func sendText(req *http.Request, roomCommand types.RoomCommand) (error, int) {
+func sendMessage(req *http.Request, roomCommand types.RoomCommand) (error, int) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return err, http.StatusBadRequest

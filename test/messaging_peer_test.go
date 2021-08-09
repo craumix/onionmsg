@@ -1,9 +1,9 @@
-package tests
+package test
 
 import (
 	"context"
 	"fmt"
-	"github.com/craumix/onionmsg/tests/mocks"
+	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
 	"testing"
 	"time"
@@ -89,7 +89,7 @@ func TestSendMessages(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !sameArray(mocks.MockedConn.WriteBytesInput[0], room.ID[:]) {
+	if !SameByteArray(mocks.MockedConn.WriteBytesInput[0], room.ID[:]) {
 		t.Error("Wrong room ID was written to connection!")
 	}
 
@@ -183,19 +183,4 @@ func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
 		t.Error("Message was not sent!")
 	}
 
-}
-
-func sameArray(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := 0; i < len(a); i++ {
-		// println("%b\n%b", a[i], b[i])
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
 }

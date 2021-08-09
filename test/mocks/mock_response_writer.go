@@ -32,24 +32,8 @@ func (m *MockResponseWriter) WriteHeader(statusCode int) {
 	m.StatusCode = statusCode
 }
 
-type MockReadCloser struct {
-	ReadFrom        []byte
-	ReadReturnInt   int
-	ReadReturnError error
-
-	CloseCalled      int
-	CloseReturnError error
-}
-
-func (m MockReadCloser) Read(readInto []byte) (n int, err error) {
-	for i, byte := range m.ReadFrom {
-		readInto[i] = byte
+func GetMockResponseWriter() *MockResponseWriter {
+	return &MockResponseWriter{
+		Head: http.Header{},
 	}
-
-	return len(m.ReadFrom), m.ReadReturnError
-}
-
-func (m MockReadCloser) Close() error {
-	m.CloseCalled++
-	return m.CloseReturnError
 }
