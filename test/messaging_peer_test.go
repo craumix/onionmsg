@@ -2,9 +2,9 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -19,16 +19,12 @@ var (
 
 	timeoutCtx    context.Context
 	timeoutCancel context.CancelFunc
-
-	testError error
 )
 
 func setupMessagingPeerTests() {
 	connection.GetConnFunc = mocks.GetMockedConnWrapper
 
 	mocks.MockedConn = &mocks.MockConnWrapper{}
-
-	testError = fmt.Errorf("test error")
 
 	identity, _ := types.NewRemoteIdentity("Test")
 	peer = types.NewMessagingPeer(identity)
@@ -61,13 +57,11 @@ func setupMessagingPeerTests() {
 func TestQueueMessageSendMessagesError(t *testing.T) {
 	setupMessagingPeerTests()
 
-	mocks.MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = GetTestError()
 
 	peer.QueueMessage(message)
 
-	if len(peer.MQueue) != 1 {
-		t.Error("Message not queued!")
-	}
+	assert.Equal(t, 1, len(peer.MQueue), "Message not queued!")
 }
 
 func TestQueueMessageSendMessageSuccessful(t *testing.T) {
@@ -75,9 +69,7 @@ func TestQueueMessageSendMessageSuccessful(t *testing.T) {
 
 	peer.QueueMessage(message)
 
-	if len(peer.MQueue) != 0 {
-		t.Error("Message not sent!")
-	}
+	assert.Equal(t, 0, len(peer.MQueue), "Message not sent!")
 }
 
 func TestSendMessages(t *testing.T) {
@@ -85,25 +77,11 @@ func TestSendMessages(t *testing.T) {
 
 	_, err := peer.SendMessages(message)
 
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !SameByteArray(mocks.MockedConn.WriteBytesInput[0], room.ID[:]) {
-		t.Error("Wrong room ID was written to connection!")
-	}
-
-	if mocks.MockedConn.WriteIntInput[0] != 1 {
-		t.Error("Wrong amount of messages was written to connection!")
-	}
-
-	if !mocks.MockedConn.FlushCalled {
-		t.Error("Connection was not flushed!")
-	}
-
-	if !mocks.MockedConn.CloseCalled {
-		t.Error("Connection was not closed!")
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, room.ID[:], mocks.MockedConn.WriteBytesInput[0], "Wrong room ID was written to connection!")
+	assert.Equal(t, 1, mocks.MockedConn.WriteIntInput[0], "Wrong amount of messages was written to connection!")
+	assert.True(t, mocks.MockedConn.FlushCalled, "Connection was not flushed!")
+	assert.True(t, mocks.MockedConn.CloseCalled, "Connection was not closed!")
 }
 
 func TestSendMessagesNoRoomSet(t *testing.T) {
@@ -113,13 +91,8 @@ func TestSendMessagesNoRoomSet(t *testing.T) {
 
 	sent, err := peer.SendMessages(message)
 
-	if err == nil {
-		t.Error("SendMessages doesn't error when no room is set!")
-	}
-
-	if sent != 0 {
-		t.Error("SendMessages doesn't return 0 when no room is set!")
-	}
+	assert.Error(t, err, "SendMessages doesn't error when no room is set!")
+	assert.Equal(t, 0, sent, "SendMessages doesn't return 0 when no room is set!")
 }
 
 func TestRunMessageQueue(t *testing.T) {
@@ -130,23 +103,19 @@ func TestRunMessageQueue(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	if len(peer.MQueue) != 0 {
-		t.Error("Message was not sent!")
-	}
+	assert.Equal(t, 0, len(peer.MQueue), "Message not sent!")
 }
 
 func TestRunMessageQueueContextCancelled(t *testing.T) {
 	setupMessagingPeerTests()
 
-	mocks.MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = GetTestError()
 
 	timeoutCancel()
 	peer.QueueMessage(message)
 	peer.RunMessageQueue(timeoutCtx, &room)
 
-	if len(peer.MQueue) != 1 {
-		t.Error("Message sent while queue is cancelled!")
-	}
+	assert.Equal(t, 1, len(peer.MQueue), "Message sent while queue is cancelled!")
 }
 
 func TestRunMessageQueueEmpty(t *testing.T) {
@@ -154,22 +123,18 @@ func TestRunMessageQueueEmpty(t *testing.T) {
 
 	peer.RunMessageQueue(timeoutCtx, &room)
 
-	if mocks.MockedConn.GetMockedConnWrapperCalled {
-		t.Error("Peer tried to transfer a message!")
-	}
+	assert.False(t, mocks.MockedConn.GetMockedConnWrapperCalled, "Peer tried to transfer a message!")
 }
 
 func TestRunMessageQueueSendMessagesError(t *testing.T) {
 	setupMessagingPeerTests()
 
-	mocks.MockedConn.GetMockedConnWrapperError = testError
+	mocks.MockedConn.GetMockedConnWrapperError = GetTestError()
 
 	peer.QueueMessage(message)
 	peer.RunMessageQueue(timeoutCtx, &room)
 
-	if len(peer.MQueue) != 1 {
-		t.Error("Message transferred while queue is cancelled!")
-	}
+	assert.Equal(t, 1, len(peer.MQueue), "Message sent while queue is cancelled!")
 }
 
 func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
@@ -179,8 +144,5 @@ func TestRunMessageQueueSendMessageSuccessfully(t *testing.T) {
 
 	peer.RunMessageQueue(timeoutCtx, &room)
 
-	if len(peer.MQueue) != 0 {
-		t.Error("Message was not sent!")
-	}
-
+	assert.Equal(t, 0, len(peer.MQueue), "Message not sent!")
 }
