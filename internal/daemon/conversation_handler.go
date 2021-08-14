@@ -97,11 +97,7 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 			return types.Message{}, err
 		}
 
-		id, err := blobmngr.MakeBlob()
-		if err != nil {
-			return types.Message{}, err
-		}
-		content = id[:]
+		id := meta.ContentInfo.BlobUUID
 
 		file, err := blobmngr.FileFromID(id)
 		if err != nil {

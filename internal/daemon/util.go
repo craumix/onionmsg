@@ -117,7 +117,7 @@ func deleteRoom(uuid string) error {
 	return deregisterRoom(id)
 }
 
-func sendMessage(uuid string, msgType types.MessageType, content []byte) error {
+func sendMessage(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
 	id, err := uid.Parse(uuid)
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func sendMessage(uuid string, msgType types.MessageType, content []byte) error {
 		return fmt.Errorf("no such room: %s", uuid)
 	}
 
-	return room.SendMessageToAllPeers(msgType, content)
+	return room.SendMessageToAllPeers(msgType, content, info)
 }
 
 func listMessages(uuid string, count int) ([]types.Message, error) {
