@@ -347,14 +347,14 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 func TestRoomSendFile(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	blobId := uuid.New()
+	newBlobId := uuid.New()
 	blobmngr.MakeBlob = func() (uuid.UUID, error) {
-		return blobId, nil
+		return newBlobId, nil
 	}
 
-	var calledFileID uuid.UUID
+	var actualFileId uuid.UUID
 	blobmngr.FileFromID = func(id uuid.UUID) (*os.File, error) {
-		calledFileID = id
+		actualFileId = id
 		return nil, nil
 	}
 
@@ -363,14 +363,14 @@ func TestRoomSendFile(t *testing.T) {
 	}
 
 	var (
-		calledID      string
-		calledType    types.MessageType
-		calledContent []byte
+		actualId   string
+		actualType types.MessageType
+		actualInfo types.MessageContentInfo
 	)
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
-		calledID = uuid
-		calledType = msgType
-		calledContent = content
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+		actualId = uuid
+		actualType = msgType
+		actualInfo = info
 		return nil
 	}
 
@@ -378,7 +378,16 @@ func TestRoomSendFile(t *testing.T) {
 
 	expectedID := "test id"
 	req.Form.Add("uuid", expectedID)
+
+	expectedInfo := types.MessageContentInfo{
+		BlobUUID: newBlobId,
+		Filename: "filename",
+		Mimetype: "mimetype",
+	}
+
 	req.Header.Set("Content-Length", "69")
+	req.Header.Set("Content-Filename", expectedInfo.Filename)
+	req.Header.Set("Content-Mimetype", expectedInfo.Mimetype)
 
 	api.RouteRoomSendFile(resWriter, req)
 
@@ -386,10 +395,10 @@ func TestRoomSendFile(t *testing.T) {
 
 	assertZeroStatusCode(t, resWriter)
 
-	assert.Equal(t, calledFileID.String(), blobId.String(), "FileFromID was called with a different id than generated")
-	assert.Equal(t, expectedID, calledID)
-	assert.Equal(t, types.MessageTypeBlob, calledType)
-	assert.Equal(t, string(blobId[:]), string(calledContent))
+	assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
+	assert.Equal(t, expectedID, actualId)
+	assert.Equal(t, types.MessageTypeBlob, actualType)
+	assert.Equal(t, expectedInfo, actualInfo)
 }
 
 func TestRoomSendFileErrors(t *testing.T) {
@@ -449,7 +458,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 			return tc.WriteIntoFileErr
 		}
 
-		daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
+		daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
 			return tc.SendErr
 		}
 
@@ -603,7 +612,7 @@ func TestSendTextFunctions(t *testing.T) {
 		actualContent []byte
 	)
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
 		actualID = uuid
 		actualMsgType = msgType
 		actualContent = content
@@ -674,7 +683,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		},
 	}
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
 		return GetTestError()
 	}
 
