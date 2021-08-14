@@ -53,7 +53,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			}
 		}
 		select {
-		case <-ctx.Done(): //context cancelled
+		case <-mp.ctx.Done(): //context cancelled
 		case <-time.After(queueTimeout): //timeout
 		}
 	}
