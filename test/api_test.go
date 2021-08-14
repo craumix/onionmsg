@@ -2,7 +2,6 @@ package test
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/craumix/onionmsg/internal/api"
 	"github.com/craumix/onionmsg/internal/daemon"
@@ -10,11 +9,11 @@ import (
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"testing"
 )
 
@@ -23,18 +22,8 @@ func TestRouteStatus(t *testing.T) {
 
 	api.RouteStatus(resWriter, nil)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	contentType := resWriter.Head.Get("Content-Type")
-	if contentType != "application/json" {
-		if contentType == "" {
-			t.Error("Content-Type not set in header!")
-		} else {
-			t.Errorf("Wrong value of Content-Type %s instead of application/json", contentType)
-		}
-	}
+	assertZeroStatusCode(t, resWriter)
+	assertApplicationJson(t, resWriter)
 }
 
 func TestRouteTorLog(t *testing.T) {
@@ -64,86 +53,59 @@ func TestRouteTorLog(t *testing.T) {
 		PID        int    `json:"pid"`
 		BinaryPath string `json:"path"`
 	}{}
-
 	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if actual.Log != expected.Log {
-		t.Error("Incorrect Log!")
-	}
-
-	if actual.Version != expected.Version {
-		t.Error("Incorrect Version!")
-	}
-
-	if actual.PID != expected.PID {
-		t.Error("Incorrect PID!")
-	}
-
-	if actual.BinaryPath != expected.BinaryPath {
-		t.Error("Incorrect Binary Path!")
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "TorInfo was modified")
 }
 
 func TestRouteContactList(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
+	expected := []string{"Contact1"}
+
 	daemon.ListContactIDs = func() []string {
-		return []string{"Contact1"}
+		return expected
 	}
 
 	api.RouteContactList(resWriter, nil)
 
-	var written []string
+	var actual []string
+	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	json.Unmarshal(resWriter.WriteInput[0], &written)
-
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if written[0] != "Contact1" {
-		t.Errorf("Wrong contacts!")
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "Contacts were modified!")
 }
 
 func TestRouteRoomList(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
+	expected := []*types.RoomInfo{{
+		Self:  "Test Room",
+		Peers: nil,
+		ID:    uuid.UUID{},
+		Name:  "",
+		Nicks: nil,
+	}}
+
 	daemon.Rooms = func() []*types.RoomInfo {
-		return []*types.RoomInfo{
-			{
-				Self:  "Test Room",
-				Peers: nil,
-				ID:    uuid.UUID{},
-				Name:  "",
-				Nicks: nil,
-			},
-		}
+		return expected
 	}
 
 	api.RouteRoomList(resWriter, nil)
 
-	var written []*types.RoomInfo
+	var actual []*types.RoomInfo
+	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	json.Unmarshal(resWriter.WriteInput[0], &written)
-
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if written[0].Self != "Test Room" {
-		t.Errorf("Wrong RoomInfo!")
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "RoomInfo was modified")
 }
 
 func TestRouteRoomCreate(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	var actual []string
+
 	daemon.CreateRoom = func(fingerprints []string) error {
 		actual = fingerprints
 		return nil
@@ -155,17 +117,12 @@ func TestRouteRoomCreate(t *testing.T) {
 
 	api.RouteRoomCreate(resWriter, req)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if !SameStringArray(expected, actual) {
-		t.Errorf("Got %v instead of %v!", actual, expected)
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "Fingerprints were modified")
 }
 
 func TestRouteRoomCreateErrors(t *testing.T) {
-	testCases := []struct {
+	testcases := []struct {
 		name              string
 		req               *http.Request
 		expectedErrorCode int
@@ -193,24 +150,23 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 	}
 
 	daemon.CreateRoom = func(fingerprints []string) error {
-		return errors.New("test error")
+		return GetTestError()
 	}
 
-	for _, testCase := range testCases {
+	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
 
-		api.RouteRoomCreate(resWriter, testCase.req)
+		api.RouteRoomCreate(resWriter, tc.req)
 
-		if testCase.expectedErrorCode != resWriter.StatusCode {
-			t.Errorf("%s got %d instead of %d!", testCase.name, resWriter.StatusCode, testCase.expectedErrorCode)
-		}
+		assertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
 	}
 }
 
 func TestDeleteRoom(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	actual := ""
+	var actual string
+
 	daemon.DeleteRoom = func(uuid string) error {
 		actual = uuid
 		return nil
@@ -223,75 +179,55 @@ func TestDeleteRoom(t *testing.T) {
 
 	api.RouteRoomDelete(resWriter, req)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if actual != expected {
-		t.Errorf("Got wrong uuid %s!", actual)
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "Uuid was modified")
 }
 
 func TestDeleteRoomError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteRoom = func(uuid string) error {
-		return errors.New("test error")
+		return GetTestError()
 	}
 
 	api.RouteRoomDelete(resWriter, GetRequest(nil, false, true))
 
-	if resWriter.StatusCode != http.StatusInternalServerError {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
+	assertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteContactCreate(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	expected := "test-id"
+
 	daemon.CreateContactID = func() (string, error) {
 		return expected, nil
 	}
 
 	api.RouteContactCreate(resWriter, nil)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	contentType := resWriter.Head.Get("Content-Type")
-	if contentType != "application/json" {
-		if contentType == "" {
-			t.Error("Content-Type not set in header!")
-		} else {
-			t.Errorf("Wrong value of Content-Type %s instead of application/json", contentType)
-		}
-	}
-
-	if string(resWriter.WriteInput[0]) != fmt.Sprintf("{\"id\":\"%s\"}", expected) {
-		t.Error("Id is not being written properly")
-	}
+	assertZeroStatusCode(t, resWriter)
+	assertApplicationJson(t, resWriter)
+	assert.Equal(t, string(resWriter.WriteInput[0]), fmt.Sprintf("{\"id\":\"%s\"}", expected), "Uuid was modified")
 }
 
 func TestRouteContactCreateError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.CreateContactID = func() (string, error) {
-		return "", errors.New("test error")
+		return "", GetTestError()
 	}
 
 	api.RouteContactCreate(resWriter, nil)
 
-	if resWriter.StatusCode != http.StatusInternalServerError {
-		t.Errorf("Wrong error code got %d instead of %d!", resWriter.StatusCode, http.StatusInternalServerError)
-	}
+	assertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteContactDelete(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	actual := ""
+	var actual string
+
 	daemon.DeleteContact = func(fingerprint string) error {
 		actual = fingerprint
 		return nil
@@ -304,19 +240,15 @@ func TestRouteContactDelete(t *testing.T) {
 
 	api.RouteContactDelete(resWriter, req)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if actual != expected {
-		t.Errorf("Got wrong id %s!", actual)
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual, "Uuid was modified")
 }
 
 func TestRouteContactDeleteNoID(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	called := false
+
 	daemon.DeleteContact = func(fingerprint string) error {
 		called = true
 		return nil
@@ -326,20 +258,15 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 
 	api.RouteContactDelete(resWriter, req)
 
-	if resWriter.StatusCode != http.StatusBadRequest {
-		t.Errorf("Wrong error code got %d instead of %d!", resWriter.StatusCode, http.StatusBadRequest)
-	}
-
-	if called {
-		t.Error("Delete contact got called with missing id field!")
-	}
+	assertErrorCode(t, resWriter, http.StatusBadRequest)
+	assert.False(t, called, "Delete contact got called with missing id field!")
 }
 
 func TestRouteContactDeleteError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteContact = func(fingerprint string) error {
-		return errors.New("test error")
+		return GetTestError()
 	}
 
 	req := GetRequest(nil, false, true)
@@ -347,50 +274,35 @@ func TestRouteContactDeleteError(t *testing.T) {
 	req.Form.Add("id", "test id")
 
 	api.RouteContactDelete(resWriter, req)
-
-	if resWriter.StatusCode != http.StatusInternalServerError {
-		t.Errorf("Wrong error code got %d instead of %d!", resWriter.StatusCode, http.StatusInternalServerError)
-	}
+	assertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteRoomCommandUseradd(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	var (
-		calledID = ""
-		calledFp = ""
-	)
+	var actualID, actualFp string
 
 	daemon.AddPeerToRoom = func(roomID uuid.UUID, fingerprint string) error {
-		calledID = roomID.String()
-		calledFp = fingerprint
+		actualID = roomID.String()
+		actualFp = fingerprint
 		return nil
 	}
 
-	expectedFp := "test content"
+	expectedFp, expectedID := "test content", GetValidUUID()
+
 	req := GetRequest(expectedFp, false, false)
 
-	expectedID := "00000000-0000-0000-0000-000000000000"
 	req.Form.Add("uuid", expectedID)
 
 	api.RouteRoomCommandUseradd(resWriter, req)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if calledID != expectedID {
-		t.Errorf("%s is not %s", calledID, expectedID)
-	}
-
-	if calledFp != expectedFp {
-		t.Errorf("%s is not %s", calledFp, expectedFp)
-	}
-
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+	assert.Equal(t, expectedFp, actualFp, "Fingerprint was modified")
 }
 
 func TestRouteRoomCommandUseraddErrors(t *testing.T) {
-	testCases := []struct {
+	testcases := []struct {
 		name              string
 		req               *http.Request
 		uuid              string
@@ -399,7 +311,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 		{
 			name:              "ReadAll error",
 			req:               GetRequest(nil, true, true),
-			uuid:              "00000000-0000-0000-0000-000000000000",
+			uuid:              GetValidUUID(),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
@@ -411,25 +323,23 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 		{
 			name:              "AddPeerToRoom error",
 			req:               GetRequest([]string{"test content"}, false, true),
-			uuid:              "00000000-0000-0000-0000-000000000000",
+			uuid:              GetValidUUID(),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
 
 	daemon.AddPeerToRoom = func(roomID uuid.UUID, fingerprint string) error {
-		return errors.New("test error")
+		return GetTestError()
 	}
 
-	for _, testCase := range testCases {
+	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
 
-		testCase.req.Form.Add("uuid", testCase.uuid)
+		tc.req.Form.Add("uuid", tc.uuid)
 
-		api.RouteRoomCommandUseradd(resWriter, testCase.req)
+		api.RouteRoomCommandUseradd(resWriter, tc.req)
 
-		if testCase.expectedErrorCode != resWriter.StatusCode {
-			t.Errorf("%s got %d instead of %d!", testCase.name, resWriter.StatusCode, testCase.expectedErrorCode)
-		}
+		assertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
 	}
 
 }
@@ -437,14 +347,14 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 func TestRoomSendFile(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	blobId := uuid.New()
+	newBlobId := uuid.New()
 	blobmngr.MakeBlob = func() (uuid.UUID, error) {
-		return blobId, nil
+		return newBlobId, nil
 	}
 
-	var calledFileID uuid.UUID
+	var actualFileId uuid.UUID
 	blobmngr.FileFromID = func(id uuid.UUID) (*os.File, error) {
-		calledFileID = id
+		actualFileId = id
 		return nil, nil
 	}
 
@@ -453,14 +363,14 @@ func TestRoomSendFile(t *testing.T) {
 	}
 
 	var (
-		calledID      string
-		calledType    types.MessageType
-		calledContent []byte
+		actualId   string
+		actualType types.MessageType
+		actualInfo types.MessageContentInfo
 	)
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
-		calledID = uuid
-		calledType = msgType
-		calledContent = content
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+		actualId = uuid
+		actualType = msgType
+		actualInfo = info
 		return nil
 	}
 
@@ -468,32 +378,27 @@ func TestRoomSendFile(t *testing.T) {
 
 	expectedID := "test id"
 	req.Form.Add("uuid", expectedID)
+
+	expectedInfo := types.MessageContentInfo{
+		BlobUUID: newBlobId,
+		Filename: "filename",
+		Mimetype: "mimetype",
+	}
+
 	req.Header.Set("Content-Length", "69")
+	req.Header.Set("Content-Filename", expectedInfo.Filename)
+	req.Header.Set("Content-Mimetype", expectedInfo.Mimetype)
 
 	api.RouteRoomSendFile(resWriter, req)
 
 	// TODO check if the file pointer is the same
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
+	assertZeroStatusCode(t, resWriter)
 
-	if blobId != calledFileID {
-		t.Errorf("FileFromID was called with a different id than generated")
-	}
-
-	if calledID != expectedID {
-		t.Errorf("Got wrong uuid %s!", calledID)
-	}
-
-	if calledType != types.MessageTypeBlob {
-		t.Errorf("Got wrong Message txpe got %s instead of %s", calledType, types.MessageTypeBlob)
-	}
-
-	if !SameByteArray(calledContent, blobId[:]) {
-		t.Errorf("Got wrong content got %s instead of %s", calledContent, blobId.String())
-	}
-
+	assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
+	assert.Equal(t, expectedID, actualId)
+	assert.Equal(t, types.MessageTypeBlob, actualType)
+	assert.Equal(t, expectedInfo, actualInfo)
 }
 
 func TestRoomSendFileErrors(t *testing.T) {
@@ -509,22 +414,22 @@ func TestRoomSendFileErrors(t *testing.T) {
 		{
 			name:            "MakeBlobError",
 			expectedErrCode: http.StatusInternalServerError,
-			MakeBlobErr:     errors.New("test error"),
+			MakeBlobErr:     GetTestError(),
 		},
 		{
 			name:            "FileFromIDErr",
 			expectedErrCode: http.StatusInternalServerError,
-			FileFromIDErr:   errors.New("test error"),
+			FileFromIDErr:   GetTestError(),
 		},
 		{
 			name:             "WriteIntoFileErr",
 			expectedErrCode:  http.StatusInternalServerError,
-			WriteIntoFileErr: errors.New("test error"),
+			WriteIntoFileErr: GetTestError(),
 		},
 		{
 			name:            "SendErr",
 			expectedErrCode: http.StatusBadRequest,
-			SendErr:         errors.New("test error"),
+			SendErr:         GetTestError(),
 		},
 		{
 			name:            "FileTooBigErr",
@@ -553,7 +458,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 			return tc.WriteIntoFileErr
 		}
 
-		daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
+		daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
 			return tc.SendErr
 		}
 
@@ -566,10 +471,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 
 		api.RouteRoomSendFile(resWriter, req)
 
-		if resWriter.StatusCode != tc.expectedErrCode {
-			t.Errorf("%s got %d instead of %d", tc.name, resWriter.StatusCode, tc.expectedErrCode)
-		}
-
+		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
 	}
 }
 
@@ -595,7 +497,7 @@ func TestRouteRoomMessages(t *testing.T) {
 		},
 		{
 			name:            "ListMessages error",
-			ListMessagesErr: errors.New("test error"),
+			ListMessagesErr: GetTestError(),
 			expectedErrCode: http.StatusBadRequest,
 		},
 	}
@@ -603,13 +505,9 @@ func TestRouteRoomMessages(t *testing.T) {
 	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
 
-		var (
-			calledID    string
-			calledCount int
-		)
+		var actualID string
 		daemon.ListMessages = func(uuid string, count int) ([]types.Message, error) {
-			calledID = uuid
-			calledCount = count
+			actualID = uuid
 			return nil, tc.ListMessagesErr
 		}
 
@@ -619,47 +517,30 @@ func TestRouteRoomMessages(t *testing.T) {
 
 		api.RouteRoomMessages(resWriter, req)
 
-		if resWriter.StatusCode != tc.expectedErrCode {
-			t.Errorf("%s got unexpected error %d!", tc.name, resWriter.StatusCode)
-		}
-
-		if calledID != tc.expectedID {
-			t.Errorf("%s got wrong uuid %s!", tc.name, calledID)
-		}
-
-		calledCountInt, _ := strconv.Atoi(tc.expectedCount)
-		if calledCount != calledCountInt {
-			t.Errorf("%s got wrong count %d!", tc.name, calledCount)
-		}
+		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
+		assert.Equal(t, tc.expectedID, actualID, tc.name+": Uuid was modified")
 	}
 }
 
 func TestRouteBlob(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	var (
-		calledID string
-	)
+	var actualID string
 
 	blobmngr.StreamTo = func(id uuid.UUID, w io.Writer) error {
-		calledID = id.String()
+		actualID = id.String()
 		return nil
 	}
 
 	req := GetRequest(nil, false, true)
 
-	expectedID := "00000000-0000-0000-0000-000000000000"
+	expectedID := GetValidUUID()
 	req.Form.Add("uuid", expectedID)
 
 	api.RouteBlob(resWriter, req)
 
-	if resWriter.StatusCode != 0 {
-		t.Errorf("Got unexpected error %d!", resWriter.StatusCode)
-	}
-
-	if calledID != expectedID {
-		t.Errorf("%s is not %s", calledID, expectedID)
-	}
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expectedID, actualID, "Uuid was modified")
 }
 
 func TestRouteBlobErrors(t *testing.T) {
@@ -676,9 +557,9 @@ func TestRouteBlobErrors(t *testing.T) {
 		},
 		{
 			name:            "Stream to error",
-			id:              "00000000-0000-0000-0000-000000000000",
+			id:              GetValidUUID(),
 			expectedErrCode: http.StatusInternalServerError,
-			StreamToErr:     errors.New("test error"),
+			StreamToErr:     GetTestError(),
 		},
 	}
 
@@ -694,9 +575,7 @@ func TestRouteBlobErrors(t *testing.T) {
 
 		api.RouteBlob(resWriter, req)
 
-		if resWriter.StatusCode != tc.expectedErrCode {
-			t.Errorf("%s got %d instead of %d", tc.name, resWriter.StatusCode, tc.expectedErrCode)
-		}
+		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
 	}
 }
 
@@ -728,15 +607,15 @@ func TestSendTextFunctions(t *testing.T) {
 	}
 
 	var (
-		calledID      string
-		calledType    types.MessageType
-		calledContent []byte
+		actualID      string
+		actualMsgType types.MessageType
+		actualContent []byte
 	)
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
-		calledID = uuid
-		calledType = msgType
-		calledContent = content
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+		actualID = uuid
+		actualMsgType = msgType
+		actualContent = content
 		return nil
 	}
 
@@ -760,21 +639,11 @@ func TestSendTextFunctions(t *testing.T) {
 
 		tc.testFunc(resWriter, req)
 
-		if resWriter.StatusCode != 0 {
-			t.Errorf("%s got unexpected error %d!", tc.name, resWriter.StatusCode)
-		}
+		assertZeroStatusCode(t, resWriter)
 
-		if calledID != expectedID {
-			t.Errorf("%s got wrong uuid %s!", tc.name, calledID)
-		}
-
-		if calledType != tc.expectedMsgType {
-			t.Errorf("%s got wrong Message txpe got %s instead of %s", tc.name, calledType, tc.expectedMsgType)
-		}
-
-		if !SameByteArray(calledContent, []byte(expectedContent)) {
-			t.Errorf("%s got wrong content got %s instead of %s", tc.name, calledContent, expectedContent)
-		}
+		assert.Equal(t, expectedID, actualID, tc.name+": Uuid was modified")
+		assert.Equal(t, tc.expectedMsgType, actualMsgType, tc.name+": Wrong message type")
+		assert.Equal(t, expectedContent, string(actualContent), tc.name+": Wrong content")
 	}
 }
 
@@ -814,8 +683,8 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		},
 	}
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte) error {
-		return errors.New("test error")
+	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+		return GetTestError()
 	}
 
 	for _, tc := range testcases {
@@ -824,13 +693,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 
 			tc.testFunc(resWriter, te.req)
 
-			if te.expectedErrorCode != resWriter.StatusCode {
-				t.Errorf("%s %s got %d instead of %d!",
-					tc.name, te.name,
-					resWriter.StatusCode,
-					te.expectedErrorCode,
-				)
-			}
+			assertErrorCode(t, resWriter, te.expectedErrorCode, tc.name+"-"+te.name)
 		}
 	}
 }
