@@ -115,7 +115,7 @@ func TestRouteRoomList(t *testing.T) {
 
 	daemon.Rooms = func() []*types.RoomInfo {
 		return []*types.RoomInfo{
-			&types.RoomInfo{
+			{
 				Self:  "Test Room",
 				Peers: nil,
 				ID:    uuid.UUID{},

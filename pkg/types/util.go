@@ -55,10 +55,7 @@ func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Messa
 			return nil
 		}
 	} else {
-		id, err := uuid.FromBytes(msg.Content)
-		if err != nil {
-			return err
-		}
+		id := msg.Meta.ContentInfo.BlobUUID
 
 		stat, err := blobmngr.StatFromID(id)
 		if err != nil {

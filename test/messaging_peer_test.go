@@ -35,12 +35,12 @@ func setupMessagingPeerTests() {
 
 	message = types.Message{
 		Meta: types.MessageMeta{
-			Sender: "test",
-			Time:   time.Time{},
-			Type:   "mtype.text",
+			Sender:      "test",
+			Time:        time.Time{},
+			Type:        "mtype.text",
+			ContentInfo: types.MessageContentInfo{},
 		},
-		Content:     []byte("this is a test"),
-		ContentMeta: nil,
+		Content: []byte("this is a test"),
 	}
 
 	room = types.Room{
