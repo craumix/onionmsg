@@ -3,11 +3,12 @@ package types
 import (
 	"context"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/google/uuid"
 )
@@ -99,7 +100,7 @@ func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
 		r.SendMessageToAllPeers(MessageContent{
 			Type: MessageTypeCmd,
-			Data: []byte("join "+peer.RIdentity.Fingerprint()),
+			Data: []byte(string(RoomCommandJoin) + peer.RIdentity.Fingerprint()),
 		})
 	}
 }
@@ -153,8 +154,8 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 func (r *Room) SendMessageToAllPeers(content MessageContent) error {
 	msg := Message{
 		Meta: MessageMeta{
-			Sender:      r.Self.Fingerprint(),
-			Time:        time.Now().UTC(),
+			Sender: r.Self.Fingerprint(),
+			Time:   time.Now().UTC(),
 		},
 		Content: content,
 	}
