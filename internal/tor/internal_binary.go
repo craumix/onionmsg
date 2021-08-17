@@ -1,3 +1,4 @@
+//go:build internalTor
 // +build internalTor
 
 package tor
