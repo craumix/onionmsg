@@ -49,7 +49,7 @@ func convClientHandler(c net.Conn) {
 			break
 		}
 
-		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content))
+		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content.Data))
 
 		notifyNewMessage(id, msg)
 

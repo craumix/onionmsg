@@ -15,20 +15,24 @@ const (
 	MessageTypeSticker MessageType = "mtype.sticker"
 )
 
-type MessageContentInfo struct {
+type ContentMeta struct {
 	BlobUUID uuid.UUID `json:"blobUUID,omitempty"`
 	Filename string    `json:"filename,omitempty"`
 	Mimetype string    `json:"mimetype,omitempty"`
 }
 
 type MessageMeta struct {
-	Sender      string             `json:"sender"`
-	Time        time.Time          `json:"time"`
-	Type        MessageType        `json:"type"`
-	ContentInfo MessageContentInfo `json:"contentMeta,omitempty"`
+	Sender string    `json:"sender"`
+	Time   time.Time `json:"time"`
+}
+
+type MessageContent struct {
+	Type MessageType `json:"type"`
+	Meta ContentMeta `json:"meta,omitempty"`
+	Data []byte      `json:"data,omitempty"`
 }
 
 type Message struct {
-	Meta    MessageMeta `json:"meta"`
-	Content []byte      `json:"content,omitempty"`
+	Meta    MessageMeta    `json:"meta"`
+	Content MessageContent `json:"cotent,omitempty"`
 }

@@ -49,13 +49,13 @@ func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Messa
 		return nil
 	}
 
-	if msg.Meta.Type != MessageTypeBlob {
-		_, err = sendDataWithSig(&dataConn, identity, msg.Content, sigSalt)
+	if msg.Content.Type != MessageTypeBlob {
+		_, err = sendDataWithSig(&dataConn, identity, msg.Content.Data, sigSalt)
 		if err != nil {
 			return nil
 		}
 	} else {
-		id := msg.Meta.ContentInfo.BlobUUID
+		id := msg.Content.Meta.BlobUUID
 
 		stat, err := blobmngr.StatFromID(id)
 		if err != nil {
