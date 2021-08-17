@@ -49,7 +49,7 @@ func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Messa
 		return nil
 	}
 
-	if msg.Content.Type != MessageTypeBlob {
+	if msg.Content.Type != MessageTypeFile {
 		_, err = sendDataWithSig(&dataConn, identity, msg.Content.Data, sigSalt)
 		if err != nil {
 			return nil

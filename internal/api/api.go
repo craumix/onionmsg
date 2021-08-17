@@ -226,7 +226,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
-		Type: types.MessageTypeBlob,
+		Type: types.MessageTypeFile,
 		Meta: types.ContentMeta{
 			BlobUUID: id,
 			Filename: filename,

@@ -6,13 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type MessageType string
+type ContentType string
 
 const (
-	MessageTypeText    MessageType = "mtype.text"
-	MessageTypeCmd     MessageType = "mtype.cmd"
-	MessageTypeBlob    MessageType = "mtype.blob"
-	MessageTypeSticker MessageType = "mtype.sticker"
+	MessageTypeText    ContentType = "mtype.text"
+	MessageTypeCmd     ContentType = "mtype.cmd"
+	MessageTypeFile    ContentType = "mtype.file"
+	MessageTypeSticker ContentType = "mtype.sticker"
 )
 
 type ContentMeta struct {
@@ -27,7 +27,7 @@ type MessageMeta struct {
 }
 
 type MessageContent struct {
-	Type MessageType `json:"type"`
+	Type ContentType `json:"type"`
 	Meta ContentMeta `json:"meta,omitempty"`
 	Data []byte      `json:"data,omitempty"`
 }
@@ -35,4 +35,8 @@ type MessageContent struct {
 type Message struct {
 	Meta    MessageMeta    `json:"meta"`
 	Content MessageContent `json:"cotent,omitempty"`
+}
+
+func (m *Message) ContainsBlob() bool {
+	return m.Content.Meta.BlobUUID != uuid.Nil
 }
