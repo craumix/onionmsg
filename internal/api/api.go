@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
@@ -216,12 +218,19 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	filename := req.Header.Get("Content-Filename")
+
+	mimetype := req.Header.Get("Content-Mimetype")
+	if mimetype == "" {
+		mimetype = mime.TypeByExtension(filepath.Ext(filename))
+	}
+
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: types.MessageTypeBlob,
 		Meta: types.ContentMeta{
 			BlobUUID: id,
-			Filename: req.Header.Get("Content-Filename"),
-			Mimetype: req.Header.Get("Content-Mimetype"),
+			Filename: filename,
+			Mimetype: mimetype,
 		},
 	})
 	if err != nil {
