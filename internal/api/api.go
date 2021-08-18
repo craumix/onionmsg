@@ -226,7 +226,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
-		Type: types.MessageTypeFile,
+		Type: types.ContentTypeFile,
 		Meta: types.ContentMeta{
 			BlobUUID: id,
 			Filename: filename,
@@ -306,10 +306,10 @@ func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) 
 		return http.StatusBadRequest, fmt.Errorf("message too big, cannot be greater %d", maxMessageSize)
 	}
 
-	msgType := types.MessageTypeText
+	msgType := types.ContentTypeText
 	msg := ""
 	if roomCommand != "" {
-		msgType = types.MessageTypeCmd
+		msgType = types.ContentTypeCmd
 		msg += string(roomCommand) + " "
 	}
 	msg += string(content)

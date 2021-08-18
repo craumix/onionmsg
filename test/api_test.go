@@ -378,7 +378,7 @@ func TestRoomSendFile(t *testing.T) {
 	req.Form.Add("uuid", expectedID)
 
 	expectedMsgContent := types.MessageContent{
-		Type: types.MessageTypeFile,
+		Type: types.ContentTypeFile,
 		Meta: types.ContentMeta{
 			BlobUUID: newBlobId,
 			Filename: "test-filename",
@@ -591,19 +591,19 @@ func TestSendTextFunctions(t *testing.T) {
 			name:                "RouteRoomCommandSetNick",
 			testFunc:            api.RouteRoomCommandSetNick,
 			command:             types.RoomCommandNick,
-			expectedContentType: types.MessageTypeCmd,
+			expectedContentType: types.ContentTypeCmd,
 		},
 		{
 			name:                "RouteRoomCommandNameRoom",
 			testFunc:            api.RouteRoomCommandNameRoom,
 			command:             types.RoomCommandNameRoom,
-			expectedContentType: types.MessageTypeCmd,
+			expectedContentType: types.ContentTypeCmd,
 		},
 		{
 			name:                "RouteRoomSendMessage",
 			testFunc:            api.RouteRoomSendMessage,
 			command:             "",
-			expectedContentType: types.MessageTypeText,
+			expectedContentType: types.ContentTypeText,
 		},
 	}
 

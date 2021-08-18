@@ -9,10 +9,10 @@ import (
 type ContentType string
 
 const (
-	MessageTypeText    ContentType = "mtype.text"
-	MessageTypeCmd     ContentType = "mtype.cmd"
-	MessageTypeFile    ContentType = "mtype.file"
-	MessageTypeSticker ContentType = "mtype.sticker"
+	ContentTypeText    ContentType = "mtype.text"
+	ContentTypeCmd     ContentType = "mtype.cmd"
+	ContentTypeFile    ContentType = "mtype.file"
+	ContentTypeSticker ContentType = "mtype.sticker"
 )
 
 type ContentMeta struct {

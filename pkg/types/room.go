@@ -99,7 +99,7 @@ This only adds users, and can't remove users from peers.
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
 		r.SendMessageToAllPeers(MessageContent{
-			Type: MessageTypeCmd,
+			Type: ContentTypeCmd,
 			//TODO make it easier to create command messages
 			Data: []byte(string(RoomCommandJoin) + " " + peer.RIdentity.Fingerprint()),
 		})
@@ -193,7 +193,7 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) LogMessage(msg Message) {
-	if msg.Content.Type == MessageTypeCmd {
+	if msg.Content.Type == ContentTypeCmd {
 		r.handleCommand(msg)
 	}
 

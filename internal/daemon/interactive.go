@@ -120,7 +120,7 @@ func startInteractive() {
 			message = strings.Trim(message, " \n")
 
 			room.SendMessageToAllPeers(types.MessageContent{
-				Type: types.MessageTypeText,
+				Type: types.ContentTypeText,
 				Data: []byte(message),
 			})
 			log.Println("Sent message!")
