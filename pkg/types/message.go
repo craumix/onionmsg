@@ -16,7 +16,7 @@ const (
 )
 
 type ContentMeta struct {
-	BlobUUID uuid.UUID `json:"blobUUID,omitempty"`
+	BlobUUID uuid.UUID `json:"blobUUID"`
 	Filename string    `json:"filename,omitempty"`
 	Mimetype string    `json:"mimetype,omitempty"`
 }
@@ -28,13 +28,13 @@ type MessageMeta struct {
 
 type MessageContent struct {
 	Type ContentType `json:"type"`
-	Meta ContentMeta `json:"meta,omitempty"`
+	Meta ContentMeta `json:"meta"`
 	Data []byte      `json:"data,omitempty"`
 }
 
 type Message struct {
 	Meta    MessageMeta    `json:"meta"`
-	Content MessageContent `json:"cotent,omitempty"`
+	Content MessageContent `json:"cotent"`
 }
 
 func (m *Message) ContainsBlob() bool {
