@@ -34,7 +34,7 @@ type MessageContent struct {
 
 type Message struct {
 	Meta    MessageMeta    `json:"meta"`
-	Content MessageContent `json:"cotent"`
+	Content MessageContent `json:"content"`
 }
 
 func (m *Message) ContainsBlob() bool {
