@@ -43,19 +43,14 @@ func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Messa
 		return err
 	}
 
-	meta, _ := json.Marshal(msg.Meta)
-	_, err = sendDataWithSig(&dataConn, identity, meta, sigSalt)
+	msgMarshal, _ := json.Marshal(msg)
+	_, err = sendDataWithSig(&dataConn, identity, msgMarshal, sigSalt)
 	if err != nil {
 		return nil
 	}
 
-	if msg.Meta.Type != MessageTypeBlob {
-		_, err = sendDataWithSig(&dataConn, identity, msg.Content, sigSalt)
-		if err != nil {
-			return nil
-		}
-	} else {
-		id := msg.Meta.ContentInfo.BlobUUID
+	if msg.ContainsBlob() {
+		id := msg.Content.Meta.BlobUUID
 
 		stat, err := blobmngr.StatFromID(id)
 		if err != nil {

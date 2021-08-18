@@ -3,11 +3,12 @@ package types
 import (
 	"context"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/google/uuid"
 )
@@ -97,7 +98,11 @@ This only adds users, and can't remove users from peers.
 */
 func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
-		r.SendMessageToAllPeers(MessageTypeCmd, []byte("join "+peer.RIdentity.Fingerprint()), MessageContentInfo{})
+		r.SendMessageToAllPeers(MessageContent{
+			Type: ContentTypeCmd,
+			//TODO make it easier to create command messages
+			Data: []byte(string(RoomCommandJoin) + " " + peer.RIdentity.Fingerprint()),
+		})
 	}
 }
 
@@ -147,13 +152,11 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 	return peer, nil
 }
 
-func (r *Room) SendMessageToAllPeers(msgType MessageType, content []byte, info MessageContentInfo) error {
+func (r *Room) SendMessageToAllPeers(content MessageContent) error {
 	msg := Message{
 		Meta: MessageMeta{
-			Sender:      r.Self.Fingerprint(),
-			Time:        time.Now().UTC(),
-			Type:        msgType,
-			ContentInfo: info,
+			Sender: r.Self.Fingerprint(),
+			Time:   time.Now().UTC(),
 		},
 		Content: content,
 	}
@@ -190,7 +193,7 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) LogMessage(msg Message) {
-	if msg.Meta.Type == MessageTypeCmd {
+	if msg.Content.Type == ContentTypeCmd {
 		r.handleCommand(msg)
 	}
 
@@ -215,7 +218,7 @@ func (r *Room) Info() *RoomInfo {
 }
 
 func (r *Room) handleCommand(msg Message) {
-	cmd := string(msg.Content)
+	cmd := string(msg.Content.Data)
 
 	args := strings.Split(cmd, " ")
 	switch args[0] {

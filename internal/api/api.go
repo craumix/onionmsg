@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
@@ -216,10 +218,20 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageTypeBlob, nil, types.MessageContentInfo{
-		BlobUUID: id,
-		Filename: req.Header.Get("Content-Filename"),
-		Mimetype: req.Header.Get("Content-Mimetype"),
+	filename := req.Header.Get("Content-Filename")
+
+	mimetype := req.Header.Get("Content-Mimetype")
+	if mimetype == "" {
+		mimetype = mime.TypeByExtension(filepath.Ext(filename))
+	}
+
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
+		Type: types.ContentTypeFile,
+		Meta: types.ContentMeta{
+			BlobUUID: id,
+			Filename: filename,
+			Mimetype: mimetype,
+		},
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -294,15 +306,18 @@ func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) 
 		return http.StatusBadRequest, fmt.Errorf("message too big, cannot be greater %d", maxMessageSize)
 	}
 
-	msgType := types.MessageTypeText
+	msgType := types.ContentTypeText
 	msg := ""
 	if roomCommand != "" {
-		msgType = types.MessageTypeCmd
+		msgType = types.ContentTypeCmd
 		msg += string(roomCommand) + " "
 	}
 	msg += string(content)
 
-	err = daemon.SendMessage(req.FormValue("uuid"), msgType, []byte(msg), types.MessageContentInfo{})
+	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
+		Type: msgType,
+		Data: []byte(msg),
+	})
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

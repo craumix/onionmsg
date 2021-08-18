@@ -119,7 +119,10 @@ func startInteractive() {
 			message, _ := cin.ReadString('\n')
 			message = strings.Trim(message, " \n")
 
-			room.SendMessageToAllPeers(types.MessageTypeText, []byte(message), types.MessageContentInfo{})
+			room.SendMessageToAllPeers(types.MessageContent{
+				Type: types.ContentTypeText,
+				Data: []byte(message),
+			})
 			log.Println("Sent message!")
 		case "list_messages":
 			log.Println("Enter a room uid:")
@@ -140,7 +143,7 @@ func startInteractive() {
 
 			for _, msg := range room.Messages {
 				log.Printf("From %s, at %s\n", msg.Meta.Sender, msg.Meta.Time)
-				log.Printf("Type %s, Content \"%s\"\n", msg.Meta.Type, string(msg.Content))
+				log.Printf("Type %s, Content \"%s\"\n", msg.Content.Type, string(msg.Content.Data))
 			}
 		case "stop_room":
 			log.Println("Enter Room ID:")
