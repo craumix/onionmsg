@@ -363,14 +363,12 @@ func TestRoomSendFile(t *testing.T) {
 	}
 
 	var (
-		actualId   string
-		actualType types.MessageType
-		actualInfo types.MessageContentInfo
+		actualID         string
+		actualMsgContent types.MessageContent
 	)
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
-		actualId = uuid
-		actualType = msgType
-		actualInfo = info
+	daemon.SendMessage = func(uuid string, msgContent types.MessageContent) error {
+		actualID = uuid
+		actualMsgContent = msgContent
 		return nil
 	}
 
@@ -379,15 +377,19 @@ func TestRoomSendFile(t *testing.T) {
 	expectedID := "test id"
 	req.Form.Add("uuid", expectedID)
 
-	expectedInfo := types.MessageContentInfo{
-		BlobUUID: newBlobId,
-		Filename: "filename",
-		Mimetype: "mimetype",
+	expectedMsgContent := types.MessageContent{
+		Type: types.MessageTypeFile,
+		Meta: types.ContentMeta{
+			BlobUUID: newBlobId,
+			Filename: "test-filename",
+			Mimetype: "test-mimetype",
+		},
+		Data: nil,
 	}
 
 	req.Header.Set("Content-Length", "69")
-	req.Header.Set("Content-Filename", expectedInfo.Filename)
-	req.Header.Set("Content-Mimetype", expectedInfo.Mimetype)
+	req.Header.Set("Content-Filename", expectedMsgContent.Meta.Filename)
+	req.Header.Set("Content-Mimetype", expectedMsgContent.Meta.Mimetype)
 
 	api.RouteRoomSendFile(resWriter, req)
 
@@ -396,9 +398,8 @@ func TestRoomSendFile(t *testing.T) {
 	assertZeroStatusCode(t, resWriter)
 
 	assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
-	assert.Equal(t, expectedID, actualId)
-	assert.Equal(t, types.MessageTypeBlob, actualType)
-	assert.Equal(t, expectedInfo, actualInfo)
+	assert.Equal(t, expectedID, actualID, "SendMessage didn't get the Id from the request")
+	assert.Equal(t, expectedMsgContent, actualMsgContent)
 }
 
 func TestRoomSendFileErrors(t *testing.T) {
@@ -458,7 +459,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 			return tc.WriteIntoFileErr
 		}
 
-		daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+		daemon.SendMessage = func(uuid string, content types.MessageContent) error {
 			return tc.SendErr
 		}
 
@@ -581,41 +582,39 @@ func TestRouteBlobErrors(t *testing.T) {
 
 func TestSendTextFunctions(t *testing.T) {
 	testcases := []struct {
-		name            string
-		testFunc        func(w http.ResponseWriter, req *http.Request)
-		command         types.RoomCommand
-		expectedMsgType types.MessageType
+		name                string
+		testFunc            func(w http.ResponseWriter, req *http.Request)
+		command             types.RoomCommand
+		expectedContentType types.ContentType
 	}{
 		{
-			name:            "RouteRoomCommandSetNick",
-			testFunc:        api.RouteRoomCommandSetNick,
-			command:         types.RoomCommandNick,
-			expectedMsgType: types.MessageTypeCmd,
+			name:                "RouteRoomCommandSetNick",
+			testFunc:            api.RouteRoomCommandSetNick,
+			command:             types.RoomCommandNick,
+			expectedContentType: types.MessageTypeCmd,
 		},
 		{
-			name:            "RouteRoomCommandNameRoom",
-			testFunc:        api.RouteRoomCommandNameRoom,
-			command:         types.RoomCommandNameRoom,
-			expectedMsgType: types.MessageTypeCmd,
+			name:                "RouteRoomCommandNameRoom",
+			testFunc:            api.RouteRoomCommandNameRoom,
+			command:             types.RoomCommandNameRoom,
+			expectedContentType: types.MessageTypeCmd,
 		},
 		{
-			name:            "RouteRoomSendMessage",
-			testFunc:        api.RouteRoomSendMessage,
-			command:         "",
-			expectedMsgType: types.MessageTypeText,
+			name:                "RouteRoomSendMessage",
+			testFunc:            api.RouteRoomSendMessage,
+			command:             "",
+			expectedContentType: types.MessageTypeText,
 		},
 	}
 
 	var (
-		actualID      string
-		actualMsgType types.MessageType
-		actualContent []byte
+		actualID         string
+		actualMsgContent types.MessageContent
 	)
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+	daemon.SendMessage = func(uuid string, content types.MessageContent) error {
 		actualID = uuid
-		actualMsgType = msgType
-		actualContent = content
+		actualMsgContent = content
 		return nil
 	}
 
@@ -631,6 +630,12 @@ func TestSendTextFunctions(t *testing.T) {
 			expectedContent = string(tc.command) + " " + expectedContent
 		}
 
+		expectedMsgContent := types.MessageContent{
+			Type: tc.expectedContentType,
+			Meta: types.ContentMeta{},
+			Data: []byte(expectedContent),
+		}
+
 		req, _ := http.NewRequest("", "", &reader)
 
 		expectedID := "test id"
@@ -642,8 +647,7 @@ func TestSendTextFunctions(t *testing.T) {
 		assertZeroStatusCode(t, resWriter)
 
 		assert.Equal(t, expectedID, actualID, tc.name+": Uuid was modified")
-		assert.Equal(t, tc.expectedMsgType, actualMsgType, tc.name+": Wrong message type")
-		assert.Equal(t, expectedContent, string(actualContent), tc.name+": Wrong content")
+		assert.Equal(t, expectedMsgContent, actualMsgContent)
 	}
 }
 
@@ -683,7 +687,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		},
 	}
 
-	daemon.SendMessage = func(uuid string, msgType types.MessageType, content []byte, info types.MessageContentInfo) error {
+	daemon.SendMessage = func(uuid string, content types.MessageContent) error {
 		return GetTestError()
 	}
 
