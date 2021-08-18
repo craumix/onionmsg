@@ -100,7 +100,8 @@ func (r *Room) syncPeerLists() {
 	for _, peer := range r.Peers {
 		r.SendMessageToAllPeers(MessageContent{
 			Type: MessageTypeCmd,
-			Data: []byte(string(RoomCommandJoin) + peer.RIdentity.Fingerprint()),
+			//TODO make it easier to create command messages
+			Data: []byte(string(RoomCommandJoin) + " " + peer.RIdentity.Fingerprint()),
 		})
 	}
 }
