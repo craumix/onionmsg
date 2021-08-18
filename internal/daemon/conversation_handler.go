@@ -63,41 +63,35 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 		return types.Message{}, err
 	}
 
-	rawMeta, _ := dconn.ReadBytes()
+	msgMarshal, _ := dconn.ReadBytes()
 	sig, err := dconn.ReadBytes()
 	if err != nil {
 		return types.Message{}, err
 	}
 
-	meta := types.MessageMeta{}
-	err = json.Unmarshal(rawMeta, &meta)
+	msg := types.Message{}
+	err = json.Unmarshal(msgMarshal, &msg)
 	if err != nil {
 		return types.Message{}, err
 	}
 
-	sender, ok := room.PeerByFingerprint(meta.Sender)
-	if !ok || !sender.Verify(append(sigSalt, rawMeta...), sig) {
-		dconn.WriteString("invalid_meta")
+	sender, ok := room.PeerByFingerprint(msg.Meta.Sender)
+	if !ok || !sender.Verify(append(sigSalt, msgMarshal...), sig) {
+		dconn.WriteString("invalid_mssage")
 		dconn.Flush()
-		return types.Message{}, fmt.Errorf("received invalid meta for message")
+		return types.Message{}, fmt.Errorf("received invalid message")
 	}
 
 	dconn.WriteString("ok")
 	dconn.Flush()
 
-	var content []byte
-	if meta.Type != types.MessageTypeBlob {
-		content, err = readDataWithSig(dconn, sender, sigSalt)
-		if err != nil {
-			return types.Message{}, err
-		}
-	} else {
+	if msg.ContainsBlob() {
 		blockcount, err := dconn.ReadInt()
 		if err != nil {
 			return types.Message{}, err
 		}
 
-		id := meta.ContentInfo.BlobUUID
+		id := msg.Content.Meta.BlobUUID
 
 		file, err := blobmngr.FileFromID(id)
 		if err != nil {
@@ -126,10 +120,7 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 		rcvOK = true
 	}
 
-	return types.Message{
-		Meta:    meta,
-		Content: content,
-	}, nil
+	return msg, nil
 }
 
 func readDataWithSig(dconn connection.ConnWrapper, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
