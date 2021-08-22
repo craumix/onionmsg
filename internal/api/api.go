@@ -105,6 +105,11 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	respFilname := req.FormValue("filename")
+	if respFilname != "" {
+		w.Header().Add("Content-Disposition", "attachment; filename=\""+respFilname+"\"")
+	}
+
 	err = blobmngr.StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
