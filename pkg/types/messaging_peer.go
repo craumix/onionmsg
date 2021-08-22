@@ -47,7 +47,8 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 			c, err := mp.SendMessages(mp.MQueue...)
 			if err != nil {
-				log.Println(err)
+				//TODO Uncomment
+				//log.Println(err)
 			} else {
 				mp.MQueue = mp.MQueue[c:]
 			}

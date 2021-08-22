@@ -200,17 +200,17 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	/*
-	lengthStr := req.Header.Get("Content-Length")
-	length, err := strconv.Atoi(lengthStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+		lengthStr := req.Header.Get("Content-Length")
+		length, err := strconv.Atoi(lengthStr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	if length > maxFileSize {
-		http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
-		return
-	}
+		if length > maxFileSize {
+			http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
+			return
+		}
 	*/
 
 	err = blobmngr.WriteIntoFile(req.Body, file)
