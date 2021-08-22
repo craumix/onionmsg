@@ -24,6 +24,7 @@ type ContentMeta struct {
 	BlobUUID uuid.UUID `json:"blobUUID"`
 	Filename string    `json:"filename,omitempty"`
 	Mimetype string    `json:"mimetype,omitempty"`
+	Filesize int       `json:"filesize,omitempty"`
 }
 
 type MessageMeta struct {
