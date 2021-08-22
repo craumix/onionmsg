@@ -199,7 +199,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	/*
 	lengthStr := req.Header.Get("Content-Length")
 	length, err := strconv.Atoi(lengthStr)
 	if err != nil {
@@ -211,6 +211,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
 		return
 	}
+	*/
 
 	err = blobmngr.WriteIntoFile(req.Body, file)
 	if err != nil {
@@ -218,9 +219,9 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	filename := req.Header.Get("Content-Filename")
+	filename := req.FormValue("Content-Filename")
 
-	mimetype := req.Header.Get("Content-Mimetype")
+	mimetype := req.FormValue("Content-Mimetype")
 	if mimetype == "" {
 		mimetype = mime.TypeByExtension(filepath.Ext(filename))
 	}
