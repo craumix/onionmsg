@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -102,6 +103,12 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 	id, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = blobmngr.StatFromID(id)
+	if os.IsNotExist(err) {
+		http.Error(w, "Blob not found!", http.StatusNotFound)
 		return
 	}
 
