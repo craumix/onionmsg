@@ -80,7 +80,7 @@ func (mp *MessagingPeer) SendMessages(msgs ...Message) (int, error) {
 
 	defer dataConn.Close()
 
-	dataConn.WriteBytes(mp.Room.ID[:])
+	dataConn.WriteBytes(mp.Room.ID[:], false)
 	dataConn.WriteInt(len(msgs))
 	dataConn.Flush()
 

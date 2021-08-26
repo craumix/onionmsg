@@ -38,7 +38,7 @@ func RandomString(size int) string {
 func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Message) error {
 	dataConn := *dataConnP
 
-	sigSalt, err := dataConn.ReadBytes()
+	sigSalt, err := dataConn.ReadBytes(false)
 	if err != nil {
 		return err
 	}
@@ -94,12 +94,12 @@ func SendMessage(dataConnP *connection.ConnWrapper, identity Identity, msg Messa
 func sendDataWithSig(dataConnP *connection.ConnWrapper, identity Identity, data, sigSalt []byte) (int, error) {
 	dataConn := *dataConnP
 
-	n, err := dataConn.WriteBytes(data)
+	n, err := dataConn.WriteBytes(data, true)
 	if err != nil {
 		return 0, err
 	}
 
-	m, err := dataConn.WriteBytes(identity.Sign(append(sigSalt, data...)))
+	m, err := dataConn.WriteBytes(identity.Sign(append(sigSalt, data...)), false)
 	if err != nil {
 		return n, err
 	}
