@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
-	uid "github.com/google/uuid"
 )
 
 var (
@@ -109,38 +108,38 @@ func addPeerToRoom(roomID uuid.UUID, fingerprint string) error {
 }
 
 // deleteRoom deletes the room with the specified uuid.
-func deleteRoom(uuid string) error {
-	id, err := uid.Parse(uuid)
+func deleteRoom(uid string) error {
+	id, err := uuid.Parse(uid)
 	if err != nil {
 		return err
 	}
 	return deregisterRoom(id)
 }
 
-func sendMessage(uuid string, content types.MessageContent) error {
-	id, err := uid.Parse(uuid)
+func sendMessage(uid string, content types.MessageContent) error {
+	id, err := uuid.Parse(uid)
 	if err != nil {
 		return err
 	}
 
 	room, ok := GetRoom(id)
 	if !ok {
-		return fmt.Errorf("no such room: %s", uuid)
+		return fmt.Errorf("no such room: %s", uid)
 	}
 
 	room.SendMessageToAllPeers(content)
 	return nil
 }
 
-func listMessages(uuid string, count int) ([]types.Message, error) {
-	id, err := uid.Parse(uuid)
+func listMessages(uid string, count int) ([]types.Message, error) {
+	id, err := uuid.Parse(uid)
 	if err != nil {
 		return nil, err
 	}
 
 	room, ok := GetRoom(id)
 	if !ok {
-		return nil, fmt.Errorf("no such room: %s", uuid)
+		return nil, fmt.Errorf("no such room: %s", uid)
 	}
 
 	if count > 0 {
