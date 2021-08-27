@@ -71,7 +71,9 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 // QueueMessage tries to send the message right away and if that fails the message will be queued
 func (mp *MessagingPeer) QueueMessage(msg Message) {
 	mp.MQueue = append(mp.MQueue, msg)
-	mp.skipQueueWait()
+	if mp.skipQueueWait != nil {
+		mp.skipQueueWait()
+	}
 }
 
 func (mp *MessagingPeer) SendMessages(msgs ...Message) (int, error) {

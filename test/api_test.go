@@ -3,6 +3,13 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
+	"net/http"
+	"net/url"
+	"os"
+	"testing"
+
 	"github.com/craumix/onionmsg/internal/api"
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -10,11 +17,6 @@ import (
 	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"testing"
 )
 
 func TestRouteStatus(t *testing.T) {
@@ -387,9 +389,10 @@ func TestRoomSendFile(t *testing.T) {
 		Data: nil,
 	}
 
+	req.Form.Add("filename", expectedMsgContent.Meta.Filename)
+	req.Form.Add("mimetype", expectedMsgContent.Meta.Mimetype)
+
 	req.Header.Set("Content-Length", "69")
-	req.Header.Set("Content-Filename", expectedMsgContent.Meta.Filename)
-	req.Header.Set("Content-Mimetype", expectedMsgContent.Meta.Mimetype)
 
 	api.RouteRoomSendFile(resWriter, req)
 
@@ -432,16 +435,19 @@ func TestRoomSendFileErrors(t *testing.T) {
 			expectedErrCode: http.StatusBadRequest,
 			SendErr:         GetTestError(),
 		},
-		{
-			name:            "FileTooBigErr",
-			expectedErrCode: http.StatusBadRequest,
-			fileLength:      "2147483700",
-		},
-		{
-			name:            "NotAnIntegerErr",
-			expectedErrCode: http.StatusBadRequest,
-			fileLength:      "NaN",
-		},
+		/*
+			Filesize is not checked atm
+			{
+				name:            "FileTooBigErr",
+				expectedErrCode: http.StatusBadRequest,
+				fileLength:      "2147483700",
+			},
+			{
+				name:            "NotAnIntegerErr",
+				expectedErrCode: http.StatusBadRequest,
+				fileLength:      "NaN",
+			},
+		*/
 	}
 
 	for _, tc := range testcases {
@@ -533,6 +539,12 @@ func TestRouteBlob(t *testing.T) {
 		return nil
 	}
 
+	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
+		//The "00000000-0000-0000-0000-000000000000" uuid will lead to os.IsNotExist error.
+		//So we throw another one or 404 will be returned.
+		return nil, fmt.Errorf("FileInfo test error")
+	}
+
 	req := GetRequest(nil, false, true)
 
 	expectedID := GetValidUUID()
@@ -562,6 +574,12 @@ func TestRouteBlobErrors(t *testing.T) {
 			expectedErrCode: http.StatusInternalServerError,
 			StreamToErr:     GetTestError(),
 		},
+	}
+
+	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
+		//The "00000000-0000-0000-0000-000000000000" uuid will lead to os.IsNotExist error.
+		//So we throw another one or 404 will be returned.
+		return nil, fmt.Errorf("FileInfo test error")
 	}
 
 	for _, tc := range testcases {

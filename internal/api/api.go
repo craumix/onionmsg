@@ -238,8 +238,11 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		mimetype = mime.TypeByExtension(filepath.Ext(filename))
 	}
 
-	fileStat, _ := blobmngr.StatFromID(id)
-	filesize := int(fileStat.Size())
+	filesize := 0
+	fileStat, err := blobmngr.StatFromID(id)
+	if err == nil {
+		filesize = int(fileStat.Size())
+	}
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: types.ContentTypeFile,

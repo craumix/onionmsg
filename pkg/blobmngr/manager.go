@@ -14,6 +14,7 @@ var (
 	MakeBlob      = makeBlob
 	FileFromID    = fileFromID
 	WriteIntoFile = writeIntoFile
+	StatFromID    = statFromID
 
 	blobdir = "./"
 )
@@ -62,7 +63,7 @@ func fileFromID(id uuid.UUID) (*os.File, error) {
 	return os.OpenFile(blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
-func StatFromID(id uuid.UUID) (fs.FileInfo, error) {
+func statFromID(id uuid.UUID) (fs.FileInfo, error) {
 	return os.Stat(blobPath(id))
 }
 
