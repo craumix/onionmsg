@@ -17,7 +17,7 @@ func convClientHandler(c net.Conn) {
 	dconn := connection.WrapConnection(c)
 	defer dconn.Close()
 
-	idRaw, err := dconn.ReadBytes()
+	idRaw, err := dconn.ReadBytes(false)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -63,8 +63,8 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 		return types.Message{}, err
 	}
 
-	msgMarshal, _ := dconn.ReadBytes()
-	sig, err := dconn.ReadBytes()
+	msgMarshal, _ := dconn.ReadBytes(true)
+	sig, err := dconn.ReadBytes(false)
 	if err != nil {
 		return types.Message{}, err
 	}
@@ -124,8 +124,8 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 }
 
 func readDataWithSig(dconn connection.ConnWrapper, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
-	content, _ := dconn.ReadBytes()
-	sig, err := dconn.ReadBytes()
+	content, _ := dconn.ReadBytes(true)
+	sig, err := dconn.ReadBytes(false)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func readDataWithSig(dconn connection.ConnWrapper, sender types.RemoteIdentity, 
 func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
 	r := make([]byte, length)
 	rand.Read(r)
-	_, err := dconn.WriteBytes(r)
+	_, err := dconn.WriteBytes(r, false)
 	if err != nil {
 		return nil, err
 	}

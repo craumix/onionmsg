@@ -14,6 +14,7 @@ var (
 	MakeBlob      = makeBlob
 	FileFromID    = fileFromID
 	WriteIntoFile = writeIntoFile
+	StatFromID    = statFromID
 
 	blobdir = "./"
 )
@@ -37,18 +38,23 @@ func streamTo(id uuid.UUID, w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	buf := make([]byte, 4096)
-	for n, err := file.Read(buf); n > 0 && err != nil; {
-		_, err = w.Write(buf[:n])
+	io.Copy(w, file)
+	/*
+		buf := make([]byte, 4096)
+		for n, err := file.Read(buf); n > 0 && err == nil; {
+			_, err = w.Write(buf[:n])
+
+			if err != nil {
+				return err
+			}
+		}
+
 		if err != nil {
 			return err
 		}
-	}
-	if err != nil {
-		return err
-	}
-	file.Close()
+	*/
 
 	return nil
 }
@@ -57,7 +63,7 @@ func fileFromID(id uuid.UUID) (*os.File, error) {
 	return os.OpenFile(blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
-func StatFromID(id uuid.UUID) (fs.FileInfo, error) {
+func statFromID(id uuid.UUID) (fs.FileInfo, error) {
 	return os.Stat(blobPath(id))
 }
 

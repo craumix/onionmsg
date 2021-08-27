@@ -51,13 +51,13 @@ type MockConnWrapper struct {
 	GetMockedConnWrapperError  error
 }
 
-func (m *MockConnWrapper) WriteBytes(msg []byte) (int, error) {
+func (m *MockConnWrapper) WriteBytes(msg []byte, compress bool) (int, error) {
 	m.WriteBytesInput = append(m.WriteBytesInput, msg)
 
 	return m.WriteBytesOutputInt, m.WriteBytesOutputError
 }
 
-func (m *MockConnWrapper) ReadBytes() ([]byte, error) {
+func (m *MockConnWrapper) ReadBytes(compressed bool) ([]byte, error) {
 	return m.ReadBytesOutputBytes, m.ReadBytesOutputError
 }
 
@@ -79,12 +79,12 @@ func (m *MockConnWrapper) ReadInt() (int, error) {
 	return m.ReadIntOutputInt, m.ReadIntOutputError
 }
 
-func (m *MockConnWrapper) WriteStruct(msg interface{}) (int, error) {
+func (m *MockConnWrapper) WriteStruct(msg interface{}, compress bool) (int, error) {
 	m.WriteStructInput = append(m.WriteStructInput, msg)
 	return m.WriteStructOutputInt, m.WriteStructOutputError
 }
 
-func (m *MockConnWrapper) ReadStruct(target interface{}) error {
+func (m *MockConnWrapper) ReadStruct(target interface{}, compressed bool) error {
 	m.ReadStructTargetStruct = append(m.ReadStructTargetStruct, target)
 	raw, _ := json.Marshal(m.ReadStructSourceStruct)
 	json.Unmarshal(raw, target)

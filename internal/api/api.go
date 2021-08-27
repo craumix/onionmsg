@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -105,6 +106,17 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	_, err = blobmngr.StatFromID(id)
+	if os.IsNotExist(err) {
+		http.Error(w, "Blob not found!", http.StatusNotFound)
+		return
+	}
+
+	respFilname := req.FormValue("filename")
+	if respFilname != "" {
+		w.Header().Add("Content-Disposition", "attachment; filename=\""+respFilname+"\"")
+	}
+
 	err = blobmngr.StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -199,18 +211,19 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	/*
+		lengthStr := req.Header.Get("Content-Length")
+		length, err := strconv.Atoi(lengthStr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	lengthStr := req.Header.Get("Content-Length")
-	length, err := strconv.Atoi(lengthStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if length > maxFileSize {
-		http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
-		return
-	}
+		if length > maxFileSize {
+			http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
+			return
+		}
+	*/
 
 	err = blobmngr.WriteIntoFile(req.Body, file)
 	if err != nil {
@@ -218,11 +231,17 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	filename := req.Header.Get("Content-Filename")
+	filename := req.FormValue("filename")
 
-	mimetype := req.Header.Get("Content-Mimetype")
+	mimetype := req.FormValue("mimetype")
 	if mimetype == "" {
 		mimetype = mime.TypeByExtension(filepath.Ext(filename))
+	}
+
+	filesize := 0
+	fileStat, err := blobmngr.StatFromID(id)
+	if err == nil {
+		filesize = int(fileStat.Size())
 	}
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
@@ -231,6 +250,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 			BlobUUID: id,
 			Filename: filename,
 			Mimetype: mimetype,
+			Filesize: filesize,
 		},
 	})
 	if err != nil {

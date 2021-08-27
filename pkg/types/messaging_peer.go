@@ -3,9 +3,10 @@ package types
 import (
 	"context"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"time"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 )
 
 const (
@@ -18,6 +19,8 @@ type MessagingPeer struct {
 
 	ctx  context.Context
 	stop context.CancelFunc
+
+	skipQueueWait context.CancelFunc
 
 	Room *Room `json:"-"`
 }
@@ -47,12 +50,18 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 			c, err := mp.SendMessages(mp.MQueue...)
 			if err != nil {
-				log.Println(err)
+				//TODO Uncomment
+				//log.Println(err)
 			} else {
 				mp.MQueue = mp.MQueue[c:]
 			}
 		}
+
+		var skip context.Context
+		skip, mp.skipQueueWait = context.WithCancel(context.Background())
+
 		select {
+		case <-skip.Done(): //used to skip a single wait period
 		case <-mp.ctx.Done(): //context cancelled
 		case <-time.After(queueTimeout): //timeout
 		}
@@ -61,9 +70,9 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 // QueueMessage tries to send the message right away and if that fails the message will be queued
 func (mp *MessagingPeer) QueueMessage(msg Message) {
-	_, err := mp.SendMessages(msg)
-	if err != nil {
-		mp.MQueue = append(mp.MQueue, msg)
+	mp.MQueue = append(mp.MQueue, msg)
+	if mp.skipQueueWait != nil {
+		mp.skipQueueWait()
 	}
 }
 
@@ -79,7 +88,7 @@ func (mp *MessagingPeer) SendMessages(msgs ...Message) (int, error) {
 
 	defer dataConn.Close()
 
-	dataConn.WriteBytes(mp.Room.ID[:])
+	dataConn.WriteBytes(mp.Room.ID[:], false)
 	dataConn.WriteInt(len(msgs))
 	dataConn.Flush()
 

@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -123,7 +122,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 		LocalFP:  r.Self.Fingerprint(),
 		ID:       r.ID,
 	}
-	_, err = dataConn.WriteStruct(req)
+	_, err = dataConn.WriteStruct(req, false)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +130,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 	dataConn.Flush()
 
 	resp := &ContactResponse{}
-	err = dataConn.ReadStruct(resp)
+	err = dataConn.ReadStruct(resp, false)
 	if err != nil {
 		return nil, err
 	}
@@ -152,22 +151,14 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 	return peer, nil
 }
 
-func (r *Room) SendMessageToAllPeers(content MessageContent) error {
-	msg := Message{
-		Meta: MessageMeta{
-			Sender: r.Self.Fingerprint(),
-			Time:   time.Now().UTC(),
-		},
-		Content: content,
-	}
+func (r *Room) SendMessageToAllPeers(content MessageContent) {
+	msg := NewMessage(content, r.Self)
 
 	r.LogMessage(msg)
 
 	for _, peer := range r.Peers {
 		go peer.QueueMessage(msg)
 	}
-
-	return nil
 }
 
 func (r *Room) RunMessageQueueForAllPeers() {
