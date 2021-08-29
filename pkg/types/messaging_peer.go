@@ -49,7 +49,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
 			return
 		default:
-			if reflect.DeepEqual(mp.lastSyncTimes, mp.Room.SyncTimes) {
+			if reflect.DeepEqual(mp.lastSyncTimes, mp.Room.SyncState) {
 				break
 			}
 
@@ -58,7 +58,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 				//TODO Uncomment
 				//log.Println(err)
 			} else {
-				mp.lastSyncTimes = CopyMap(mp.Room.SyncTimes)
+				mp.lastSyncTimes = CopySyncMap(mp.Room.SyncState)
 			}
 		}
 
@@ -84,15 +84,11 @@ func (mp *MessagingPeer) syncMsgs() error {
 		return fmt.Errorf("Room not set")
 	}
 
-	//start := time.Now()
 	conn, err := connection.GetConnFunc("tcp", mp.RIdentity.URL()+":"+strconv.Itoa(PubConvPort))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	//log.Printf("TCP-Dial took %s", time.Since(start).String())
-
-	//runPing(conn)
 
 	err = fingerprintChallenge(conn, mp.Room.Self)
 	if err != nil {
@@ -199,14 +195,6 @@ func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 	}
 
 	return ids
-}
-
-func runPing(conn connection.ConnWrapper) {
-	start := time.Now()
-	conn.WriteString("ping")
-	conn.Flush()
-	pingResp, _ := conn.ReadString()
-	log.Printf("Got %s after %s", pingResp, time.Since(start).String())
 }
 
 func expectResponse(conn connection.ConnWrapper, expResp string) error {

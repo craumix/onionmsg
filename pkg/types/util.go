@@ -15,6 +15,8 @@ const (
 	blocksize = 1 << 19 // 512K
 )
 
+type SyncMap map[string]time.Time
+
 type ContactRequest struct {
 	RemoteFP string
 	LocalFP  string
@@ -32,9 +34,8 @@ func RandomString(size int) string {
 	return base64.RawStdEncoding.EncodeToString(r)
 }
 
-/*https://stackoverflow.com/questions/23057785/how-to-copy-a-map/23058707#23058707*/
-func CopyMap(m map[string]time.Time) map[string]time.Time {
-    cp := make(map[string]time.Time)
+func CopySyncMap(m SyncMap) SyncMap{
+    cp := make(SyncMap)
     for k, v := range m {
         cp[k] = v
     }

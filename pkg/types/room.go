@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -30,7 +28,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	SyncTimes   map[string]time.Time `json:"lastMessage"`
+	SyncState   SyncMap `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
 
 	Ctx  context.Context `json:"-"`
@@ -49,7 +47,7 @@ func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, e
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
-		SyncTimes: make(map[string]time.Time),
+		SyncState: make(SyncMap),
 	}
 
 	err := room.SetContext(ctx)
@@ -191,19 +189,15 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) PushMessages(msgs ...Message) error {
-	//TODO could be done without sorting, but by duplicating the map and updating the copy and then
-	//replacing the original, but this would require a map deepcopy func which I am to lazy for atm
-	sort.SliceStable(msgs, func(i, j int) bool {
-		return msgs[i].Meta.Time.Before(msgs[j].Meta.Time)
-	})
+	newSyncState := CopySyncMap(r.SyncState)
 
 	r.msgUpdateMutex.Lock()
 
 	//Usually all messages that reach this point should be new to us,
 	//the if-statement is more of a failsafe
 	for _, msg := range msgs {
-		if last, ok := r.SyncTimes[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
-			r.SyncTimes[msg.Meta.Sender] = msg.Meta.Time
+		if last, ok := r.SyncState[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			newSyncState[msg.Meta.Sender] = msg.Meta.Time
 
 			if msg.Content.Type == ContentTypeCmd {
 				r.handleCommand(msg)
@@ -213,6 +207,8 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			r.Messages = append(r.Messages, msg)
 		}
 	}
+
+	r.SyncState = newSyncState
 
 	r.msgUpdateMutex.Unlock()
 
@@ -285,7 +281,7 @@ func (r *Room) handleNameRoom(args []string) {
 	log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
 }
 
-func (r Room) handleNick(args []string, sender string) {
+func (r *Room) handleNick(args []string, sender string) {
 	if !enoughArgs(args, 2) {
 		return
 	}
