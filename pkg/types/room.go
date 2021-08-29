@@ -49,6 +49,7 @@ func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, e
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
+		SyncTimes: make(map[string]time.Time),
 	}
 
 	err := room.SetContext(ctx)
@@ -189,7 +190,7 @@ func (r *Room) StopQueues() {
 	r.stop()
 }
 
-func (r *Room) PushMessages(msgs ...Message) {
+func (r *Room) PushMessages(msgs ...Message) error {
 	//TODO could be done without sorting, but by duplicating the map and updating the copy and then
 	//replacing the original, but this would require a map deepcopy func which I am to lazy for atm
 	sort.SliceStable(msgs, func(i, j int) bool {
@@ -208,11 +209,14 @@ func (r *Room) PushMessages(msgs ...Message) {
 				r.handleCommand(msg)
 			}
 			
+			log.Printf("New message for room %s: %s", r.ID, msg.Content.Data)
 			r.Messages = append(r.Messages, msg)
 		}
 	}
 
 	r.msgUpdateMutex.Unlock()
+
+	return nil
 }
 
 // Info returns a struct with useful information about this Room

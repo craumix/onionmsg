@@ -23,7 +23,7 @@ type MessagingPeer struct {
 	ctx  context.Context
 	Stop context.CancelFunc
 
-	BumpQueue context.CancelFunc
+	skipTimeout context.CancelFunc
 
 	Room *Room `json:"-"`
 
@@ -58,12 +58,12 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 				//TODO Uncomment
 				//log.Println(err)
 			} else {
-				mp.lastSyncTimes = mp.Room.SyncTimes
+				mp.lastSyncTimes = CopyMap(mp.Room.SyncTimes)
 			}
 		}
 
 		var skip context.Context
-		skip, mp.BumpQueue = context.WithCancel(context.Background())
+		skip, mp.skipTimeout = context.WithCancel(context.Background())
 
 		select {
 		case <-skip.Done(): //used to skip a single wait period
@@ -73,20 +73,26 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 	}
 }
 
+func (mp *MessagingPeer) BumpQueue() {
+	if mp.skipTimeout != nil {
+		mp.skipTimeout()
+	}
+}
+
 func (mp *MessagingPeer) syncMsgs() error {
 	if mp.Room == nil {
 		return fmt.Errorf("Room not set")
 	}
 
-	start := time.Now()
+	//start := time.Now()
 	conn, err := connection.GetConnFunc("tcp", mp.RIdentity.URL()+":"+strconv.Itoa(PubConvPort))
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	log.Printf("TCP-Dial took %s", time.Since(start).String())
+	//log.Printf("TCP-Dial took %s", time.Since(start).String())
 
-	runPing(conn)
+	//runPing(conn)
 
 	err = fingerprintChallenge(conn, mp.Room.Self)
 	if err != nil {
@@ -102,13 +108,14 @@ func (mp *MessagingPeer) syncMsgs() error {
 	}
 
 	remoteSyncTimes := make(map[string]time.Time)
-	err = conn.ReadStruct(remoteSyncTimes, false)
+	err = conn.ReadStruct(&remoteSyncTimes, false)
 	if err != nil {
 		return err
 	}
-
+	
 	msgsToSync := mp.findMessagesToSync(remoteSyncTimes)
 	conn.WriteStruct(msgsToSync, true)
+	conn.Flush()
 
 	err = expectResponse(conn, "messages_ok")
 	if err != nil {
@@ -121,6 +128,11 @@ func (mp *MessagingPeer) syncMsgs() error {
 		return err
 	}
 
+	err = expectResponse(conn, "sync_ok")
+	if err != nil {
+		return err
+	} 
+	log.Println("transfer done")
 	return nil
 }
 

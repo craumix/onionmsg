@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -19,7 +20,7 @@ func convClientHandler(c net.Conn) {
 	conn := connection.WrapConnection(c)
 	defer conn.Close()
 
-	answerPing(conn)
+	//answerPing(conn)
 
 	fingerprint, err := readFingerprintWithChallenge(conn)
 	if err != nil {
@@ -59,12 +60,19 @@ func convClientHandler(c net.Conn) {
 	conn.Flush()
 
 	newMsgs := make([]types.Message, 0)
-	conn.ReadStruct(newMsgs, true)
+	conn.ReadStruct(&newMsgs, true)
 
 	room.PushMessages(newMsgs...)
 
-	//TODO just pass whole slice instead of loop
 	for _, msg := range newMsgs {
+		if !msg.SigIsValid() {
+			raw, _ := json.Marshal(msg)
+			log.Printf("sig for %s is not valid", string(raw))
+			conn.WriteString("message_sig_invalid " + string(raw))
+			return
+		}
+
+		//TODO just pass whole slice instead of loop
 		notifyNewMessage(id, msg)
 	}
 
@@ -75,11 +83,14 @@ func convClientHandler(c net.Conn) {
 	if err != nil {
 		log.Println(err.Error())
 	}
+
+	conn.WriteString("sync_ok")
+	conn.Flush()
 }
 
 func readBlobs(conn connection.ConnWrapper) error {
 	ids := make([]uuid.UUID, 0)
-	conn.ReadStruct(ids, false)
+	conn.ReadStruct(&ids, false)
 
 	for _, id := range ids {
 		blockcount, err := conn.ReadInt()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -48,6 +49,7 @@ func contClientHandler(c net.Conn) {
 		Self:  convID,
 		Peers: []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
 		ID:    req.ID,
+		SyncTimes: make(map[string]time.Time),
 	}
 	room.SetContext(context.Background())
 
