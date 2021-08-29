@@ -20,8 +20,6 @@ func convClientHandler(c net.Conn) {
 	conn := connection.WrapConnection(c)
 	defer conn.Close()
 
-	//answerPing(conn)
-
 	fingerprint, err := readFingerprintWithChallenge(conn)
 	if err != nil {
 		log.Println(err.Error())
@@ -56,25 +54,24 @@ func convClientHandler(c net.Conn) {
 	}
 
 	conn.WriteString("auth_ok")
-	conn.WriteStruct(room.SyncTimes, false)
+	conn.WriteStruct(room.SyncState, false)
 	conn.Flush()
 
 	newMsgs := make([]types.Message, 0)
 	conn.ReadStruct(&newMsgs, true)
 
-	room.PushMessages(newMsgs...)
-
 	for _, msg := range newMsgs {
 		if !msg.SigIsValid() {
 			raw, _ := json.Marshal(msg)
-			log.Printf("sig for %s is not valid", string(raw))
+			log.Printf("Sig for %s is not valid", string(raw))
 			conn.WriteString("message_sig_invalid " + string(raw))
 			return
 		}
 
 		//TODO just pass whole slice instead of loop
-		notifyNewMessage(id, msg)
 	}
+
+	notifyNewMessages(id, newMsgs...)
 
 	conn.WriteString("messages_ok")
 	conn.Flush()
@@ -83,6 +80,8 @@ func convClientHandler(c net.Conn) {
 	if err != nil {
 		log.Println(err.Error())
 	}
+
+	room.PushMessages(newMsgs...)
 
 	conn.WriteString("sync_ok")
 	conn.Flush()
@@ -145,16 +144,6 @@ func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
 	dconn.Flush()
 
 	return r, nil
-}
-
-func answerPing(conn connection.ConnWrapper) {
-	msg, _ := conn.ReadString()
-	if msg != "ping" {
-		log.Printf("%s received \"ping\" expected...", msg)
-	} else {
-		conn.WriteString("pong")
-		conn.Flush()
-	}
 }
 
 func readFingerprintWithChallenge(conn connection.ConnWrapper) (string, error) {
