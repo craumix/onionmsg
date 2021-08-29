@@ -198,6 +198,8 @@ func (r *Room) PushMessages(msgs ...Message) {
 
 	r.msgUpdateMutex.Lock()
 
+	//Usually all messages that reach this point should be new to us,
+	//the if-statement is more of a failsafe
 	for _, msg := range msgs {
 		if last, ok := r.SyncTimes[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
 			r.SyncTimes[msg.Meta.Sender] = msg.Meta.Time
@@ -205,7 +207,7 @@ func (r *Room) PushMessages(msgs ...Message) {
 			if msg.Content.Type == ContentTypeCmd {
 				r.handleCommand(msg)
 			}
-	
+			
 			r.Messages = append(r.Messages, msg)
 		}
 	}

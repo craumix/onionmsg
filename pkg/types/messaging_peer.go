@@ -25,8 +25,6 @@ type MessagingPeer struct {
 
 	BumpQueue context.CancelFunc
 
-	skipQueueWait context.CancelFunc
-
 	Room *Room `json:"-"`
 
 	lastSyncTimes map[string]time.Time
