@@ -31,10 +31,10 @@ func registerCallbacks() {
 	daemon.ErrorCallback = NotifyError
 }
 
-func NotifyNewMessage(id uuid.UUID, msg types.Message) {
+func NotifyNewMessage(id uuid.UUID, msg ...types.Message) {
 	n := struct {
-		RoomID  uuid.UUID     `json:"uuid"`
-		Message types.Message `json:"message"`
+		RoomID  uuid.UUID       `json:"uuid"`
+		Message []types.Message `json:"message"`
 	}{
 		id,
 		msg,
