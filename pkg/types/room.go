@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -26,6 +29,9 @@ type Room struct {
 	ID       uuid.UUID        `json:"uuid"`
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
+
+	LastMessageTime   map[string]time.Time `json:"lastMessage"`
+	msgUpdateMutex sync.Mutex
 
 	Ctx  context.Context `json:"-"`
 	stop context.CancelFunc
@@ -154,7 +160,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 func (r *Room) SendMessageToAllPeers(content MessageContent) {
 	msg := NewMessage(content, r.Self)
 
-	r.LogMessage(msg)
+	r.PushMessages(msg)
 
 	for _, peer := range r.Peers {
 		go peer.QueueMessage(msg)
@@ -183,12 +189,26 @@ func (r *Room) StopQueues() {
 	r.stop()
 }
 
-func (r *Room) LogMessage(msg Message) {
-	if msg.Content.Type == ContentTypeCmd {
-		r.handleCommand(msg)
+func (r *Room) PushMessages(msgs ...Message) {
+	sort.SliceStable(msgs, func(i, j int) bool {
+		return msgs[i].Meta.Time.Before(msgs[j].Meta.Time)
+	})
+
+	r.msgUpdateMutex.Lock()
+
+	for _, msg := range msgs {
+		if last, ok := r.LastMessageTime[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			r.LastMessageTime[msg.Meta.Sender] = msg.Meta.Time
+
+			if msg.Content.Type == ContentTypeCmd {
+				r.handleCommand(msg)
+			}
+	
+			r.Messages = append(r.Messages, msg)
+		}
 	}
 
-	r.Messages = append(r.Messages, msg)
+	r.msgUpdateMutex.Unlock()
 }
 
 // Info returns a struct with useful information about this Room

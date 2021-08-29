@@ -53,7 +53,7 @@ func convClientHandler(c net.Conn) {
 
 		notifyNewMessage(id, msg)
 
-		room.LogMessage(msg)
+		room.PushMessages(msg)
 	}
 }
 
