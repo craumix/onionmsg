@@ -132,7 +132,6 @@ func (mp *MessagingPeer) syncMsgs() error {
 	if err != nil {
 		return err
 	}
-	log.Println("transfer done")
 	return nil
 }
 
