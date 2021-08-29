@@ -19,6 +19,7 @@ jobs:
         export BUILDVER_FLAG="-X '$MODULENAME/internal/daemon.BuildVer=$(go version)'"
         export VARFLAGS="-s -w $COMMIT_FLAG $BUILDVER_FLAG"
         GOOS=linux go build -ldflags="$VARFLAGS" -o onionmsgd-latest-linux ./cmd/onionmsgd
+        GOOS=darwin go build -ldflags="$VARFLAGS" -o onionmsgd-latest-darwin ./cmd/onionmsgd
         GOOS=windows go build -ldflags="$VARFLAGS" -o onionmsgd-latest-windows.exe ./cmd/onionmsgd
         GOOS=windows go build -ldflags="$VARFLAGS -H=windowsgui" -o onionmsgd-latest-windows-nogui.exe ./cmd/onionmsgd
     - name: Run UPX
