@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -18,16 +17,14 @@ const (
 )
 
 type MessagingPeer struct {
-	RIdentity RemoteIdentity `json:"identity"`
+	RIdentity     RemoteIdentity       `json:"identity"`
+	LastSyncState map[string]time.Time `json:"lastSync"`
 
-	ctx  context.Context
-	Stop context.CancelFunc
-
+	ctx         context.Context
+	stop        context.CancelFunc
 	skipTimeout context.CancelFunc
 
 	Room *Room `json:"-"`
-
-	lastSyncTimes map[string]time.Time
 }
 
 func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
@@ -41,7 +38,7 @@ func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 	mp.Room = room
 
-	mp.ctx, mp.Stop = context.WithCancel(ctx)
+	mp.ctx, mp.stop = context.WithCancel(ctx)
 
 	for {
 		select {
@@ -49,7 +46,14 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
 			return
 		default:
-			if reflect.DeepEqual(mp.lastSyncTimes, mp.Room.SyncState) {
+			match := true
+			for k, v := range mp.Room.SyncState {
+				if t, ok := mp.LastSyncState[k]; !ok || t.Before(v) {
+					match = false
+				}
+			}
+
+			if match {
 				break
 			}
 
@@ -58,7 +62,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 				//TODO Uncomment
 				//log.Println(err)
 			} else {
-				mp.lastSyncTimes = CopySyncMap(mp.Room.SyncState)
+				mp.LastSyncState = CopySyncMap(mp.Room.SyncState)
 			}
 		}
 
@@ -108,7 +112,7 @@ func (mp *MessagingPeer) syncMsgs() error {
 	if err != nil {
 		return err
 	}
-	
+
 	msgsToSync := mp.findMessagesToSync(remoteSyncTimes)
 	conn.WriteStruct(msgsToSync, true)
 	conn.Flush()
@@ -127,7 +131,7 @@ func (mp *MessagingPeer) syncMsgs() error {
 	err = expectResponse(conn, "sync_ok")
 	if err != nil {
 		return err
-	} 
+	}
 	log.Println("transfer done")
 	return nil
 }

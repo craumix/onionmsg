@@ -67,11 +67,11 @@ func convClientHandler(c net.Conn) {
 			conn.WriteString("message_sig_invalid " + string(raw))
 			return
 		}
-
-		//TODO just pass whole slice instead of loop
 	}
 
-	notifyNewMessages(id, newMsgs...)
+	if len(newMsgs) > 0 {
+		notifyNewMessages(id, newMsgs...)
+	}
 
 	conn.WriteString("messages_ok")
 	conn.Flush()

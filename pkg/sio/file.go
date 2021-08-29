@@ -17,7 +17,10 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 	}
 	defer file.Close()
 
-	raw, _ := json.Marshal(src)
+	raw, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
 
 	enc, _ := zstd.NewWriter(file)
 	comp := enc.EncodeAll(raw, make([]byte, 0))
