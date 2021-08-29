@@ -30,7 +30,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	LastMessageTime   map[string]time.Time `json:"lastMessage"`
+	SyncTimes   map[string]time.Time `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
 
 	Ctx  context.Context `json:"-"`
@@ -163,7 +163,7 @@ func (r *Room) SendMessageToAllPeers(content MessageContent) {
 	r.PushMessages(msg)
 
 	for _, peer := range r.Peers {
-		go peer.QueueMessage(msg)
+		peer.BumpQueue()
 	}
 }
 
@@ -190,6 +190,8 @@ func (r *Room) StopQueues() {
 }
 
 func (r *Room) PushMessages(msgs ...Message) {
+	//TODO could be done without sorting, but by duplicating the map and updating the copy and then
+	//replacing the original, but this would require a map deepcopy func which I am to lazy for atm
 	sort.SliceStable(msgs, func(i, j int) bool {
 		return msgs[i].Meta.Time.Before(msgs[j].Meta.Time)
 	})
@@ -197,8 +199,8 @@ func (r *Room) PushMessages(msgs ...Message) {
 	r.msgUpdateMutex.Lock()
 
 	for _, msg := range msgs {
-		if last, ok := r.LastMessageTime[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
-			r.LastMessageTime[msg.Meta.Sender] = msg.Meta.Time
+		if last, ok := r.SyncTimes[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			r.SyncTimes[msg.Meta.Sender] = msg.Meta.Time
 
 			if msg.Content.Type == ContentTypeCmd {
 				r.handleCommand(msg)
