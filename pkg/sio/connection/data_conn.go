@@ -12,8 +12,10 @@ import (
 )
 
 const (
-	//1M
-	maxBufSize = 1 << 20
+	//1 MByte
+	maxMsgSize = 1 << 20
+	//128 Byte
+	compThreshold = 1 << 7
 )
 
 var (
@@ -48,7 +50,7 @@ func DialDataConn(network, address string) (ConnWrapper, error) {
 	return WrapConnection(c), nil
 }
 
-//NewDataIO creates a new DataConn from a net.Conn
+//WrapConnection creates a new DataConn from a net.Conn
 func WrapConnection(conn net.Conn) ConnWrapper {
 	return DataConn{
 		buffer: bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
@@ -59,22 +61,37 @@ func WrapConnection(conn net.Conn) ConnWrapper {
 //WriteBytes writes a byte slice to the connection.
 //It returns the number of bytes written.
 //If n < len(msg), it also returns an error explaining why the write is short.
-func (d DataConn) WriteBytes(msg []byte, compress bool) (int, error) {
-	if compress {
+func (d DataConn) WriteBytes(msg []byte) (int, error) {
+	compressed := false
+	if len(msg) >= compThreshold {
 		enc, _ := zstd.NewWriter(nil)
-		msg = enc.EncodeAll(msg, make([]byte, 0))
+		comp := enc.EncodeAll(msg, make([]byte, 0))
+
+		if len(comp) < len(msg) {
+			msg = comp
+			compressed = true
+		}
 	}
 
-	if len(msg) > maxBufSize {
-		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxBufSize)
+	if len(msg) > maxMsgSize {
+		return 0, fmt.Errorf("data cannot be larger %d to be sent", maxMsgSize)
 	}
 
-	n, err := d.buffer.Write(append(intToBytes(len(msg)), msg...))
-	return n, err
+	message := make([]byte, 0)
+
+	message = append(message, intToBytes(len(msg))...)
+	if compressed {
+		message = append(message, 0x01)
+	} else {
+		message = append(message, 0x00)
+	}
+	message = append(message, msg...)
+
+	return d.buffer.Write(message)
 }
 
 //ReadBytes reads a byte slice from the underlying connection
-func (d DataConn) ReadBytes(compressed bool) ([]byte, error) {
+func (d DataConn) ReadBytes() ([]byte, error) {
 	l := make([]byte, 4)
 	_, err := d.buffer.Read(l)
 	if err != nil {
@@ -82,9 +99,16 @@ func (d DataConn) ReadBytes(compressed bool) ([]byte, error) {
 	}
 
 	bufSize := bytesToInt(l)
-	if bufSize > maxBufSize {
+	if bufSize > maxMsgSize {
 		return nil, fmt.Errorf("%d exceeds buffer size limit", bufSize)
 	}
+
+	c := make([]byte, 1)
+	_, err = d.buffer.Read(c)
+	if err != nil {
+		return nil, err
+	}
+	compressed := c[0] == 0x01
 
 	var total []byte
 	for len(total) < bufSize {
@@ -96,7 +120,7 @@ func (d DataConn) ReadBytes(compressed bool) ([]byte, error) {
 
 		total = append(total, tmp[:n]...)
 	}
-
+	
 	if compressed {
 		dec, _ := zstd.NewReader(nil)
 		total, err = dec.DecodeAll(total, nil)
@@ -112,13 +136,13 @@ func (d DataConn) ReadBytes(compressed bool) ([]byte, error) {
 //It returns the number of bytes written.
 //If n < len(msg), it also returns an error explaining why the write is short.
 func (d DataConn) WriteString(msg string) (int, error) {
-	n, err := d.WriteBytes([]byte(msg), false)
+	n, err := d.WriteBytes([]byte(msg))
 	return n, err
 }
 
 //ReadString reads a string from the underlying connection
 func (d DataConn) ReadString() (string, error) {
-	msg, err := d.ReadBytes(false)
+	msg, err := d.ReadBytes()
 	if err != nil {
 		return "", err
 	}
@@ -130,13 +154,13 @@ func (d DataConn) ReadString() (string, error) {
 //It returns the number of bytes written.
 //If n < 4, it also returns an error explaining why the write is short.
 func (d DataConn) WriteInt(msg int) (int, error) {
-	n, err := d.WriteBytes(intToBytes(msg), false)
+	n, err := d.WriteBytes(intToBytes(msg))
 	return n, err
 }
 
 //ReadInt reades an int from the underlying connection
 func (d DataConn) ReadInt() (int, error) {
-	msg, err := d.ReadBytes(false)
+	msg, err := d.ReadBytes()
 	if err != nil {
 		return 0, err
 	}
@@ -147,18 +171,18 @@ func (d DataConn) ReadInt() (int, error) {
 //WriteStruct serializes and then writes the specified struct to the underlying connection
 //It returns the number of bytes written.
 //If n < len(json.Marshal(msg)), it also returns an error explaining why the write is short.
-func (d DataConn) WriteStruct(msg interface{}, compress bool) (int, error) {
+func (d DataConn) WriteStruct(msg interface{}) (int, error) {
 	m, err := json.Marshal(msg)
 	if err != nil {
 		return 0, err
 	}
 
-	return d.WriteBytes(m, compress)
+	return d.WriteBytes(m)
 }
 
 //ReadStruct reades an serialized struct from the underlying connection and unmarshals it into the provided struct
-func (d DataConn) ReadStruct(target interface{}, compressed bool) error {
-	raw, err := d.ReadBytes(compressed)
+func (d DataConn) ReadStruct(target interface{}) error {
+	raw, err := d.ReadBytes()
 	if err != nil {
 		return err
 	}

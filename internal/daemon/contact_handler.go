@@ -15,7 +15,7 @@ func contClientHandler(c net.Conn) {
 	defer dconn.Close()
 
 	req := &types.ContactRequest{}
-	err := dconn.ReadStruct(req, false)
+	err := dconn.ReadStruct(req)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -36,7 +36,7 @@ func contClientHandler(c net.Conn) {
 		Sig:    cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
 	}
 
-	_, err = dconn.WriteStruct(resp, false)
+	_, err = dconn.WriteStruct(resp)
 	if err != nil {
 		log.Println(err.Error())
 		return

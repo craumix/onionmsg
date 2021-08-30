@@ -1,8 +1,8 @@
 package connection
 
 type ConnWrapper interface {
-	WriteBytes(msg []byte, compress bool) (int, error)
-	ReadBytes(compressed bool) ([]byte, error)
+	WriteBytes(msg []byte) (int, error)
+	ReadBytes() ([]byte, error)
 
 	WriteString(msg string) (int, error)
 	ReadString() (string, error)
@@ -10,8 +10,8 @@ type ConnWrapper interface {
 	WriteInt(msg int) (int, error)
 	ReadInt() (int, error)
 
-	WriteStruct(msg interface{}, compress bool) (int, error)
-	ReadStruct(target interface{}, compressed bool) error
+	WriteStruct(msg interface{}) (int, error)
+	ReadStruct(target interface{}) error
 
 	Flush() error
 	Close() error
