@@ -46,6 +46,16 @@ func CopySyncMap(m SyncMap) SyncMap {
 	return cp
 }
 
+func SyncMapsEqual(map1, map2 SyncMap) bool {
+	for k, v := range map1 {
+		if t, ok := map2[k]; !ok || !t.Equal(v) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 	ids := make([]uuid.UUID, 0)
 

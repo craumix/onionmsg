@@ -45,9 +45,9 @@ func contClientHandler(c net.Conn) {
 	dconn.Flush()
 
 	room := &types.Room{
-		Self:  convID,
-		Peers: []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
-		ID:    req.ID,
+		Self:      convID,
+		Peers:     []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
+		ID:        req.ID,
 		SyncState: make(types.SyncMap),
 	}
 	room.SetContext(context.Background())
