@@ -46,14 +46,7 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
 			return
 		default:
-			match := true
-			for k, v := range mp.Room.SyncState {
-				if t, ok := mp.LastSyncState[k]; !ok || t.Before(v) {
-					match = false
-				}
-			}
-
-			if match {
+			if SyncMapsEqual(mp.Room.SyncState, mp.LastSyncState) {
 				break
 			}
 
