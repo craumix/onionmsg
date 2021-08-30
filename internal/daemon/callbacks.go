@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	NewMessageCallback func(uuid.UUID, types.Message)
+	NewMessageCallback func(uuid.UUID, ...types.Message)
 	NewRoomCallback    func(info *types.RoomInfo)
 	ErrorCallback      func(error)
 )
 
-func notifyNewMessage(id uuid.UUID, msg types.Message) {
+func notifyNewMessages(id uuid.UUID, msgs ...types.Message) {
 	if NewMessageCallback != nil {
-		go NewMessageCallback(id, msg)
+		go NewMessageCallback(id, msgs...)
 	}
 }
 

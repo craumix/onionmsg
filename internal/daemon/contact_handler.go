@@ -48,6 +48,7 @@ func contClientHandler(c net.Conn) {
 		Self:  convID,
 		Peers: []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
 		ID:    req.ID,
+		SyncState: make(types.SyncMap),
 	}
 	room.SetContext(context.Background())
 

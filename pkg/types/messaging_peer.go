@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"github.com/google/uuid"
 )
 
 const (
@@ -14,13 +17,12 @@ const (
 )
 
 type MessagingPeer struct {
-	RIdentity RemoteIdentity `json:"identity"`
-	MQueue    []Message      `json:"queue"`
+	RIdentity     RemoteIdentity       `json:"identity"`
+	LastSyncState map[string]time.Time `json:"lastSync"`
 
-	ctx  context.Context
-	stop context.CancelFunc
-
-	skipQueueWait context.CancelFunc
+	ctx         context.Context
+	stop        context.CancelFunc
+	skipTimeout context.CancelFunc
 
 	Room *Room `json:"-"`
 }
@@ -44,21 +46,28 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
 			return
 		default:
-			if len(mp.MQueue) == 0 {
+			match := true
+			for k, v := range mp.Room.SyncState {
+				if t, ok := mp.LastSyncState[k]; !ok || t.Before(v) {
+					match = false
+				}
+			}
+
+			if match {
 				break
 			}
 
-			c, err := mp.SendMessages(mp.MQueue...)
+			err := mp.syncMsgs()
 			if err != nil {
 				//TODO Uncomment
 				//log.Println(err)
 			} else {
-				mp.MQueue = mp.MQueue[c:]
+				mp.LastSyncState = CopySyncMap(mp.Room.SyncState)
 			}
 		}
 
 		var skip context.Context
-		skip, mp.skipQueueWait = context.WithCancel(context.Background())
+		skip, mp.skipTimeout = context.WithCancel(context.Background())
 
 		select {
 		case <-skip.Done(): //used to skip a single wait period
@@ -68,46 +77,123 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 	}
 }
 
-// QueueMessage tries to send the message right away and if that fails the message will be queued
-func (mp *MessagingPeer) QueueMessage(msg Message) {
-	mp.MQueue = append(mp.MQueue, msg)
-	if mp.skipQueueWait != nil {
-		mp.skipQueueWait()
+func (mp *MessagingPeer) BumpQueue() {
+	if mp.skipTimeout != nil {
+		mp.skipTimeout()
 	}
 }
 
-func (mp *MessagingPeer) SendMessages(msgs ...Message) (int, error) {
+func (mp *MessagingPeer) syncMsgs() error {
 	if mp.Room == nil {
-		return 0, fmt.Errorf("Room not set")
+		return fmt.Errorf("Room not set")
 	}
 
-	dataConn, err := connection.GetConnFunc("tcp", mp.getConvURL())
+	conn, err := connection.GetConnFunc("tcp", mp.RIdentity.URL()+":"+strconv.Itoa(PubConvPort))
 	if err != nil {
-		return 0, err
+		return err
+	}
+	defer conn.Close()
+
+	err = fingerprintChallenge(conn, mp.Room.Self)
+	if err != nil {
+		return err
 	}
 
-	defer dataConn.Close()
+	conn.WriteBytes(mp.Room.ID[:], false)
+	conn.Flush()
 
-	dataConn.WriteBytes(mp.Room.ID[:], false)
-	dataConn.WriteInt(len(msgs))
-	dataConn.Flush()
+	err = expectResponse(conn, "auth_ok")
+	if err != nil {
+		return err
+	}
 
-	for index, msg := range msgs {
-		err = SendMessage(&dataConn, mp.Room.Self, msg)
+	remoteSyncTimes := make(map[string]time.Time)
+	err = conn.ReadStruct(&remoteSyncTimes, false)
+	if err != nil {
+		return err
+	}
+
+	msgsToSync := mp.findMessagesToSync(remoteSyncTimes)
+	conn.WriteStruct(msgsToSync, true)
+	conn.Flush()
+
+	err = expectResponse(conn, "messages_ok")
+	if err != nil {
+		return err
+	}
+
+	blobIDs := blobIDsFromMessages(msgsToSync...)
+	err = sendBlobs(conn, blobIDs)
+	if err != nil {
+		return err
+	}
+
+	err = expectResponse(conn, "sync_ok")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
+	conn.WriteStruct(ids, false)
+	conn.Flush()
+
+	for _, id := range ids {
+		stat, err := blobmngr.StatFromID(id)
 		if err != nil {
-			dataConn.Close()
-			return index, err
+			return err
+		}
+
+		blockCount := int(stat.Size() / blocksize)
+		if stat.Size()%blocksize != 0 {
+			blockCount++
+		}
+
+		conn.WriteInt(blockCount)
+		conn.Flush()
+
+		file, err := blobmngr.FileFromID(id)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		buf := make([]byte, blocksize)
+		for c := 0; c < blockCount; c++ {
+			n, err := file.Read(buf)
+			if err != nil {
+				return err
+			}
+
+			conn.WriteBytes(buf[:n], false)
+			conn.Flush()
+
+			err = expectResponse(conn, "block_ok")
+			if err != nil {
+				return err
+			}
+		}
+
+		err = expectResponse(conn, "blob_ok")
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Transfered Blob %s", id.String())
+	}
+
+	return nil
+}
+
+func (mp *MessagingPeer) findMessagesToSync(remoteSyncTimes map[string]time.Time) []Message {
+	msgs := make([]Message, 0)
+
+	for _, msg := range mp.Room.Messages {
+		if last, ok := remoteSyncTimes[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			msgs = append(msgs, msg)
 		}
 	}
 
-	return len(msgs), nil
-}
-
-// TerminateMessageQueue cancels the context for this MessagingPeer
-func (mp *MessagingPeer) TerminateMessageQueue() {
-	mp.stop()
-}
-
-func (mp *MessagingPeer) getConvURL() string {
-	return fmt.Sprintf("%s:%d", mp.RIdentity.URL(), PubConvPort)
+	return msgs
 }

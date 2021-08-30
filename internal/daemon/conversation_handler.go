@@ -1,12 +1,15 @@
 package daemon
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"log"
 	"net"
+
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
@@ -14,10 +17,17 @@ import (
 )
 
 func convClientHandler(c net.Conn) {
-	dconn := connection.WrapConnection(c)
-	defer dconn.Close()
+	conn := connection.WrapConnection(c)
+	defer conn.Close()
 
-	idRaw, err := dconn.ReadBytes(false)
+	fingerprint, err := readFingerprintWithChallenge(conn)
+	if err != nil {
+		log.Println(err.Error())
+		conn.WriteString("auth_failed")
+		return
+	}
+
+	idRaw, err := conn.ReadBytes(false)
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -26,76 +36,70 @@ func convClientHandler(c net.Conn) {
 	id, err := uuid.FromBytes(idRaw)
 	if err != nil {
 		log.Println(err.Error())
+		conn.WriteString("malformed_uuid")
 		return
 	}
 
 	room, ok := GetRoom(id)
 	if !ok {
 		log.Printf("Unknown room with %s\n", id)
+		conn.WriteString("auth_failed")
 		return
 	}
 
-	amount, err := dconn.ReadInt()
+	if _, ok := room.PeerByFingerprint(fingerprint); !ok {
+		log.Printf("Peer %s is not part of room %s", fingerprint, id)
+		conn.WriteString("auth_failed")
+		return
+	}
+
+	conn.WriteString("auth_ok")
+	conn.WriteStruct(room.SyncState, false)
+	conn.Flush()
+
+	newMsgs := make([]types.Message, 0)
+	conn.ReadStruct(&newMsgs, true)
+
+	for _, msg := range newMsgs {
+		if !msg.SigIsValid() {
+			raw, _ := json.Marshal(msg)
+			log.Printf("Sig for %s is not valid", string(raw))
+			conn.WriteString("message_sig_invalid " + string(raw))
+			return
+		}
+	}
+
+	if len(newMsgs) > 0 {
+		notifyNewMessages(id, newMsgs...)
+	}
+
+	conn.WriteString("messages_ok")
+	conn.Flush()
+
+	err = readBlobs(conn)
 	if err != nil {
 		log.Println(err.Error())
-		return
 	}
 
-	for i := 0; i < amount; i++ {
-		msg, err := readMessage(dconn, room)
-		if err != nil {
-			log.Print(err.Error())
-			dconn.Close()
-			break
-		}
+	room.PushMessages(newMsgs...)
 
-		log.Printf("Msg for room %s with content \"%s\"\n", id, string(msg.Content.Data))
-
-		notifyNewMessage(id, msg)
-
-		room.LogMessage(msg)
-	}
+	conn.WriteString("sync_ok")
+	conn.Flush()
 }
 
-func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message, error) {
-	sigSalt, err := writeRandom(dconn, 16)
-	if err != nil {
-		return types.Message{}, err
-	}
+func readBlobs(conn connection.ConnWrapper) error {
+	ids := make([]uuid.UUID, 0)
+	conn.ReadStruct(&ids, false)
 
-	msgMarshal, _ := dconn.ReadBytes(true)
-	sig, err := dconn.ReadBytes(false)
-	if err != nil {
-		return types.Message{}, err
-	}
-
-	msg := types.Message{}
-	err = json.Unmarshal(msgMarshal, &msg)
-	if err != nil {
-		return types.Message{}, err
-	}
-
-	sender, ok := room.PeerByFingerprint(msg.Meta.Sender)
-	if !ok || !sender.Verify(append(sigSalt, msgMarshal...), sig) {
-		dconn.WriteString("invalid_mssage")
-		dconn.Flush()
-		return types.Message{}, fmt.Errorf("received invalid message")
-	}
-
-	dconn.WriteString("ok")
-	dconn.Flush()
-
-	if msg.ContainsBlob() {
-		blockcount, err := dconn.ReadInt()
+	for _, id := range ids {
+		blockcount, err := conn.ReadInt()
 		if err != nil {
-			return types.Message{}, err
+			return err
 		}
-
-		id := msg.Content.Meta.BlobUUID
 
 		file, err := blobmngr.FileFromID(id)
 		if err != nil {
-			return types.Message{}, err
+			return err
 		}
 
 		rcvOK := false
@@ -107,37 +111,27 @@ func readMessage(dconn connection.ConnWrapper, room *types.Room) (types.Message,
 		}()
 
 		for i := 0; i < blockcount; i++ {
-			buf, err := readDataWithSig(dconn, sender, sigSalt)
+			buf, err := conn.ReadBytes(false)
 			if err != nil {
-				return types.Message{}, err
+				return err
 			}
 
 			_, err = file.Write(buf)
 			if err != nil {
-				return types.Message{}, err
+				return err
 			}
+
+			conn.WriteString("block_ok")
+			conn.Flush()
 		}
+
+		conn.WriteString("blob_ok")
+		conn.Flush()
+
 		rcvOK = true
 	}
 
-	return msg, nil
-}
-
-func readDataWithSig(dconn connection.ConnWrapper, sender types.RemoteIdentity, sigSalt []byte) ([]byte, error) {
-	content, _ := dconn.ReadBytes(true)
-	sig, err := dconn.ReadBytes(false)
-	if err != nil {
-		return nil, err
-	}
-
-	defer dconn.Flush()
-	if !sender.Verify(append(sigSalt, content...), sig) {
-		dconn.WriteString("invalid_sig")
-		return nil, fmt.Errorf("invalid signature from remote")
-	}
-
-	dconn.WriteString("ok")
-	return content, nil
+	return nil
 }
 
 func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
@@ -150,4 +144,29 @@ func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
 	dconn.Flush()
 
 	return r, nil
+}
+
+func readFingerprintWithChallenge(conn connection.ConnWrapper) (string, error) {
+	challenge, _ := writeRandom(conn, 32)
+
+	fingerprint, err := conn.ReadString()
+	if err != nil {
+		return "", err
+	}
+	sig, err := conn.ReadBytes(false)
+	if err != nil {
+		return "", err
+	}
+
+	keyBytes, err := base64.RawURLEncoding.DecodeString(fingerprint)
+	if err != nil {
+		return "", err
+	}
+
+	key := ed25519.PublicKey(keyBytes)
+	if !ed25519.Verify(key, challenge, sig) {
+		return "", fmt.Errorf("remote failed challenge")
+	}
+
+	return fingerprint, nil
 }

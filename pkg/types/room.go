@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -27,6 +28,9 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
+	SyncState   SyncMap `json:"lastMessage"`
+	msgUpdateMutex sync.Mutex
+
 	Ctx  context.Context `json:"-"`
 	stop context.CancelFunc
 }
@@ -43,6 +47,7 @@ func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, e
 	room := &Room{
 		Self: NewIdentity(),
 		ID:   uuid.New(),
+		SyncState: make(SyncMap),
 	}
 
 	err := room.SetContext(ctx)
@@ -154,10 +159,10 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 func (r *Room) SendMessageToAllPeers(content MessageContent) {
 	msg := NewMessage(content, r.Self)
 
-	r.LogMessage(msg)
+	r.PushMessages(msg)
 
 	for _, peer := range r.Peers {
-		go peer.QueueMessage(msg)
+		peer.BumpQueue()
 	}
 }
 
@@ -183,12 +188,31 @@ func (r *Room) StopQueues() {
 	r.stop()
 }
 
-func (r *Room) LogMessage(msg Message) {
-	if msg.Content.Type == ContentTypeCmd {
-		r.handleCommand(msg)
+func (r *Room) PushMessages(msgs ...Message) error {
+	newSyncState := CopySyncMap(r.SyncState)
+
+	r.msgUpdateMutex.Lock()
+
+	//Usually all messages that reach this point should be new to us,
+	//the if-statement is more of a failsafe
+	for _, msg := range msgs {
+		if last, ok := r.SyncState[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			newSyncState[msg.Meta.Sender] = msg.Meta.Time
+
+			if msg.Content.Type == ContentTypeCmd {
+				r.handleCommand(msg)
+			}
+			
+			log.Printf("New message for room %s: %s", r.ID, msg.Content.Data)
+			r.Messages = append(r.Messages, msg)
+		}
 	}
 
-	r.Messages = append(r.Messages, msg)
+	r.SyncState = newSyncState
+
+	r.msgUpdateMutex.Unlock()
+
+	return nil
 }
 
 // Info returns a struct with useful information about this Room
@@ -257,7 +281,7 @@ func (r *Room) handleNameRoom(args []string) {
 	log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
 }
 
-func (r Room) handleNick(args []string, sender string) {
+func (r *Room) handleNick(args []string, sender string) {
 	if !enoughArgs(args, 2) {
 		return
 	}

@@ -1,8 +1,6 @@
 package api
 
 import (
-	"log"
-
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
@@ -31,10 +29,10 @@ func registerCallbacks() {
 	daemon.ErrorCallback = NotifyError
 }
 
-func NotifyNewMessage(id uuid.UUID, msg types.Message) {
+func NotifyNewMessage(id uuid.UUID, msg ...types.Message) {
 	n := struct {
-		RoomID  uuid.UUID     `json:"uuid"`
-		Message types.Message `json:"message"`
+		RoomID  uuid.UUID       `json:"uuid"`
+		Message []types.Message `json:"message"`
 	}{
 		id,
 		msg,
@@ -76,7 +74,7 @@ func NotifyObservers(ntype NotificationType, msg interface{}) {
 		err := c.WriteJSON(notification)
 		if err != nil {
 			//TODO remove dead sockets
-			log.Print(err)
+			//log.Print(err)
 			c.Close()
 		}
 	}
