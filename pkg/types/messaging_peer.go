@@ -17,8 +17,8 @@ const (
 )
 
 type MessagingPeer struct {
-	RIdentity     RemoteIdentity       `json:"identity"`
-	LastSyncState map[string]time.Time `json:"lastSync"`
+	RIdentity     RemoteIdentity `json:"identity"`
+	LastSyncState SyncMap        `json:"lastSync"`
 
 	ctx         context.Context
 	stop        context.CancelFunc
@@ -100,7 +100,7 @@ func (mp *MessagingPeer) syncMsgs() error {
 		return err
 	}
 
-	remoteSyncTimes := make(map[string]time.Time)
+	remoteSyncTimes := make(SyncMap)
 	err = conn.ReadStruct(&remoteSyncTimes)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 	return nil
 }
 
-func (mp *MessagingPeer) findMessagesToSync(remoteSyncTimes map[string]time.Time) []Message {
+func (mp *MessagingPeer) findMessagesToSync(remoteSyncTimes SyncMap) []Message {
 	msgs := make([]Message, 0)
 
 	for _, msg := range mp.Room.Messages {

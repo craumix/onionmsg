@@ -120,7 +120,7 @@ func (d DataConn) ReadBytes() ([]byte, error) {
 
 		total = append(total, tmp[:n]...)
 	}
-	
+
 	if compressed {
 		dec, _ := zstd.NewReader(nil)
 		total, err = dec.DecodeAll(total, nil)
