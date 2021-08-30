@@ -59,17 +59,9 @@ func RegisterRoomCommands() error {
 }
 
 func handleJoin(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	if command != RoomCommandJoin {
-		return fmt.Errorf("%s is the wrong command", command)
-	}
-
-	args := strings.Split(string(message.Content.Data), CommandDelimiter)
-	if !enoughArgs(args, 2) {
-		return fmt.Errorf("%s doesn't have enough arguments", RoomCommandJoin)
-	}
-
-	if _, ok := room.PeerByFingerprint(args[1]); ok || args[1] == room.Self.Fingerprint() {
-		return fmt.Errorf("user %s already added, or self", args[1])
+	args, err := isNeededCommand(message, command, RoomCommandJoin, 2)
+	if err != nil {
+		return err
 	}
 
 	peerID, err := NewRemoteIdentity(args[1])
@@ -87,13 +79,9 @@ func handleJoin(command Command, message *Message, room *Room, _ *RemoteIdentity
 }
 
 func handleNameRoom(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	if command != RoomCommandNameRoom {
-		return fmt.Errorf("%s is the wrong command", command)
-	}
-
-	args := strings.Split(string(message.Content.Data), CommandDelimiter)
-	if !enoughArgs(args, 2) {
-		return fmt.Errorf("%s doesn't have enough arguments", RoomCommandNameRoom)
+	args, err := isNeededCommand(message, command, RoomCommandNameRoom, 2)
+	if err != nil {
+		return err
 	}
 
 	room.Name = args[1]
@@ -103,13 +91,9 @@ func handleNameRoom(command Command, message *Message, room *Room, _ *RemoteIden
 }
 
 func handleNick(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	if command != RoomCommandNick {
-		return fmt.Errorf("%s is the wrong command", command)
-	}
-
-	args := strings.Split(string(message.Content.Data), CommandDelimiter)
-	if !enoughArgs(args, 2) {
-		return fmt.Errorf("%s doesn't have enough arguments", RoomCommandNick)
+	args, err := isNeededCommand(message, command, RoomCommandNick, 2)
+	if err != nil {
+		return err
 	}
 
 	sender := message.Meta.Sender
@@ -123,6 +107,19 @@ func handleNick(command Command, message *Message, room *Room, _ *RemoteIdentity
 	}
 
 	return nil
+}
+
+func isNeededCommand(message *Message, actualCommand Command, expectedCommand Command, neededArgs int) ([]string, error) {
+	if actualCommand != expectedCommand {
+		return nil, fmt.Errorf("%s is the wrong command", actualCommand)
+	}
+
+	args := strings.Split(string(message.Content.Data), CommandDelimiter)
+	if !enoughArgs(args, neededArgs) {
+		return nil, fmt.Errorf("%s doesn't have enough arguments", actualCommand)
+	}
+
+	return strings.Split(string(message.Content.Data), CommandDelimiter), nil
 }
 
 func enoughArgs(args []string, needed int) bool {
