@@ -27,7 +27,7 @@ func convClientHandler(c net.Conn) {
 		return
 	}
 
-	idRaw, err := conn.ReadBytes(false)
+	idRaw, err := conn.ReadBytes()
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -54,11 +54,11 @@ func convClientHandler(c net.Conn) {
 	}
 
 	conn.WriteString("auth_ok")
-	conn.WriteStruct(room.SyncState, false)
+	conn.WriteStruct(room.SyncState)
 	conn.Flush()
 
 	newMsgs := make([]types.Message, 0)
-	conn.ReadStruct(&newMsgs, true)
+	conn.ReadStruct(&newMsgs)
 
 	for _, msg := range newMsgs {
 		if !msg.SigIsValid() {
@@ -89,7 +89,7 @@ func convClientHandler(c net.Conn) {
 
 func readBlobs(conn connection.ConnWrapper) error {
 	ids := make([]uuid.UUID, 0)
-	conn.ReadStruct(&ids, false)
+	conn.ReadStruct(&ids)
 
 	for _, id := range ids {
 		blockcount, err := conn.ReadInt()
@@ -111,7 +111,7 @@ func readBlobs(conn connection.ConnWrapper) error {
 		}()
 
 		for i := 0; i < blockcount; i++ {
-			buf, err := conn.ReadBytes(false)
+			buf, err := conn.ReadBytes()
 			if err != nil {
 				return err
 			}
@@ -137,7 +137,7 @@ func readBlobs(conn connection.ConnWrapper) error {
 func writeRandom(dconn connection.ConnWrapper, length int) ([]byte, error) {
 	r := make([]byte, length)
 	rand.Read(r)
-	_, err := dconn.WriteBytes(r, false)
+	_, err := dconn.WriteBytes(r)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func readFingerprintWithChallenge(conn connection.ConnWrapper) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sig, err := conn.ReadBytes(false)
+	sig, err := conn.ReadBytes()
 	if err != nil {
 		return "", err
 	}

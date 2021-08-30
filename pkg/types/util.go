@@ -79,13 +79,13 @@ func expectResponse(conn connection.ConnWrapper, expResp string) error {
 }
 
 func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
-	challenge, err := conn.ReadBytes(false)
+	challenge, err := conn.ReadBytes()
 	if err != nil {
 		return err
 	}
 
 	conn.WriteString(id.Fingerprint())
-	conn.WriteBytes(id.Sign(challenge), false)
+	conn.WriteBytes(id.Sign(challenge))
 	conn.Flush()
 
 	return nil

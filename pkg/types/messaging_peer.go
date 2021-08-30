@@ -92,7 +92,7 @@ func (mp *MessagingPeer) syncMsgs() error {
 		return err
 	}
 
-	conn.WriteBytes(mp.Room.ID[:], false)
+	conn.WriteBytes(mp.Room.ID[:])
 	conn.Flush()
 
 	err = expectResponse(conn, "auth_ok")
@@ -101,13 +101,13 @@ func (mp *MessagingPeer) syncMsgs() error {
 	}
 
 	remoteSyncTimes := make(map[string]time.Time)
-	err = conn.ReadStruct(&remoteSyncTimes, false)
+	err = conn.ReadStruct(&remoteSyncTimes)
 	if err != nil {
 		return err
 	}
 
 	msgsToSync := mp.findMessagesToSync(remoteSyncTimes)
-	conn.WriteStruct(msgsToSync, true)
+	conn.WriteStruct(msgsToSync)
 	conn.Flush()
 
 	err = expectResponse(conn, "messages_ok")
@@ -129,7 +129,7 @@ func (mp *MessagingPeer) syncMsgs() error {
 }
 
 func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
-	conn.WriteStruct(ids, false)
+	conn.WriteStruct(ids)
 	conn.Flush()
 
 	for _, id := range ids {
@@ -159,7 +159,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 				return err
 			}
 
-			conn.WriteBytes(buf[:n], false)
+			conn.WriteBytes(buf[:n])
 			conn.Flush()
 
 			err = expectResponse(conn, "block_ok")

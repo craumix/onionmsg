@@ -127,7 +127,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 		LocalFP:  r.Self.Fingerprint(),
 		ID:       r.ID,
 	}
-	_, err = dataConn.WriteStruct(req, false)
+	_, err = dataConn.WriteStruct(req)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 	dataConn.Flush()
 
 	resp := &ContactResponse{}
-	err = dataConn.ReadStruct(resp, false)
+	err = dataConn.ReadStruct(resp)
 	if err != nil {
 		return nil, err
 	}
