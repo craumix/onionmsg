@@ -161,7 +161,7 @@ func (i *Instance) connectController(ctx context.Context) (*torgo.Controller, er
 
 	for {
 		ctrl, err = torgo.NewController("127.0.0.1:" + strconv.Itoa(i.Config.ControlPort))
-		if err == nil || timeoutCtx.Err() == context.Canceled {
+		if err == nil || timeoutCtx.Err() != nil {
 			break
 		}
 	}
