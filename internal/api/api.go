@@ -327,16 +327,13 @@ func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	}
 
 	msgType := types.ContentTypeText
-	msg := ""
 	if roomCommand != "" {
 		msgType = types.ContentTypeCmd
-		msg += string(roomCommand) + types.CommandDelimiter
 	}
-	msg += string(content)
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: msgType,
-		Data: []byte(msg),
+		Data: types.AddCommand(content, roomCommand),
 	})
 	if err != nil {
 		return http.StatusInternalServerError, err

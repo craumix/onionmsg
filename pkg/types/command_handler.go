@@ -129,3 +129,7 @@ func enoughArgs(args []string, needed int) bool {
 	}
 	return true
 }
+
+func AddCommand(message []byte, command Command) []byte {
+	return []byte(string(command) + CommandDelimiter + string(message))
+}
