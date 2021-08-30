@@ -17,10 +17,10 @@ const (
 )
 
 var (
-	commandCallbacks = map[string]func(Command, *Message, *Room, *RemoteIdentity) error{}
+	commandCallbacks = map[Command]func(Command, *Message, *Room, *RemoteIdentity) error{}
 )
 
-func RegisterCommand(command string, callback func(Command, *Message, *Room, *RemoteIdentity) error) error {
+func RegisterCommand(command Command, callback func(Command, *Message, *Room, *RemoteIdentity) error) error {
 	if _, found := commandCallbacks[command]; found {
 		return fmt.Errorf("command %s is already registered", command)
 	}
@@ -33,24 +33,24 @@ func HandleCommand(message *Message, room *Room, remoteID *RemoteIdentity) error
 	if !hasCommand {
 		return fmt.Errorf("message doesn't have a command")
 	}
-	if _, found := commandCallbacks[command]; !found {
+	if _, found := commandCallbacks[Command(command)]; !found {
 		return fmt.Errorf("command %s is not registered", command)
 	}
-	return commandCallbacks[command](Command(command), message, room, remoteID)
+	return commandCallbacks[Command(command)](Command(command), message, room, remoteID)
 }
 
 func RegisterRoomCommands() error {
-	err := RegisterCommand(string(RoomCommandJoin), handleJoin)
+	err := RegisterCommand(RoomCommandJoin, handleJoin)
 	if err != nil {
 		return err
 	}
 
-	err = RegisterCommand(string(RoomCommandNameRoom), handleNameRoom)
+	err = RegisterCommand(RoomCommandNameRoom, handleNameRoom)
 	if err != nil {
 		return err
 	}
 
-	err = RegisterCommand(string(RoomCommandNick), handleNick)
+	err = RegisterCommand(RoomCommandNick, handleNick)
 	if err != nil {
 		return err
 	}
