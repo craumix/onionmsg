@@ -109,7 +109,7 @@ func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 	return nil
 }
 
-func parseCommand(message *Message, actualCommand Command, expectedCommand Command, neededArgs int) ([]string, error) {
+func parseCommand(message *Message, actualCommand, expectedCommand Command, neededArgs int) ([]string, error) {
 	if actualCommand != expectedCommand {
 		return nil, fmt.Errorf("%s is the wrong command", actualCommand)
 	}
