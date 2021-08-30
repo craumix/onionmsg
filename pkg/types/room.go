@@ -5,20 +5,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/google/uuid"
-)
-
-type RoomCommand string
-
-const (
-	RoomCommandJoin     RoomCommand = "join"
-	RoomCommandNameRoom RoomCommand = "name_room"
-	RoomCommandNick     RoomCommand = "nick"
 )
 
 type Room struct {
@@ -28,7 +19,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	SyncState   SyncMap `json:"lastMessage"`
+	SyncState      SyncMap `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
 
 	Ctx  context.Context `json:"-"`
@@ -45,8 +36,8 @@ type RoomInfo struct {
 
 func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
 	room := &Room{
-		Self: NewIdentity(),
-		ID:   uuid.New(),
+		Self:      NewIdentity(),
+		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
 
@@ -200,9 +191,12 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			newSyncState[msg.Meta.Sender] = msg.Meta.Time
 
 			if msg.Content.Type == ContentTypeCmd {
-				r.handleCommand(msg)
+				err := HandleCommand(&msg, r, nil)
+				if err != nil {
+					log.Print(err.Error())
+				}
 			}
-			
+
 			log.Printf("New message for room %s: %s", r.ID, msg.Content.Data)
 			r.Messages = append(r.Messages, msg)
 		}
@@ -230,77 +224,4 @@ func (r *Room) Info() *RoomInfo {
 	}
 
 	return info
-}
-
-func (r *Room) handleCommand(msg Message) {
-	cmd := string(msg.Content.Data)
-
-	args := strings.Split(cmd, " ")
-	switch args[0] {
-	case string(RoomCommandJoin):
-		r.handleJoin(args)
-	case string(RoomCommandNameRoom):
-		r.handleNameRoom(args)
-	case string(RoomCommandNick):
-		r.handleNick(args, msg.Meta.Sender)
-	default:
-		log.Printf("Received invalid command \"%s\"\n", cmd)
-	}
-}
-
-func (r *Room) handleJoin(args []string) {
-	if !enoughArgs(args, 2) {
-		return
-	}
-
-	if _, ok := r.PeerByFingerprint(args[1]); ok || args[1] == r.Self.Fingerprint() {
-		//User already added, or self
-		return
-	}
-
-	peerID, err := NewRemoteIdentity(args[1])
-	if err != nil {
-		log.Println(err.Error())
-		return
-	}
-
-	newPeer := NewMessagingPeer(peerID)
-	r.Peers = append(r.Peers, newPeer)
-
-	go newPeer.RunMessageQueue(r.Ctx, r)
-
-	log.Printf("New peer %s added to Room %s\n", newPeer.RIdentity.Fingerprint(), r.ID)
-}
-
-func (r *Room) handleNameRoom(args []string) {
-	if !enoughArgs(args, 2) {
-		return
-	}
-
-	r.Name = args[1]
-	log.Printf("Room with id %s renamed to %s", r.ID, r.Name)
-}
-
-func (r *Room) handleNick(args []string, sender string) {
-	if !enoughArgs(args, 2) {
-		return
-	}
-
-	identity, found := r.PeerByFingerprint(sender)
-	if found {
-		nickname := args[1]
-		identity.Nick = nickname
-		log.Printf("Set nickname for %s to %s", sender, nickname)
-	} else {
-		log.Printf("Peer %s not found", sender)
-	}
-
-}
-
-func enoughArgs(args []string, needed int) bool {
-	if len(args) < needed {
-		log.Printf("Not enough args for command \"%s\"\n", strings.Join(args, " "))
-		return false
-	}
-	return true
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -103,4 +104,8 @@ func NewMessage(content MessageContent, sender Identity) Message {
 	msg.Sign(sender.Key)
 
 	return msg
+}
+
+func (m *Message) isCommand() (bool, string) {
+	return m.Content.Type == ContentTypeCmd, strings.Split(string(m.Content.Data), CommandDelimiter)[0]
 }

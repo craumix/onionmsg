@@ -316,7 +316,7 @@ func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) {
+func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -330,7 +330,7 @@ func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) 
 	msg := ""
 	if roomCommand != "" {
 		msgType = types.ContentTypeCmd
-		msg += string(roomCommand) + " "
+		msg += string(roomCommand) + types.CommandDelimiter
 	}
 	msg += string(content)
 

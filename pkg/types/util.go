@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
@@ -36,13 +37,13 @@ func RandomString(size int) string {
 	return base64.RawStdEncoding.EncodeToString(r)
 }
 
-func CopySyncMap(m SyncMap) SyncMap{
-    cp := make(SyncMap)
-    for k, v := range m {
-        cp[k] = v
-    }
+func CopySyncMap(m SyncMap) SyncMap {
+	cp := make(SyncMap)
+	for k, v := range m {
+		cp[k] = v
+	}
 
-    return cp
+	return cp
 }
 
 func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
@@ -79,4 +80,11 @@ func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 	conn.Flush()
 
 	return nil
+}
+
+func init() {
+	err := RegisterRoomCommands()
+	if err != nil {
+		log.Println(err.Error())
+	}
 }
