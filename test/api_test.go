@@ -602,7 +602,7 @@ func TestSendTextFunctions(t *testing.T) {
 	testcases := []struct {
 		name                string
 		testFunc            func(w http.ResponseWriter, req *http.Request)
-		command             types.RoomCommand
+		command             types.Command
 		expectedContentType types.ContentType
 	}{
 		{

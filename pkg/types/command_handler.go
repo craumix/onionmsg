@@ -31,7 +31,7 @@ func RegisterCommand(command Command, callback func(Command, *Message, *Room, *R
 func HandleCommand(message *Message, room *Room, remoteID *RemoteIdentity) error {
 	hasCommand, command := message.isCommand()
 	if !hasCommand {
-		return fmt.Errorf("message doesn't have a command")
+		return fmt.Errorf("message isn't a command")
 	}
 	if _, found := commandCallbacks[Command(command)]; !found {
 		return fmt.Errorf("command %s is not registered", command)
@@ -132,4 +132,8 @@ func enoughArgs(args []string, needed int) bool {
 
 func AddCommand(message []byte, command Command) []byte {
 	return []byte(string(command) + CommandDelimiter + string(message))
+}
+
+func CleanCallbacks() {
+	commandCallbacks = map[Command]func(Command, *Message, *Room, *RemoteIdentity) error{}
 }
