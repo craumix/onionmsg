@@ -40,17 +40,17 @@ func HandleCommand(message *Message, room *Room, remoteID *RemoteIdentity) error
 }
 
 func RegisterRoomCommands() error {
-	err := RegisterCommand(RoomCommandJoin, handleJoin)
+	err := RegisterCommand(RoomCommandJoin, joinCallback)
 	if err != nil {
 		return err
 	}
 
-	err = RegisterCommand(RoomCommandNameRoom, handleNameRoom)
+	err = RegisterCommand(RoomCommandNameRoom, nameRoomCallback)
 	if err != nil {
 		return err
 	}
 
-	err = RegisterCommand(RoomCommandNick, handleNick)
+	err = RegisterCommand(RoomCommandNick, nickCallback)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func RegisterRoomCommands() error {
 	return nil
 }
 
-func handleJoin(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	args, err := isNeededCommand(message, command, RoomCommandJoin, 2)
+func joinCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+	args, err := parseCommand(message, command, RoomCommandJoin, 2)
 	if err != nil {
 		return err
 	}
@@ -78,8 +78,8 @@ func handleJoin(command Command, message *Message, room *Room, _ *RemoteIdentity
 	return nil
 }
 
-func handleNameRoom(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	args, err := isNeededCommand(message, command, RoomCommandNameRoom, 2)
+func nameRoomCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+	args, err := parseCommand(message, command, RoomCommandNameRoom, 2)
 	if err != nil {
 		return err
 	}
@@ -90,8 +90,8 @@ func handleNameRoom(command Command, message *Message, room *Room, _ *RemoteIden
 	return nil
 }
 
-func handleNick(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
-	args, err := isNeededCommand(message, command, RoomCommandNick, 2)
+func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+	args, err := parseCommand(message, command, RoomCommandNick, 2)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func handleNick(command Command, message *Message, room *Room, _ *RemoteIdentity
 	return nil
 }
 
-func isNeededCommand(message *Message, actualCommand Command, expectedCommand Command, neededArgs int) ([]string, error) {
+func parseCommand(message *Message, actualCommand Command, expectedCommand Command, neededArgs int) ([]string, error) {
 	if actualCommand != expectedCommand {
 		return nil, fmt.Errorf("%s is the wrong command", actualCommand)
 	}
