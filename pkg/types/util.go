@@ -36,13 +36,13 @@ func RandomString(size int) string {
 	return base64.RawStdEncoding.EncodeToString(r)
 }
 
-func CopySyncMap(m SyncMap) SyncMap{
-    cp := make(SyncMap)
-    for k, v := range m {
-        cp[k] = v
-    }
+func CopySyncMap(m SyncMap) SyncMap {
+	cp := make(SyncMap)
+	for k, v := range m {
+		cp[k] = v
+	}
 
-    return cp
+	return cp
 }
 
 func blobIDsFromMessages(msgs ...Message) []uuid.UUID {

@@ -181,7 +181,7 @@ func (i *Instance) connectController(ctx context.Context) (*torgo.Controller, er
 	return ctrl, nil
 }
 
-//Log returns the ouput of STDOUT and STDERR from the Tor process.
+//Log returns the output of STDOUT and STDERR from the Tor process.
 func (i *Instance) Log() string {
 	return i.logBuffer.String()
 }

@@ -180,7 +180,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 			return err
 		}
 
-		log.Printf("Transfered Blob %s", id.String())
+		log.Printf("Transferred Blob %s", id.String())
 	}
 
 	return nil

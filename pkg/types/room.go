@@ -28,7 +28,7 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
-	SyncState   SyncMap `json:"lastMessage"`
+	SyncState      SyncMap `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
 
 	Ctx  context.Context `json:"-"`
@@ -45,8 +45,8 @@ type RoomInfo struct {
 
 func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
 	room := &Room{
-		Self: NewIdentity(),
-		ID:   uuid.New(),
+		Self:      NewIdentity(),
+		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
 
@@ -202,7 +202,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			if msg.Content.Type == ContentTypeCmd {
 				r.handleCommand(msg)
 			}
-			
+
 			log.Printf("New message for room %s: %s", r.ID, msg.Content.Data)
 			r.Messages = append(r.Messages, msg)
 		}
