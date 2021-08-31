@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
@@ -89,4 +90,11 @@ func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 	conn.Flush()
 
 	return nil
+}
+
+func init() {
+	err := RegisterRoomCommands()
+	if err != nil {
+		log.Println(err.Error())
+	}
 }

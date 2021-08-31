@@ -316,7 +316,7 @@ func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) {
+func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -327,16 +327,13 @@ func sendMessage(req *http.Request, roomCommand types.RoomCommand) (int, error) 
 	}
 
 	msgType := types.ContentTypeText
-	msg := ""
 	if roomCommand != "" {
 		msgType = types.ContentTypeCmd
-		msg += string(roomCommand) + " "
 	}
-	msg += string(content)
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: msgType,
-		Data: []byte(msg),
+		Data: types.AddCommand(content, roomCommand),
 	})
 	if err != nil {
 		return http.StatusInternalServerError, err
