@@ -112,10 +112,14 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	//To set correct filename for downloads
 	respFilname := req.FormValue("filename")
 	if respFilname != "" {
 		w.Header().Add("Content-Disposition", "attachment; filename=\""+respFilname+"\"")
 	}
+
+	//If the blob exists, it will never change
+	w.Header().Add("Cache-Control", "public, max-age=604800, immutable")
 
 	err = blobmngr.StreamTo(id, w)
 	if err != nil {
