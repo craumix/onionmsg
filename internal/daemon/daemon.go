@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"crypto/ed25519"
 	"log"
 	"os"
 	"os/signal"
@@ -18,8 +19,8 @@ import (
 
 // SerializableData struct exists purely for serialization purposes
 type SerializableData struct {
-	ContactIdentities []types.Identity `json:"contactIdentities"`
-	Rooms             []*types.Room    `json:"rooms"`
+	Keys  []ed25519.PrivateKey `json:"contactIdentities"`
+	Rooms []*types.Room        `json:"rooms"`
 }
 
 const (

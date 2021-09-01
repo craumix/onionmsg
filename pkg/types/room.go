@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,10 +14,12 @@ import (
 )
 
 type Room struct {
-	Self     Identity         `json:"self"`
-	Peers    []*MessagingPeer `json:"peers"`
+	Self ed25519.PrivateKey `json:"self"`
+	Nick string             `json:"nick"`
+
 	ID       uuid.UUID        `json:"uuid"`
 	Name     string           `json:"name"`
+	Peers    []*MessagingPeer `json:"peers"`
 	Messages []Message        `json:"messages"`
 
 	SyncState      SyncMap `json:"lastMessage"`
@@ -36,7 +39,7 @@ type RoomInfo struct {
 
 func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
 	room := &Room{
-		Self:      NewIdentity(),
+		Self:      GenerateKey(),
 		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
@@ -115,7 +118,7 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 
 	req := &ContactRequest{
 		RemoteFP: contactIdentity.Fingerprint(),
-		LocalFP:  r.Self.Fingerprint(),
+		LocalFP:  Fingerprint(r.Self),
 		ID:       r.ID,
 	}
 	_, err = dataConn.WriteStruct(req)
@@ -212,7 +215,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 // Info returns a struct with useful information about this Room
 func (r *Room) Info() *RoomInfo {
 	info := &RoomInfo{
-		Self:  r.Self.Fingerprint(),
+		Self:  Fingerprint(r.Self),
 		ID:    r.ID,
 		Name:  r.Name,
 		Nicks: map[string]string{},

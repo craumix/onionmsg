@@ -64,7 +64,7 @@ func joinCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 		return err
 	}
 
-	if _, ok := room.PeerByFingerprint(args[1]); ok || args[1] == room.Self.Fingerprint() {
+	if _, ok := room.PeerByFingerprint(args[1]); ok || args[1] == Fingerprint(room.Self) {
 		return fmt.Errorf("user %s already added, or self", args[1])
 	}
 

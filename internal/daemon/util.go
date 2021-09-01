@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
@@ -41,8 +42,8 @@ func getTorInfo() interface{} {
 // listContactIDs returns a list of all the contactId's fingerprints.
 func listContactIDs() []string {
 	var contIDs []string
-	for _, id := range data.ContactIdentities {
-		contIDs = append(contIDs, id.Fingerprint())
+	for _, key := range data.Keys {
+		contIDs = append(contIDs, types.Fingerprint(key))
 	}
 	return contIDs
 }
@@ -59,12 +60,12 @@ func listRooms() []*types.RoomInfo {
 
 // createContactID generates and registers a new contact id and returns its fingerprint.
 func createContactID() (string, error) {
-	id := types.NewIdentity()
-	err := registerContID(id)
+	key := types.GenerateKey()
+	err := registerContID(key)
 	if err != nil {
 		return "", err
 	}
-	return id.Fingerprint(), nil
+	return types.Fingerprint(key), nil
 }
 
 // DeleteContactID deletes and deregisters a contact id.
@@ -158,13 +159,13 @@ func GetRoom(id uuid.UUID) (*types.Room, bool) {
 	return nil, false
 }
 
-func GetContactID(fingerprint string) (types.Identity, bool) {
-	for _, i := range data.ContactIdentities {
-		if i.Fingerprint() == fingerprint {
-			return i, true
+func GetKey(fingerprint string) (ed25519.PrivateKey, bool) {
+	for _, key := range data.Keys {
+		if types.Fingerprint(key) == fingerprint {
+			return key, true
 		}
 	}
-	return types.Identity{}, false
+	return ed25519.PrivateKey{}, false
 }
 
 func deleteRoomFromSlice(item *types.Room) {
@@ -179,15 +180,14 @@ func deleteRoomFromSlice(item *types.Room) {
 	data.Rooms = data.Rooms[:len(data.Rooms)-1]
 }
 
-func deleteContactIDFromSlice(item types.Identity) {
-	var i int
-	for j, e := range data.ContactIdentities {
-		if e.Fingerprint() == item.Fingerprint() {
-			i = j
+func deleteKeyFromSlice(fingerprint string) {
+	i := 0
+	for ; i < len(data.Keys); i++ {
+		if types.Fingerprint(data.Keys[i]) == fingerprint {
 			break
 		}
 	}
 
-	data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
-	data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
+	data.Keys[len(data.Keys)-1], data.Keys[i] = data.Keys[i], data.Keys[len(data.Keys)-1]
+	data.Keys = data.Keys[:len(data.Keys)-1]
 }

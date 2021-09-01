@@ -32,7 +32,7 @@ func startInteractive() {
 		case "exit":
 			exitDaemon()
 		case "add_cont":
-			err = registerContID(types.NewIdentity())
+			err = registerContID(types.GenerateKey())
 			if err != nil {
 				log.Println(err.Error())
 				continue
@@ -49,8 +49,8 @@ func startInteractive() {
 			}
 		case "list_cont":
 			log.Println("Contact Identities:")
-			for _, e := range data.ContactIdentities {
-				log.Println(e.Fingerprint())
+			for _, key := range data.Keys {
+				log.Println(types.Fingerprint(key))
 				continue
 			}
 		case "list_rooms":
@@ -59,7 +59,7 @@ func startInteractive() {
 				for iPeer, peer := range room.Peers {
 					log.Printf("\tPeer %d:\t%s\n", iPeer, peer.RIdentity.Fingerprint())
 				}
-				log.Printf("\tSelf:\t%s\n", room.Self.Fingerprint())
+				log.Printf("\tSelf:\t%s\n", types.Fingerprint(room.Self))
 			}
 		case "add_room":
 			log.Println("Print Contact IDs (one per line, empty line to finish):")
@@ -98,7 +98,7 @@ func startInteractive() {
 				continue
 			}
 
-			log.Printf("Room created with %s and %s\n", room.ID, room.Self.Fingerprint())
+			log.Printf("Room created with %s and %s\n", room.ID, types.Fingerprint(room.Self))
 		case "send_message":
 			log.Printf("Write Room UID in first line and message in second:")
 			uid, _ := cin.ReadString('\n')

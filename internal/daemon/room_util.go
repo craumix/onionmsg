@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"crypto/ed25519"
 	"log"
 
 	"github.com/craumix/onionmsg/pkg/types"
@@ -38,8 +39,8 @@ func registerRoom(room *types.Room) error {
 	return nil
 }
 
-func serveConvIDService(i types.Identity) error {
-	return torInstance.RegisterService(i.Key, types.PubConvPort, loConvPort)
+func serveConvIDService(key ed25519.PrivateKey) error {
+	return torInstance.RegisterService(key, types.PubConvPort, loConvPort)
 }
 
 func deregisterRoom(id uuid.UUID) error {
@@ -48,7 +49,7 @@ func deregisterRoom(id uuid.UUID) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(r.Self.Key)
+	err := torInstance.DeregisterService(r.Self)
 	if err != nil {
 		return err
 	}

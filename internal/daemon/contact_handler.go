@@ -21,7 +21,7 @@ func contClientHandler(c net.Conn) {
 		return
 	}
 
-	cont, ok := GetContactID(req.RemoteFP)
+	cont, ok := GetKey(req.RemoteFP)
 	if !ok {
 		log.Printf("Contact id %s unknown\n", req.RemoteFP)
 		return
@@ -29,11 +29,11 @@ func contClientHandler(c net.Conn) {
 
 	remoteID, _ := types.NewRemoteIdentity(req.LocalFP)
 
-	convID := types.NewIdentity()
+	convID := types.GenerateKey()
 
 	resp := &types.ContactResponse{
-		ConvFP: convID.Fingerprint(),
-		Sig:    cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
+		ConvFP: types.Fingerprint(convID),
+		Sig:    types.Sign(cont, append([]byte(types.Fingerprint(convID)), req.ID[:]...)),
 	}
 
 	_, err = dconn.WriteStruct(resp)

@@ -1,54 +1,55 @@
 package daemon
 
 import (
+	"crypto/ed25519"
 	"log"
 
 	"github.com/craumix/onionmsg/pkg/types"
 )
 
 func initContIDServices() error {
-	for _, i := range data.ContactIdentities {
-		err := serveContIDService(i)
+	for _, key := range data.Keys {
+		err := serveContIDService(key)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Printf("Loaded %d Contact Identities\n", len(data.ContactIdentities))
+	log.Printf("Loaded %d Contact Identities\n", len(data.Keys))
 
 	return nil
 }
 
-func registerContID(i types.Identity) error {
-	err := serveContIDService(i)
+func registerContID(key ed25519.PrivateKey) error {
+	err := serveContIDService(key)
 	if err != nil {
 		return err
 	}
 
-	data.ContactIdentities = append(data.ContactIdentities, i)
-	log.Printf("Registered contact identity %s\n", i.Fingerprint())
+	data.Keys = append(data.Keys, key)
+	log.Printf("Registered contact identity %s\n", types.Fingerprint(key))
 
 	return nil
 }
 
-func serveContIDService(i types.Identity) error {
-	return torInstance.RegisterService(i.Key, types.PubContPort, loContPort)
+func serveContIDService(key ed25519.PrivateKey) error {
+	return torInstance.RegisterService(key, types.PubContPort, loContPort)
 }
 
 func deregisterContID(fingerprint string) error {
-	i, ok := GetContactID(fingerprint)
+	key, ok := GetKey(fingerprint)
 	if !ok {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(i.Key)
+	err := torInstance.DeregisterService(key)
 	if err != nil {
 		return err
 	}
 
-	deleteContactIDFromSlice(i)
+	deleteKeyFromSlice(types.Fingerprint(key))
 
-	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
+	log.Printf("Deregistered contact identity %s\n", types.Fingerprint(key))
 
 	return nil
 }
