@@ -12,6 +12,7 @@ const (
 	RoomCommandJoin     Command = "join"
 	RoomCommandNameRoom Command = "name_room"
 	RoomCommandNick     Command = "nick"
+	RoomCommandPromote  Command = "promote"
 
 	CommandDelimiter = " "
 )
@@ -51,6 +52,11 @@ func RegisterRoomCommands() error {
 	}
 
 	err = RegisterCommand(RoomCommandNick, nickCallback)
+	if err != nil {
+		return err
+	}
+
+	err = RegisterCommand(RoomCommandPromote, promoteCallback)
 	if err != nil {
 		return err
 	}
@@ -108,6 +114,32 @@ func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 		log.Printf("Set nickname for %s to %s", sender, nickname)
 	} else {
 		return fmt.Errorf("peer %s not found", sender)
+	}
+
+	return nil
+}
+
+func promoteCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+	args, err := parseCommand(message, command, RoomCommandPromote, 2)
+	if err != nil {
+		return err
+	}
+
+	sender, found := room.PeerByFingerprint(message.Meta.Sender)
+	if !found {
+		return fmt.Errorf("peer %s not found", message.Meta.Sender)
+	} else if !sender.Admin {
+		return fmt.Errorf("peer %s is not an admin", message.Meta.Sender)
+	}
+
+	toPromote, found := room.PeerByFingerprint(args[1])
+	switch {
+	case found:
+		toPromote.Admin = true
+	case room.isSelf(args[1]):
+		room.Self.Admin = true
+	default:
+		return fmt.Errorf("peer %s not found", args[1])
 	}
 
 	return nil

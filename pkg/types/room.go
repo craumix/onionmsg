@@ -27,11 +27,12 @@ type Room struct {
 }
 
 type RoomInfo struct {
-	Self  string            `json:"self"`
-	Peers []string          `json:"peers"`
-	ID    uuid.UUID         `json:"uuid"`
-	Name  string            `json:"name,omitempty"`
-	Nicks map[string]string `json:"nicks,omitempty"`
+	Self   string            `json:"self"`
+	Peers  []string          `json:"peers"`
+	ID     uuid.UUID         `json:"uuid"`
+	Name   string            `json:"name,omitempty"`
+	Nicks  map[string]string `json:"nicks,omitempty"`
+	Admins map[string]bool   `json:"admins,omitempty"`
 }
 
 func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
@@ -40,6 +41,7 @@ func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, e
 		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
+	room.Self.Admin = true
 
 	err := room.SetContext(ctx)
 	if err != nil {
@@ -209,18 +211,24 @@ func (r *Room) PushMessages(msgs ...Message) error {
 	return nil
 }
 
+func (r *Room) isSelf(fingerprint string) bool {
+	return fingerprint == r.Self.Fingerprint()
+}
+
 // Info returns a struct with useful information about this Room
 func (r *Room) Info() *RoomInfo {
 	info := &RoomInfo{
-		Self:  r.Self.Fingerprint(),
-		ID:    r.ID,
-		Name:  r.Name,
-		Nicks: map[string]string{},
+		Self:   r.Self.Fingerprint(),
+		ID:     r.ID,
+		Name:   r.Name,
+		Nicks:  map[string]string{},
+		Admins: map[string]bool{},
 	}
 
 	for _, peer := range r.Peers {
 		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
 		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick
+		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.Admin
 	}
 
 	return info
