@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+
 	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 )
@@ -14,6 +15,7 @@ var (
 	CreateContactID = createContactID
 	DeleteContact   = DeleteContactID
 
+	RoomInfo      = roomInfo
 	Rooms         = listRooms
 	CreateRoom    = createRoom
 	DeleteRoom    = deleteRoom
@@ -55,6 +57,16 @@ func listRooms() []*types.RoomInfo {
 	}
 
 	return rooms
+}
+
+func roomInfo(id uuid.UUID) (*types.RoomInfo, error) {
+	for _, r := range data.Rooms {
+		if r.ID == id {
+			return r.Info(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("room with id %s doesn't exist", id)
 }
 
 // createContactID generates and registers a new contact id and returns its fingerprint.
