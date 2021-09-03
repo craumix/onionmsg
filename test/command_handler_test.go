@@ -12,7 +12,7 @@ func TestRegisterCallback(t *testing.T) {
 	CleanCallbacks()
 
 	called := 0
-	RegisterCommand(testCommand, func(Command, *Message, *Room, *RemoteIdentity) error {
+	RegisterCommand(testCommand, func(Command, *Message, *Room) error {
 		called++
 		return nil
 	})
@@ -27,7 +27,7 @@ func TestRegisterCallback(t *testing.T) {
 		Sig: nil,
 	}
 
-	HandleCommand(&testMsg, nil, nil)
+	HandleCommand(&testMsg, nil)
 
 	assert.Equal(t, 1, called)
 }
@@ -35,11 +35,11 @@ func TestRegisterCallback(t *testing.T) {
 func TestRegisterCallbackError(t *testing.T) {
 	CleanCallbacks()
 
-	err1 := RegisterCommand(testCommand, func(Command, *Message, *Room, *RemoteIdentity) error {
+	err1 := RegisterCommand(testCommand, func(Command, *Message, *Room) error {
 		return nil
 	})
 
-	err2 := RegisterCommand(testCommand, func(Command, *Message, *Room, *RemoteIdentity) error {
+	err2 := RegisterCommand(testCommand, func(Command, *Message, *Room) error {
 		return nil
 	})
 
@@ -60,7 +60,7 @@ func TestHandleCallbackNoCommand(t *testing.T) {
 		Sig: nil,
 	}
 
-	actual := HandleCommand(&testMsg, nil, nil)
+	actual := HandleCommand(&testMsg, nil)
 
 	assert.Error(t, actual)
 }
@@ -78,7 +78,7 @@ func TestHandleCallbackCommandNotRegistered(t *testing.T) {
 		Sig: nil,
 	}
 
-	actual := HandleCommand(&testMsg, nil, nil)
+	actual := HandleCommand(&testMsg, nil)
 
 	assert.Error(t, actual)
 }
@@ -87,7 +87,7 @@ func TestCleanCallbacks(t *testing.T) {
 	CleanCallbacks()
 
 	called := 0
-	RegisterCommand(testCommand, func(Command, *Message, *Room, *RemoteIdentity) error {
+	RegisterCommand(testCommand, func(Command, *Message, *Room) error {
 		called++
 		return nil
 	})
@@ -104,7 +104,7 @@ func TestCleanCallbacks(t *testing.T) {
 
 	CleanCallbacks()
 
-	actual := HandleCommand(&testMsg, nil, nil)
+	actual := HandleCommand(&testMsg, nil)
 
 	assert.Error(t, actual)
 	assert.Zero(t, called)

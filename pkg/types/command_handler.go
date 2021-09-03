@@ -18,10 +18,10 @@ const (
 )
 
 var (
-	commandCallbacks = map[Command]func(Command, *Message, *Room, *RemoteIdentity) error{}
+	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
 )
 
-func RegisterCommand(command Command, callback func(Command, *Message, *Room, *RemoteIdentity) error) error {
+func RegisterCommand(command Command, callback func(Command, *Message, *Room) error) error {
 	if _, found := commandCallbacks[command]; found {
 		return fmt.Errorf("command %s is already registered", command)
 	}
@@ -29,7 +29,7 @@ func RegisterCommand(command Command, callback func(Command, *Message, *Room, *R
 	return nil
 }
 
-func HandleCommand(message *Message, room *Room, remoteID *RemoteIdentity) error {
+func HandleCommand(message *Message, room *Room) error {
 	hasCommand, command := message.isCommand()
 	if !hasCommand {
 		return fmt.Errorf("message isn't a command")
@@ -37,7 +37,7 @@ func HandleCommand(message *Message, room *Room, remoteID *RemoteIdentity) error
 	if _, found := commandCallbacks[Command(command)]; !found {
 		return fmt.Errorf("command %s is not registered", command)
 	}
-	return commandCallbacks[Command(command)](Command(command), message, room, remoteID)
+	return commandCallbacks[Command(command)](Command(command), message, room)
 }
 
 func RegisterRoomCommands() error {
@@ -64,7 +64,7 @@ func RegisterRoomCommands() error {
 	return nil
 }
 
-func joinCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+func joinCallback(command Command, message *Message, room *Room) error {
 	args, err := parseCommand(message, command, RoomCommandJoin, 2)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func joinCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 	return nil
 }
 
-func nameRoomCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+func nameRoomCallback(command Command, message *Message, room *Room) error {
 	args, err := parseCommand(message, command, RoomCommandNameRoom, 2)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func nameRoomCallback(command Command, message *Message, room *Room, _ *RemoteId
 	return nil
 }
 
-func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+func nickCallback(command Command, message *Message, room *Room) error {
 	args, err := parseCommand(message, command, RoomCommandNick, 2)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 	return nil
 }
 
-func promoteCallback(command Command, message *Message, room *Room, _ *RemoteIdentity) error {
+func promoteCallback(command Command, message *Message, room *Room) error {
 	args, err := parseCommand(message, command, RoomCommandPromote, 2)
 	if err != nil {
 		return err
@@ -179,5 +179,5 @@ func AddCommand(message []byte, command Command) []byte {
 }
 
 func CleanCallbacks() {
-	commandCallbacks = map[Command]func(Command, *Message, *Room, *RemoteIdentity) error{}
+	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
 }

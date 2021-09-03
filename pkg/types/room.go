@@ -193,7 +193,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			newSyncState[msg.Meta.Sender] = msg.Meta.Time
 
 			if msg.Content.Type == ContentTypeCmd {
-				err := HandleCommand(&msg, r, nil)
+				err := HandleCommand(&msg, r)
 				if err != nil {
 					log.Print(err.Error())
 				}
