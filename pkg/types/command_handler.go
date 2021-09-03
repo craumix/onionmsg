@@ -70,7 +70,7 @@ func joinCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 		return err
 	}
 
-	if _, ok := room.PeerByFingerprint(args[1]); ok || args[1] == room.Self.Fingerprint() {
+	if _, found := room.PeerByFingerprint(args[1]); found || args[1] == room.Self.Fingerprint() {
 		return fmt.Errorf("user %s already added, or self", args[1])
 	}
 
@@ -108,13 +108,13 @@ func nickCallback(command Command, message *Message, room *Room, _ *RemoteIdenti
 
 	sender := message.Meta.Sender
 	identity, found := room.PeerByFingerprint(sender)
-	if found {
-		nickname := args[1]
-		identity.Nick = nickname
-		log.Printf("Set nickname for %s to %s", sender, nickname)
-	} else {
-		return fmt.Errorf("peer %s not found", sender)
+	if !found {
+		return peerNotFoundError(sender)
 	}
+
+	nickname := args[1]
+	identity.Nick = nickname
+	log.Printf("Set nickname for %s to %s", sender, nickname)
 
 	return nil
 }
@@ -127,9 +127,9 @@ func promoteCallback(command Command, message *Message, room *Room, _ *RemoteIde
 
 	sender, found := room.PeerByFingerprint(message.Meta.Sender)
 	if !found {
-		return fmt.Errorf("peer %s not found", message.Meta.Sender)
+		return peerNotFoundError(message.Meta.Sender)
 	} else if !sender.Admin {
-		return fmt.Errorf("peer %s is not an admin", message.Meta.Sender)
+		return peerNotAdminError(message.Meta.Sender)
 	}
 
 	toPromote, found := room.PeerByFingerprint(args[1])
@@ -139,19 +139,19 @@ func promoteCallback(command Command, message *Message, room *Room, _ *RemoteIde
 	case room.isSelf(args[1]):
 		room.Self.Admin = true
 	default:
-		return fmt.Errorf("peer %s not found", args[1])
+		return peerNotFoundError(args[1])
 	}
 
 	return nil
 }
 
-func parseCommand(message *Message, actualCommand, expectedCommand Command, neededArgs int) ([]string, error) {
+func parseCommand(message *Message, actualCommand, expectedCommand Command, expectedArgs int) ([]string, error) {
 	if actualCommand != expectedCommand {
 		return nil, fmt.Errorf("%s is the wrong command", actualCommand)
 	}
 
 	args := strings.Split(string(message.Content.Data), CommandDelimiter)
-	if !enoughArgs(args, neededArgs) {
+	if !enoughArgs(args, expectedArgs) {
 		return nil, fmt.Errorf("%s doesn't have enough arguments", actualCommand)
 	}
 
@@ -164,6 +164,14 @@ func enoughArgs(args []string, needed int) bool {
 		return false
 	}
 	return true
+}
+
+func peerNotFoundError(peer string) error {
+	return fmt.Errorf("peer %s not found", peer)
+}
+
+func peerNotAdminError(peer string) error {
+	return fmt.Errorf("peer %s is not an admin", peer)
 }
 
 func AddCommand(message []byte, command Command) []byte {
