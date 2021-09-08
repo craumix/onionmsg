@@ -113,7 +113,7 @@ func nickCallback(command Command, message *Message, room *Room) error {
 	}
 
 	nickname := args[1]
-	identity.Nick = nickname
+	identity.Meta.Nick = nickname
 	log.Printf("Set nickname for %s to %s", sender, nickname)
 
 	return nil
@@ -128,16 +128,16 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 	sender, found := room.PeerByFingerprint(message.Meta.Sender)
 	if !found {
 		return peerNotFoundError(message.Meta.Sender)
-	} else if !sender.Admin {
+	} else if !sender.Meta.Admin {
 		return peerNotAdminError(message.Meta.Sender)
 	}
 
 	toPromote, found := room.PeerByFingerprint(args[1])
 	switch {
 	case found:
-		toPromote.Admin = true
+		toPromote.Meta.Admin = true
 	case room.isSelf(args[1]):
-		room.Self.Admin = true
+		room.Self.Meta.Admin = true
 	default:
 		return peerNotFoundError(args[1])
 	}

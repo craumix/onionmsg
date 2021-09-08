@@ -8,9 +8,8 @@ import (
 )
 
 type RemoteIdentity struct {
-	Pub   ed25519.PublicKey `json:"public_key"`
-	Nick  string            `json:"nick"`
-	Admin bool              `json:"admin"`
+	Pub  ed25519.PublicKey `json:"public_key"`
+	Meta IdentityMeta      `json:"meta"`
 }
 
 func NewRemoteIdentity(fingerprint string) (RemoteIdentity, error) {

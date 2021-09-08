@@ -41,7 +41,7 @@ func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, e
 		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
-	room.Self.Admin = true
+	room.Self.Meta.Admin = true
 
 	err := room.SetContext(ctx)
 	if err != nil {
@@ -227,8 +227,8 @@ func (r *Room) Info() *RoomInfo {
 
 	for _, peer := range r.Peers {
 		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
-		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick
-		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.Admin
+		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Meta.Nick
+		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.Meta.Admin
 	}
 
 	return info
