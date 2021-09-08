@@ -1,4 +1,4 @@
-package test
+package api_test
 
 import (
 	"encoding/json"
@@ -14,6 +14,7 @@ import (
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/test"
 	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -24,8 +25,8 @@ func TestRouteStatus(t *testing.T) {
 
 	api.RouteStatus(resWriter, nil)
 
-	assertZeroStatusCode(t, resWriter)
-	assertApplicationJson(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
+	test.AssertApplicationJson(t, resWriter)
 }
 
 func TestRouteTorLog(t *testing.T) {
@@ -57,7 +58,7 @@ func TestRouteTorLog(t *testing.T) {
 	}{}
 	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "TorInfo was modified")
 }
 
@@ -75,7 +76,7 @@ func TestRouteContactList(t *testing.T) {
 	var actual []string
 	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "Contacts were modified!")
 }
 
@@ -99,7 +100,7 @@ func TestRouteRoomList(t *testing.T) {
 	var actual []*types.RoomInfo
 	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "RoomInfo was modified")
 }
 
@@ -115,11 +116,11 @@ func TestRouteRoomCreate(t *testing.T) {
 
 	expected := []string{"id1", "id2"}
 
-	req := GetRequest(expected, false, true)
+	req := test.GetRequest(expected, false, true)
 
 	api.RouteRoomCreate(resWriter, req)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "Fingerprints were modified")
 }
 
@@ -131,28 +132,28 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAll error",
-			req:               GetRequest(nil, true, true),
+			req:               test.GetRequest(nil, true, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "Unmarshal error",
-			req:               GetRequest("", false, true),
+			req:               test.GetRequest("", false, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "No ids error",
-			req:               GetRequest([]string{}, false, true),
+			req:               test.GetRequest([]string{}, false, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "CreateRoom error",
-			req:               GetRequest([]string{"id1"}, false, true),
+			req:               test.GetRequest([]string{"id1"}, false, true),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
 
 	daemon.CreateRoom = func(fingerprints []string) error {
-		return GetTestError()
+		return test.GetTestError()
 	}
 
 	for _, tc := range testcases {
@@ -160,7 +161,7 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 
 		api.RouteRoomCreate(resWriter, tc.req)
 
-		assertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
+		test.AssertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
 	}
 }
 
@@ -174,14 +175,14 @@ func TestDeleteRoom(t *testing.T) {
 		return nil
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
 	expected := "test id"
 	req.Form.Add("uuid", expected)
 
 	api.RouteRoomDelete(resWriter, req)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "Uuid was modified")
 }
 
@@ -189,12 +190,12 @@ func TestDeleteRoomError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteRoom = func(uuid string) error {
-		return GetTestError()
+		return test.GetTestError()
 	}
 
-	api.RouteRoomDelete(resWriter, GetRequest(nil, false, true))
+	api.RouteRoomDelete(resWriter, test.GetRequest(nil, false, true))
 
-	assertErrorCode(t, resWriter, http.StatusInternalServerError)
+	test.AssertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteContactCreate(t *testing.T) {
@@ -208,8 +209,8 @@ func TestRouteContactCreate(t *testing.T) {
 
 	api.RouteContactCreate(resWriter, nil)
 
-	assertZeroStatusCode(t, resWriter)
-	assertApplicationJson(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
+	test.AssertApplicationJson(t, resWriter)
 	assert.Equal(t, string(resWriter.WriteInput[0]), fmt.Sprintf("{\"id\":\"%s\"}", expected), "Uuid was modified")
 }
 
@@ -217,12 +218,12 @@ func TestRouteContactCreateError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.CreateContactID = func() (string, error) {
-		return "", GetTestError()
+		return "", test.GetTestError()
 	}
 
 	api.RouteContactCreate(resWriter, nil)
 
-	assertErrorCode(t, resWriter, http.StatusInternalServerError)
+	test.AssertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteContactDelete(t *testing.T) {
@@ -235,14 +236,14 @@ func TestRouteContactDelete(t *testing.T) {
 		return nil
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
 	expected := "test id"
 	req.Form.Add("id", expected)
 
 	api.RouteContactDelete(resWriter, req)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expected, actual, "Uuid was modified")
 }
 
@@ -256,11 +257,11 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 		return nil
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
 	api.RouteContactDelete(resWriter, req)
 
-	assertErrorCode(t, resWriter, http.StatusBadRequest)
+	test.AssertErrorCode(t, resWriter, http.StatusBadRequest)
 	assert.False(t, called, "Delete contact got called with missing id field!")
 }
 
@@ -268,15 +269,15 @@ func TestRouteContactDeleteError(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
 	daemon.DeleteContact = func(fingerprint string) error {
-		return GetTestError()
+		return test.GetTestError()
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
 	req.Form.Add("id", "test id")
 
 	api.RouteContactDelete(resWriter, req)
-	assertErrorCode(t, resWriter, http.StatusInternalServerError)
+	test.AssertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
 
 func TestRouteRoomCommandUseradd(t *testing.T) {
@@ -290,15 +291,15 @@ func TestRouteRoomCommandUseradd(t *testing.T) {
 		return nil
 	}
 
-	expectedFp, expectedID := "test content", GetValidUUID()
+	expectedFp, expectedID := "test content", test.GetValidUUID()
 
-	req := GetRequest(expectedFp, false, false)
+	req := test.GetRequest(expectedFp, false, false)
 
 	req.Form.Add("uuid", expectedID)
 
 	api.RouteRoomCommandUseradd(resWriter, req)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expectedID, actualID, "Uuid was modified")
 	assert.Equal(t, expectedFp, actualFp, "Fingerprint was modified")
 }
@@ -312,26 +313,26 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAll error",
-			req:               GetRequest(nil, true, true),
-			uuid:              GetValidUUID(),
+			req:               test.GetRequest(nil, true, true),
+			uuid:              test.GetValidUUID(),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "Uuid parse error",
-			req:               GetRequest(nil, false, true),
+			req:               test.GetRequest(nil, false, true),
 			uuid:              "abc",
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "AddPeerToRoom error",
-			req:               GetRequest([]string{"test content"}, false, true),
-			uuid:              GetValidUUID(),
+			req:               test.GetRequest([]string{"test content"}, false, true),
+			uuid:              test.GetValidUUID(),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
 
 	daemon.AddPeerToRoom = func(roomID uuid.UUID, fingerprint string) error {
-		return GetTestError()
+		return test.GetTestError()
 	}
 
 	for _, tc := range testcases {
@@ -341,7 +342,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 
 		api.RouteRoomCommandUseradd(resWriter, tc.req)
 
-		assertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
+		test.AssertErrorCode(t, resWriter, tc.expectedErrorCode, tc.name)
 	}
 
 }
@@ -374,23 +375,23 @@ func TestRoomSendFile(t *testing.T) {
 		return nil
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
 	expectedID := "test id"
 	req.Form.Add("uuid", expectedID)
 
 	expectedMsgContent := types.MessageContent{
 		Type: types.ContentTypeFile,
-		Meta: types.ContentMeta{
-			BlobUUID: newBlobId,
-			Filename: "test-filename",
-			Mimetype: "test-mimetype",
+		Blob: &types.BlobMeta{
+			ID: newBlobId,
+			Name: "test-filename",
+			Type: "test-mimetype",
 		},
 		Data: nil,
 	}
 
-	req.Form.Add("filename", expectedMsgContent.Meta.Filename)
-	req.Form.Add("mimetype", expectedMsgContent.Meta.Mimetype)
+	req.Form.Add("filename", expectedMsgContent.Blob.Name)
+	req.Form.Add("mimetype", expectedMsgContent.Blob.Type)
 
 	req.Header.Set("Content-Length", "69")
 
@@ -398,7 +399,7 @@ func TestRoomSendFile(t *testing.T) {
 
 	// TODO check if the file pointer is the same
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 
 	assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
 	assert.Equal(t, expectedID, actualID, "SendMessage didn't get the Id from the request")
@@ -418,22 +419,22 @@ func TestRoomSendFileErrors(t *testing.T) {
 		{
 			name:            "MakeBlobError",
 			expectedErrCode: http.StatusInternalServerError,
-			MakeBlobErr:     GetTestError(),
+			MakeBlobErr:     test.GetTestError(),
 		},
 		{
 			name:            "FileFromIDErr",
 			expectedErrCode: http.StatusInternalServerError,
-			FileFromIDErr:   GetTestError(),
+			FileFromIDErr:   test.GetTestError(),
 		},
 		{
 			name:             "WriteIntoFileErr",
 			expectedErrCode:  http.StatusInternalServerError,
-			WriteIntoFileErr: GetTestError(),
+			WriteIntoFileErr: test.GetTestError(),
 		},
 		{
 			name:            "SendErr",
 			expectedErrCode: http.StatusBadRequest,
-			SendErr:         GetTestError(),
+			SendErr:         test.GetTestError(),
 		},
 		/*
 			Filesize is not checked atm
@@ -473,12 +474,12 @@ func TestRoomSendFileErrors(t *testing.T) {
 			tc.fileLength = "42"
 		}
 
-		req := GetRequest(nil, false, true)
+		req := test.GetRequest(nil, false, true)
 		req.Header.Set("Content-Length", tc.fileLength)
 
 		api.RouteRoomSendFile(resWriter, req)
 
-		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
+		test.AssertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
 	}
 }
 
@@ -504,7 +505,7 @@ func TestRouteRoomMessages(t *testing.T) {
 		},
 		{
 			name:            "ListMessages error",
-			ListMessagesErr: GetTestError(),
+			ListMessagesErr: test.GetTestError(),
 			expectedErrCode: http.StatusBadRequest,
 		},
 	}
@@ -518,13 +519,13 @@ func TestRouteRoomMessages(t *testing.T) {
 			return nil, tc.ListMessagesErr
 		}
 
-		req := GetRequest(nil, false, true)
+		req := test.GetRequest(nil, false, true)
 
 		req.Form.Add("count", tc.expectedCount)
 
 		api.RouteRoomMessages(resWriter, req)
 
-		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
+		test.AssertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
 		assert.Equal(t, tc.expectedID, actualID, tc.name+": Uuid was modified")
 	}
 }
@@ -545,14 +546,14 @@ func TestRouteBlob(t *testing.T) {
 		return nil, fmt.Errorf("FileInfo test error")
 	}
 
-	req := GetRequest(nil, false, true)
+	req := test.GetRequest(nil, false, true)
 
-	expectedID := GetValidUUID()
+	expectedID := test.GetValidUUID()
 	req.Form.Add("uuid", expectedID)
 
 	api.RouteBlob(resWriter, req)
 
-	assertZeroStatusCode(t, resWriter)
+	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expectedID, actualID, "Uuid was modified")
 }
 
@@ -570,9 +571,9 @@ func TestRouteBlobErrors(t *testing.T) {
 		},
 		{
 			name:            "Stream to error",
-			id:              GetValidUUID(),
+			id:              test.GetValidUUID(),
 			expectedErrCode: http.StatusInternalServerError,
-			StreamToErr:     GetTestError(),
+			StreamToErr:     test.GetTestError(),
 		},
 	}
 
@@ -589,12 +590,12 @@ func TestRouteBlobErrors(t *testing.T) {
 			return tc.StreamToErr
 		}
 
-		req := GetRequest(nil, false, true)
+		req := test.GetRequest(nil, false, true)
 		req.Form.Add("uuid", tc.id)
 
 		api.RouteBlob(resWriter, req)
 
-		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
+		test.AssertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
 	}
 }
 
@@ -650,7 +651,6 @@ func TestSendTextFunctions(t *testing.T) {
 
 		expectedMsgContent := types.MessageContent{
 			Type: tc.expectedContentType,
-			Meta: types.ContentMeta{},
 			Data: []byte(expectedContent),
 		}
 
@@ -662,7 +662,7 @@ func TestSendTextFunctions(t *testing.T) {
 
 		tc.testFunc(resWriter, req)
 
-		assertZeroStatusCode(t, resWriter)
+		test.AssertZeroStatusCode(t, resWriter)
 
 		assert.Equal(t, expectedID, actualID, tc.name+": Uuid was modified")
 		assert.Equal(t, expectedMsgContent, actualMsgContent)
@@ -695,18 +695,18 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 	}{
 		{
 			name:              "ReadAllError",
-			req:               GetRequest(nil, true, true),
+			req:               test.GetRequest(nil, true, true),
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
 			name:              "SendError",
-			req:               GetRequest([]string{"test content"}, false, true),
+			req:               test.GetRequest([]string{"test content"}, false, true),
 			expectedErrorCode: http.StatusInternalServerError,
 		},
 	}
 
 	daemon.SendMessage = func(uuid string, content types.MessageContent) error {
-		return GetTestError()
+		return test.GetTestError()
 	}
 
 	for _, tc := range testcases {
@@ -715,7 +715,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 
 			tc.testFunc(resWriter, te.req)
 
-			assertErrorCode(t, resWriter, te.expectedErrorCode, tc.name+"-"+te.name)
+			test.AssertErrorCode(t, resWriter, te.expectedErrorCode, tc.name+"-"+te.name)
 		}
 	}
 }

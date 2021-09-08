@@ -36,7 +36,7 @@ func setupMessagingPeerTests() {
 		},
 		Content: types.MessageContent{
 			Type: types.ContentTypeText,
-			Meta: types.ContentMeta{},
+			Blob: &types.BlobMeta{},
 			Data: []byte("this is a test"),
 		},
 	}
