@@ -1,6 +1,7 @@
 package types
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -90,6 +91,14 @@ func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 	conn.Flush()
 
 	return nil
+}
+
+func Sign(key ed25519.PrivateKey, data []byte) []byte {
+	return ed25519.Sign(key, data)
+}
+
+func Fingerprint(key ed25519.PublicKey) string {
+	return base64.RawURLEncoding.EncodeToString(key)
 }
 
 func init() {

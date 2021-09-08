@@ -32,11 +32,7 @@ func (i *RemoteIdentity) URL() string {
 }
 
 func (i *RemoteIdentity) Fingerprint() string {
-	return i.B64PubKey()
-}
-
-func (i *RemoteIdentity) B64PubKey() string {
-	return base64.RawURLEncoding.EncodeToString(i.Pub)
+	return Fingerprint(i.Pub)
 }
 
 func (i *RemoteIdentity) ServiceID() (id string) {
