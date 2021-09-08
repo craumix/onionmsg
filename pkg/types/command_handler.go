@@ -175,6 +175,9 @@ func peerNotAdminError(peer string) error {
 }
 
 func AddCommand(message []byte, command Command) []byte {
+	if command == "" {
+		return message
+	}
 	return []byte(string(command) + CommandDelimiter + string(message))
 }
 

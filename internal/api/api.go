@@ -361,16 +361,9 @@ func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 		msgType = types.ContentTypeCmd
 	}
 
-	var msgData []byte
-	if msgType == types.ContentTypeCmd {
-		msgData = types.AddCommand(content, roomCommand)
-	} else {
-		msgData = content
-	}
-
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: msgType,
-		Data: msgData,
+		Data: types.AddCommand(content, roomCommand),
 	})
 	if err != nil {
 		return http.StatusInternalServerError, err
