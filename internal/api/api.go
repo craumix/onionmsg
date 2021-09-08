@@ -268,11 +268,11 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: types.ContentTypeFile,
-		Meta: types.ContentMeta{
-			BlobUUID: id,
-			Filename: filename,
-			Mimetype: mimetype,
-			Filesize: filesize,
+		Blob: &types.BlobMeta{
+			ID: id,
+			Name: filename,
+			Type: mimetype,
+			Size: filesize,
 		},
 	})
 	if err != nil {

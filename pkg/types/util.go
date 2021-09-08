@@ -61,7 +61,7 @@ func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 
 	for _, msg := range msgs {
 		if msg.ContainsBlob() {
-			ids = append(ids, msg.Content.Meta.BlobUUID)
+			ids = append(ids, msg.Content.Blob.ID)
 		}
 	}
 
