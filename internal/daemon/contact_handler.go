@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -27,13 +28,17 @@ func contClientHandler(c net.Conn) {
 		return
 	}
 
-	remoteID, _ := types.NewRemoteIdentity(req.LocalFP)
+	remoteID, _ := types.NewIdentity(types.Remote, req.LocalFP)
 
-	convID := types.NewIdentity()
+	convID, _ := types.NewIdentity(types.Self, "")
 
+	signed, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
+	if err != nil {
+		fmt.Print(err.Error())
+	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
-		Sig:    cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...)),
+		Sig:    signed,
 	}
 
 	_, err = dconn.WriteStruct(resp)

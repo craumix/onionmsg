@@ -18,8 +18,8 @@ import (
 
 // SerializableData struct exists purely for serialization purposes
 type SerializableData struct {
-	ContactIdentities []types.ContactIdentity `json:"contactIdentities"`
-	Rooms             []*types.Room           `json:"rooms"`
+	ContactIdentities []types.Identity `json:"contactIdentities"`
+	Rooms             []*types.Room    `json:"rooms"`
 }
 
 const (

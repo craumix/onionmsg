@@ -39,7 +39,7 @@ func registerRoom(room *types.Room) error {
 }
 
 func serveConvIDService(i types.Identity) error {
-	return torInstance.RegisterService(types.ContactIdentity(i.Key), types.PubConvPort, loConvPort)
+	return torInstance.RegisterService(i, types.PubConvPort, loConvPort)
 }
 
 func deregisterRoom(id uuid.UUID) error {
@@ -48,7 +48,7 @@ func deregisterRoom(id uuid.UUID) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(types.ContactIdentity(r.Self.Key))
+	err := torInstance.DeregisterService(r.Self)
 	if err != nil {
 		return err
 	}

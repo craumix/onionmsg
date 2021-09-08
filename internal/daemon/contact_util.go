@@ -19,20 +19,20 @@ func initContIDServices() error {
 	return nil
 }
 
-func registerContID(cid types.ContactIdentity) error {
-	err := serveContIDService(cid)
+func registerContID(id types.Identity) error {
+	err := serveContIDService(id)
 	if err != nil {
 		return err
 	}
 
-	data.ContactIdentities = append(data.ContactIdentities, cid)
-	log.Printf("Registered contact identity %s\n", cid.Fingerprint())
+	data.ContactIdentities = append(data.ContactIdentities, id)
+	log.Printf("Registered contact identity %s\n", id.Fingerprint())
 
 	return nil
 }
 
-func serveContIDService(cid types.ContactIdentity) error {
-	return torInstance.RegisterService(cid, types.PubContPort, loContPort)
+func serveContIDService(id types.Identity) error {
+	return torInstance.RegisterService(id, types.PubContPort, loContPort)
 }
 
 func deregisterContID(fingerprint string) error {
@@ -48,7 +48,7 @@ func deregisterContID(fingerprint string) error {
 
 	deleteContactIDFromSlice(i)
 
-	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
+	log.Printf("Deregistered contact identity %s\n", i)
 
 	return nil
 }

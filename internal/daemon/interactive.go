@@ -32,7 +32,8 @@ func startInteractive() {
 		case "exit":
 			exitDaemon()
 		case "add_cont":
-			err = registerContID(types.NewContactIdentity())
+			id, _ := types.NewIdentity(types.Contact, "")
+			err = registerContID(id)
 			if err != nil {
 				log.Println(err.Error())
 				continue
@@ -63,7 +64,7 @@ func startInteractive() {
 			}
 		case "add_room":
 			log.Println("Print Contact IDs (one per line, empty line to finish):")
-			var ids []types.RemoteIdentity
+			var ids []types.Identity
 			for {
 				peer, _ := cin.ReadString('\n')
 				peer = strings.Trim(peer, " \n")
@@ -72,7 +73,7 @@ func startInteractive() {
 					break
 				}
 
-				p, err := types.NewRemoteIdentity(peer)
+				p, err := types.NewIdentity(types.Remote, peer)
 				if err != nil {
 					log.Println(err.Error())
 					continue
