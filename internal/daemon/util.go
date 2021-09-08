@@ -71,7 +71,7 @@ func roomInfo(id uuid.UUID) (*types.RoomInfo, error) {
 
 // createContactID generates and registers a new contact id and returns its fingerprint.
 func createContactID() (string, error) {
-	id := types.NewIdentity()
+	id := types.NewContactIdentity()
 	err := registerContID(id)
 	if err != nil {
 		return "", err
@@ -170,13 +170,13 @@ func GetRoom(id uuid.UUID) (*types.Room, bool) {
 	return nil, false
 }
 
-func GetContactID(fingerprint string) (types.Identity, bool) {
+func GetContactID(fingerprint string) (types.ContactIdentity, bool) {
 	for _, i := range data.ContactIdentities {
 		if i.Fingerprint() == fingerprint {
 			return i, true
 		}
 	}
-	return types.Identity{}, false
+	return types.ContactIdentity{}, false
 }
 
 func deleteRoomFromSlice(item *types.Room) {
@@ -191,11 +191,10 @@ func deleteRoomFromSlice(item *types.Room) {
 	data.Rooms = data.Rooms[:len(data.Rooms)-1]
 }
 
-func deleteContactIDFromSlice(item types.Identity) {
-	var i int
-	for j, e := range data.ContactIdentities {
-		if e.Fingerprint() == item.Fingerprint() {
-			i = j
+func deleteContactIDFromSlice(cid types.ContactIdentity) {
+	i := 0
+	for ; i < len(data.ContactIdentities); i++ {
+		if data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
 			break
 		}
 	}
