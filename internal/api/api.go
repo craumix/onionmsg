@@ -75,6 +75,7 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/room/command/useradd", RouteRoomCommandUseradd)
 	http.HandleFunc("/v1/room/command/nameroom", RouteRoomCommandNameRoom)
 	http.HandleFunc("/v1/room/command/setnick", RouteRoomCommandSetNick)
+	http.HandleFunc("/v1/room/command/promote", RouteRoomCommandPromote)
 
 	err = http.Serve(listener, nil)
 	if err != nil {
@@ -269,7 +270,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type: types.ContentTypeFile,
 		Blob: &types.BlobMeta{
-			ID: id,
+			ID:   id,
 			Name: filename,
 			Type: mimetype,
 			Size: filesize,
@@ -338,6 +339,13 @@ func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, types.RoomCommandPromote)
+	if err != nil {
+		http.Error(w, err.Error(), errCode)
+	}
+}
+
 func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -356,7 +364,7 @@ func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	var msgData []byte
 	if msgType == types.ContentTypeCmd {
 		msgData = types.AddCommand(content, roomCommand)
-	}else {
+	} else {
 		msgData = content
 	}
 
