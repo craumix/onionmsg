@@ -32,11 +32,11 @@ func GetRequest(body interface{}, readShouldError, marshalBody bool) *http.Reque
 	return req
 }
 
-func assertZeroStatusCode(t *testing.T, resWriter *mocks.MockResponseWriter, name ...string) {
-	assertErrorCode(t, resWriter, 0, name...)
+func AssertZeroStatusCode(t *testing.T, resWriter *mocks.MockResponseWriter, name ...string) {
+	AssertErrorCode(t, resWriter, 0, name...)
 }
 
-func assertErrorCode(t *testing.T, resWriter *mocks.MockResponseWriter, expectedErrorCode int, name ...string) {
+func AssertErrorCode(t *testing.T, resWriter *mocks.MockResponseWriter, expectedErrorCode int, name ...string) {
 	prefix := ""
 	for _, s := range name {
 		prefix += s
@@ -48,7 +48,7 @@ func assertErrorCode(t *testing.T, resWriter *mocks.MockResponseWriter, expected
 	assert.Equal(t, expectedErrorCode, resWriter.StatusCode, prefix+"Wrong error code was written to header")
 }
 
-func assertApplicationJson(t *testing.T, resWriter *mocks.MockResponseWriter) {
+func AssertApplicationJson(t *testing.T, resWriter *mocks.MockResponseWriter) {
 	assert.Equal(t, "application/json", resWriter.Head.Get("Content-Type"), "Wrong value in header field Content-Type")
 }
 

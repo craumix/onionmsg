@@ -21,11 +21,11 @@ const (
 	ContentTypeSticker ContentType = "mtype.sticker"
 )
 
-type ContentMeta struct {
-	BlobUUID uuid.UUID `json:"blobUUID"`
-	Filename string    `json:"filename,omitempty"`
-	Mimetype string    `json:"mimetype,omitempty"`
-	Filesize int       `json:"filesize,omitempty"`
+type BlobMeta struct {
+	ID   uuid.UUID `json:"uuid"`
+	Name string    `json:"name,omitempty"`
+	Type string    `json:"type,omitempty"`
+	Size int       `json:"size,omitempty"`
 }
 
 type MessageMeta struct {
@@ -35,7 +35,7 @@ type MessageMeta struct {
 
 type MessageContent struct {
 	Type ContentType `json:"type"`
-	Meta ContentMeta `json:"meta"`
+	Blob *BlobMeta   `json:"blob,omitempty"`
 	Data []byte      `json:"data,omitempty"`
 }
 
@@ -46,7 +46,7 @@ type Message struct {
 }
 
 func (m *Message) ContainsBlob() bool {
-	return m.Content.Meta.BlobUUID != uuid.Nil
+	return m.Content.Blob != nil
 }
 
 func (m *Message) Sign(key ed25519.PrivateKey) {

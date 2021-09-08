@@ -1,4 +1,4 @@
-package test
+package types_test
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -21,7 +21,7 @@ func TestRegisterCallback(t *testing.T) {
 		Meta: MessageMeta{},
 		Content: MessageContent{
 			Type: ContentTypeCmd,
-			Meta: ContentMeta{},
+			Blob: &BlobMeta{},
 			Data: []byte(testCommand),
 		},
 		Sig: nil,
@@ -54,7 +54,7 @@ func TestHandleCallbackNoCommand(t *testing.T) {
 		Meta: MessageMeta{},
 		Content: MessageContent{
 			Type: ContentTypeText,
-			Meta: ContentMeta{},
+			Blob: &BlobMeta{},
 			Data: nil,
 		},
 		Sig: nil,
@@ -72,7 +72,7 @@ func TestHandleCallbackCommandNotRegistered(t *testing.T) {
 		Meta: MessageMeta{},
 		Content: MessageContent{
 			Type: ContentTypeCmd,
-			Meta: ContentMeta{},
+			Blob: &BlobMeta{},
 			Data: []byte(testCommand),
 		},
 		Sig: nil,
@@ -96,7 +96,7 @@ func TestCleanCallbacks(t *testing.T) {
 		Meta: MessageMeta{},
 		Content: MessageContent{
 			Type: ContentTypeCmd,
-			Meta: ContentMeta{},
+			Blob: &BlobMeta{},
 			Data: []byte(testCommand),
 		},
 		Sig: nil,
