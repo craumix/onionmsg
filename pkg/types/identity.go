@@ -5,9 +5,14 @@ import (
 	"encoding/base64"
 )
 
+type IdentityMeta struct {
+	Nick  string `json:"nick"`
+	Admin bool   `json:"admin"`
+}
+
 type Identity struct {
 	Key  ed25519.PrivateKey `json:"key"`
-	Nick string             `json:"nick"`
+	Meta IdentityMeta       `json:"meta"`
 }
 
 func NewIdentity() Identity {
