@@ -3,6 +3,14 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/craumix/onionmsg/pkg/types"
+)
+
+const (
+	//FIX maybe
+	//https://datatracker.ietf.org/doc/html/rfc6648
+	replyToHeader = "X-ReplyTo"
 )
 
 func setJSONContentHeader(w http.ResponseWriter) {
@@ -18,4 +26,19 @@ func sendSerialized(w http.ResponseWriter, v interface{}) {
 
 	setJSONContentHeader(w)
 	w.Write(raw)
+}
+
+func replyFromHeader(req *http.Request) (*types.Message, error) {
+	rawReply := req.Header.Get(replyToHeader)
+	if rawReply == "" {
+		return nil, nil
+	}
+
+	msg := &types.Message{}
+	err := json.Unmarshal([]byte(rawReply), msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }
