@@ -34,9 +34,10 @@ type MessageMeta struct {
 }
 
 type MessageContent struct {
-	Type ContentType `json:"type"`
-	Blob *BlobMeta   `json:"blob,omitempty"`
-	Data []byte      `json:"data,omitempty"`
+	Type    ContentType `json:"type"`
+	ReplyTo *Message    `json:"replyto,omitempty"`
+	Blob    *BlobMeta   `json:"blob,omitempty"`
+	Data    []byte      `json:"data,omitempty"`
 }
 
 type Message struct {
@@ -60,6 +61,11 @@ func (m *Message) SigIsValid() bool {
 		return false
 	} else if len(rawKey) != ed25519.PublicKeySize {
 		log.Printf("Invalid length for Public Key, %d instead of %d!", len(rawKey), ed25519.PublicKeySize)
+		return false
+	}
+
+	if m.Content.ReplyTo != nil && !m.Content.ReplyTo.SigIsValid() {
+		log.Printf("Recursive Signature check faild for message!")
 		return false
 	}
 
