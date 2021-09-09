@@ -48,7 +48,7 @@ func deregisterContID(fingerprint string) error {
 
 	deleteContactIDFromSlice(i)
 
-	log.Printf("Deregistered contact identity %s\n", i)
+	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
 
 	return nil
 }

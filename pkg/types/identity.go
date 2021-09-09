@@ -44,6 +44,11 @@ func NewIdentity(iType IdentityType, fingerprint string) (Identity, error) {
 		i.fillKeyPair()
 	}
 
+	switch iType {
+	case Remote, Self:
+		i.Meta = &IdentityMeta{}
+	}
+
 	return i, nil
 }
 

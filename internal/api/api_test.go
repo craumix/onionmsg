@@ -383,7 +383,7 @@ func TestRoomSendFile(t *testing.T) {
 	expectedMsgContent := types.MessageContent{
 		Type: types.ContentTypeFile,
 		Blob: &types.BlobMeta{
-			ID: newBlobId,
+			ID:   newBlobId,
 			Name: "test-filename",
 			Type: "test-mimetype",
 		},
@@ -541,9 +541,7 @@ func TestRouteBlob(t *testing.T) {
 	}
 
 	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
-		//The "00000000-0000-0000-0000-000000000000" uuid will lead to os.IsNotExist error.
-		//So we throw another one or 404 will be returned.
-		return nil, fmt.Errorf("FileInfo test error")
+		return nil, nil
 	}
 
 	req := test.GetRequest(nil, false, true)
@@ -555,9 +553,10 @@ func TestRouteBlob(t *testing.T) {
 
 	test.AssertZeroStatusCode(t, resWriter)
 	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+	assert.Equal(t, "public, max-age=604800, immutable", resWriter.Head.Get("Cache-Control"))
 }
 
-func TestRouteBlobErrors(t *testing.T) {
+func TestRouteBlobStreamToErrors(t *testing.T) {
 	testcases := []struct {
 		name            string
 		id              string
@@ -578,9 +577,7 @@ func TestRouteBlobErrors(t *testing.T) {
 	}
 
 	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
-		//The "00000000-0000-0000-0000-000000000000" uuid will lead to os.IsNotExist error.
-		//So we throw another one or 404 will be returned.
-		return nil, fmt.Errorf("FileInfo test error")
+		return nil, nil
 	}
 
 	for _, tc := range testcases {
@@ -596,6 +593,73 @@ func TestRouteBlobErrors(t *testing.T) {
 		api.RouteBlob(resWriter, req)
 
 		test.AssertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
+	}
+}
+
+func TestRouteBlobBlobNotFoundError(t *testing.T) {
+	resWriter := mocks.GetMockResponseWriter()
+
+	called := false
+	blobmngr.StreamTo = func(id uuid.UUID, w io.Writer) error {
+		called = true
+		return nil
+	}
+
+	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
+		return nil, os.ErrNotExist
+	}
+
+	req := test.GetRequest(nil, false, true)
+
+	expectedID := test.GetValidUUID()
+	req.Form.Add("uuid", expectedID)
+
+	api.RouteBlob(resWriter, req)
+
+	test.AssertErrorCode(t, resWriter, http.StatusNotFound)
+	assert.False(t, called)
+}
+
+func TestRouteBlobContentDisposition(t *testing.T) {
+
+	testcases := []struct {
+		name                       string
+		filename                   string
+		expectedContentDisposition string
+	}{
+		{
+			name:                       "Empty filename header",
+			filename:                   "",
+			expectedContentDisposition: "",
+		},
+		{
+			name:                       "Set filename header",
+			filename:                   "test",
+			expectedContentDisposition: "attachment; filename=\"test\"",
+		},
+	}
+
+	blobmngr.StreamTo = func(id uuid.UUID, w io.Writer) error {
+		return nil
+	}
+
+	blobmngr.StatFromID = func(id uuid.UUID) (fs.FileInfo, error) {
+		return nil, nil
+	}
+
+	for _, tc := range testcases {
+		resWriter := mocks.GetMockResponseWriter()
+
+		req := test.GetRequest(nil, false, true)
+
+		req.Form.Add("uuid", test.GetValidUUID())
+		req.Form.Add("filename", tc.filename)
+
+		api.RouteBlob(resWriter, req)
+
+		test.AssertZeroStatusCode(t, resWriter)
+		assert.Equal(t, "public, max-age=604800, immutable", resWriter.Head.Get("Cache-Control"))
+		assert.Equal(t, tc.expectedContentDisposition, resWriter.Head.Get("Content-Disposition"), tc.name)
 	}
 }
 
@@ -616,6 +680,12 @@ func TestSendTextFunctions(t *testing.T) {
 			name:                "RouteRoomCommandNameRoom",
 			testFunc:            api.RouteRoomCommandNameRoom,
 			command:             types.RoomCommandNameRoom,
+			expectedContentType: types.ContentTypeCmd,
+		},
+		{
+			name:                "RouteRoomCommandPromote",
+			testFunc:            api.RouteRoomCommandPromote,
+			command:             types.RoomCommandPromote,
 			expectedContentType: types.ContentTypeCmd,
 		},
 		{
@@ -681,6 +751,10 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		{
 			name:     "RouteRoomCommandNameRoom",
 			testFunc: api.RouteRoomCommandNameRoom,
+		},
+		{
+			name:     "RouteRoomCommandPromote",
+			testFunc: api.RouteRoomCommandPromote,
 		},
 		{
 			name:     "RouteRoomSendMessage",
