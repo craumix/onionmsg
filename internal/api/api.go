@@ -409,7 +409,7 @@ func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type:    msgType,
 		ReplyTo: replyto,
-		Data:    types.AddCommand(content, roomCommand),
+		Data:    types.ConstructCommand(content, roomCommand),
 	})
 	if err != nil {
 		return http.StatusInternalServerError, err

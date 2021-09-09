@@ -9,10 +9,11 @@ import (
 type Command string
 
 const (
-	RoomCommandAdd     Command = "add"
+	RoomCommandInvite   Command = "invite"
 	RoomCommandNameRoom Command = "name_room"
 	RoomCommandNick     Command = "nick"
 	RoomCommandPromote  Command = "promote"
+	RoomCommandAccept   Command = "accept"
 
 	CommandDelimiter = " "
 )
@@ -41,7 +42,7 @@ func HandleCommand(message *Message, room *Room) error {
 }
 
 func RegisterRoomCommands() error {
-	err := RegisterCommand(RoomCommandAdd, addCallback)
+	err := RegisterCommand(RoomCommandInvite, inviteCallback)
 	if err != nil {
 		return err
 	}
@@ -64,8 +65,8 @@ func RegisterRoomCommands() error {
 	return nil
 }
 
-func addCallback(command Command, message *Message, room *Room) error {
-	args, err := parseCommand(message, command, RoomCommandAdd, 2)
+func inviteCallback(command Command, message *Message, room *Room) error {
+	args, err := parseCommand(message, command, RoomCommandInvite, 2)
 	if err != nil {
 		return err
 	}
@@ -174,7 +175,7 @@ func peerNotAdminError(peer string) error {
 	return fmt.Errorf("peer %s is not an admin", peer)
 }
 
-func AddCommand(message []byte, command Command) []byte {
+func ConstructCommand(message []byte, command Command) []byte {
 	if command == "" {
 		return message
 	}

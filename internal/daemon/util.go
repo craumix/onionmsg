@@ -221,6 +221,11 @@ func acceptRoomRequest(id uuid.UUID) error {
 
 			v.Room.RunMessageQueueForAllPeers()
 
+			v.Room.SendMessageToAllPeers(types.MessageContent{
+				Type: types.ContentTypeCmd,
+				Data: types.ConstructCommand([]byte(v.Room.Self.Fingerprint()), types.RoomCommandAccept),
+			})
+
 			deleteRoomRequest(id)
 			return nil
 		}
