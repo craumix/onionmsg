@@ -69,10 +69,6 @@ func convClientHandler(c net.Conn) {
 		}
 	}
 
-	if len(newMsgs) > 0 {
-		notifyNewMessages(id, newMsgs...)
-	}
-
 	conn.WriteString("messages_ok")
 	conn.Flush()
 
@@ -82,6 +78,10 @@ func convClientHandler(c net.Conn) {
 	}
 
 	room.PushMessages(newMsgs...)
+
+	if len(newMsgs) > 0 {
+		notifyNewMessages(id, newMsgs...)
+	}
 
 	conn.WriteString("sync_ok")
 	conn.Flush()

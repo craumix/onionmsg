@@ -65,6 +65,10 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/contact/create", RouteContactCreate)
 	http.HandleFunc("/v1/contact/delete", RouteContactDelete)
 
+	http.HandleFunc("/v1/request/list", RouteRequestList)
+	http.HandleFunc("/v1/request/accept", RouteRequestAccept)
+	http.HandleFunc("/v1/request/delete", RouteRequestDelete)
+
 	http.HandleFunc("/v1/room/info", RouteRoomInfo)
 	http.HandleFunc("/v1/room/list", RouteRoomList)
 	http.HandleFunc("/v1/room/create", RouteRoomCreate)
@@ -157,6 +161,35 @@ func RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func RouteRequestList(w http.ResponseWriter, req *http.Request) {
+	sendSerialized(w, daemon.RequestList())
+}
+
+func RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
+	sid := req.FormValue("uuid")
+	id, err := uuid.Parse(sid)
+	if err != nil {
+		http.Error(w, "Malformed uuid", http.StatusBadRequest)
+		return
+	}
+
+	err = daemon.AcceptRoomRequest(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
+	sid := req.FormValue("uuid")
+	id, err := uuid.Parse(sid)
+	if err != nil {
+		http.Error(w, "Malformed uuid", http.StatusBadRequest)
+		return
+	}
+
+	daemon.DeleteRoomRequest(id)
 }
 
 func RouteRoomInfo(w http.ResponseWriter, req *http.Request) {

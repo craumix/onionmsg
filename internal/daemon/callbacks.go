@@ -9,6 +9,7 @@ var (
 	NewMessageCallback func(uuid.UUID, ...types.Message)
 	NewRoomCallback    func(info *types.RoomInfo)
 	ErrorCallback      func(error)
+	NewRequestCallback func(*types.RoomRequest)
 )
 
 func notifyNewMessages(id uuid.UUID, msgs ...types.Message) {
@@ -26,5 +27,11 @@ func notifyNewRoom(info *types.RoomInfo) {
 func notifyError(err error) {
 	if NewMessageCallback != nil {
 		go ErrorCallback(err)
+	}
+}
+
+func notifyNewRequest(req *types.RoomRequest) {
+	if NewRequestCallback != nil {
+		go NewRequestCallback(req)
 	}
 }

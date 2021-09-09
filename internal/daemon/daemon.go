@@ -20,6 +20,7 @@ import (
 type SerializableData struct {
 	ContactIdentities []types.ContactIdentity `json:"contactIdentities"`
 	Rooms             []*types.Room           `json:"rooms"`
+	Requests          []*types.RoomRequest    `json:"requests"`
 }
 
 const (
@@ -53,7 +54,7 @@ var (
 // Basically everything except the frontend API.
 func StartDaemon(interactiveArg bool) {
 	var err error
-
+	
 	interactive = interactiveArg
 
 	connection.GetConnFunc = connection.DialDataConn
