@@ -9,7 +9,7 @@ import (
 type Command string
 
 const (
-	RoomCommandJoin     Command = "join"
+	RoomCommandAdd     Command = "add"
 	RoomCommandNameRoom Command = "name_room"
 	RoomCommandNick     Command = "nick"
 	RoomCommandPromote  Command = "promote"
@@ -41,7 +41,7 @@ func HandleCommand(message *Message, room *Room) error {
 }
 
 func RegisterRoomCommands() error {
-	err := RegisterCommand(RoomCommandJoin, joinCallback)
+	err := RegisterCommand(RoomCommandAdd, addCallback)
 	if err != nil {
 		return err
 	}
@@ -64,8 +64,8 @@ func RegisterRoomCommands() error {
 	return nil
 }
 
-func joinCallback(command Command, message *Message, room *Room) error {
-	args, err := parseCommand(message, command, RoomCommandJoin, 2)
+func addCallback(command Command, message *Message, room *Room) error {
+	args, err := parseCommand(message, command, RoomCommandAdd, 2)
 	if err != nil {
 		return err
 	}
