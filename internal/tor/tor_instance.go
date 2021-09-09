@@ -119,8 +119,8 @@ func (i *Instance) runBinary() error {
 }
 
 //RegisterService registers a new V3 Hidden Service, and proxies the requests to the specified local port.
-func (i *Instance) RegisterService(key ed25519.PrivateKey, torPort, localPort int) error {
-	s, err := torgo.OnionFromEd25519(key)
+func (i *Instance) RegisterService(cid types.ContactIdentity, torPort, localPort int) error {
+	s, err := torgo.OnionFromEd25519(cid.Key())
 	if err != nil {
 		return err
 	}
@@ -136,8 +136,8 @@ func (i *Instance) RegisterService(key ed25519.PrivateKey, torPort, localPort in
 }
 
 //DeregisterService removes a HiddenService.
-func (i *Instance) DeregisterService(key ed25519.PrivateKey) error {
-	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey(key[32:]))
+func (i *Instance) DeregisterService(cid types.ContactIdentity) error {
+	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey(cid.Key()[32:]))
 	if err != nil {
 		return err
 	}
