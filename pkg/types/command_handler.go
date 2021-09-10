@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/craumix/onionmsg/internal/daemon"
 	"log"
 	"strings"
 )
@@ -13,7 +14,8 @@ const (
 	RoomCommandNameRoom Command = "name_room"
 	RoomCommandNick     Command = "nick"
 	RoomCommandPromote  Command = "promote"
-	
+	RoomCommandRemove   Command = "remove"
+
 	//This command is essentially a No-Op,
 	//and is mainly used for indication in frontends
 	RoomCommandAccept Command = "accept"
@@ -61,6 +63,11 @@ func RegisterRoomCommands() error {
 	}
 
 	err = RegisterCommand(RoomCommandPromote, promoteCallback)
+	if err != nil {
+		return err
+	}
+
+	err = RegisterCommand(RoomCommandRemove, removeCallback)
 	if err != nil {
 		return err
 	}
@@ -147,6 +154,30 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 	}
 
 	return nil
+}
+
+func removeCallback(command Command, message *Message, room *Room) error {
+	args, err := parseCommand(message, command, RoomCommandRemove, 2)
+	if err != nil {
+		return err
+	}
+
+	sender, found := room.PeerByFingerprint(message.Meta.Sender)
+	if !found {
+		return peerNotFoundError(message.Meta.Sender)
+	} else if !sender.Meta.Admin {
+		return peerNotAdminError(message.Meta.Sender)
+	}
+
+	if room.isSelf(args[1]) {
+		room.StopQueues()
+		err = daemon.DeleteRoom(room.ID.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	return room.removePeer(args[1])
 }
 
 func parseCommand(message *Message, actualCommand, expectedCommand Command, expectedArgs int) ([]string, error) {
