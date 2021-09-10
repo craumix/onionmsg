@@ -79,7 +79,7 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/room/command/nameroom", RouteRoomCommandNameRoom)
 	http.HandleFunc("/v1/room/command/setnick", RouteRoomCommandSetNick)
 	http.HandleFunc("/v1/room/command/promote", RouteRoomCommandPromote)
-	http.HandleFunc("/v1/room/command/remove", RouteRoomCommandRemove)
+	http.HandleFunc("/v1/room/command/removepeer", RouteRoomCommandRemovePeer)
 
 	err = http.Serve(listener, nil)
 	if err != nil {
@@ -373,8 +373,8 @@ func RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func RouteRoomCommandRemove(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, types.RoomCommandRemove)
+func RouteRoomCommandRemovePeer(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, types.RoomCommandRemovePeer)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}

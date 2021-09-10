@@ -9,11 +9,11 @@ import (
 type Command string
 
 const (
-	RoomCommandInvite   Command = "invite"
-	RoomCommandNameRoom Command = "name_room"
-	RoomCommandNick     Command = "nick"
-	RoomCommandPromote  Command = "promote"
-	RoomCommandRemove   Command = "remove"
+	RoomCommandInvite     Command = "invite"
+	RoomCommandNameRoom   Command = "name_room"
+	RoomCommandNick       Command = "nick"
+	RoomCommandPromote    Command = "promote"
+	RoomCommandRemovePeer Command = "remove_peer"
 
 	//This command is essentially a No-Op,
 	//and is mainly used for indication in frontends
@@ -23,8 +23,7 @@ const (
 )
 
 var (
-	DeleteRoomCallback func(roomID string) error
-	commandCallbacks   = map[Command]func(Command, *Message, *Room) error{}
+	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
 )
 
 func RegisterCommand(command Command, callback func(Command, *Message, *Room) error) error {
@@ -67,7 +66,7 @@ func RegisterRoomCommands() error {
 		return err
 	}
 
-	err = RegisterCommand(RoomCommandRemove, removeCallback)
+	err = RegisterCommand(RoomCommandRemovePeer, removePeerCallback)
 	if err != nil {
 		return err
 	}
@@ -156,8 +155,8 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 	return nil
 }
 
-func removeCallback(command Command, message *Message, room *Room) error {
-	args, err := parseCommand(message, command, RoomCommandRemove, 2)
+func removePeerCallback(command Command, message *Message, room *Room) error {
+	args, err := parseCommand(message, command, RoomCommandRemovePeer, 2)
 	if err != nil {
 		return err
 	}
@@ -167,14 +166,6 @@ func removeCallback(command Command, message *Message, room *Room) error {
 		return peerNotFoundError(message.Meta.Sender)
 	} else if !sender.Meta.Admin {
 		return peerNotAdminError(message.Meta.Sender)
-	}
-
-	if room.isSelf(args[1]) {
-		room.StopQueues()
-		err = DeleteRoomCallback(room.ID.String())
-		if err != nil {
-			return err
-		}
 	}
 
 	return room.removePeer(args[1])
