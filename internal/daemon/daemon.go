@@ -101,6 +101,11 @@ func StartDaemon(interactiveArg bool) {
 		log.Panicln(err.Error())
 	}
 
+	err = prepareCommandHandler()
+	if err != nil {
+		log.Panicln(err.Error())
+	}
+
 	go sio.StartLocalServer(loContPort, contClientHandler)
 	go sio.StartLocalServer(loConvPort, convClientHandler)
 
@@ -108,6 +113,17 @@ func StartDaemon(interactiveArg bool) {
 		time.Sleep(time.Millisecond * 500)
 		go startInteractive()
 	}
+}
+
+func prepareCommandHandler() error {
+	types.DeleteRoomCallback = DeleteRoom
+
+	err := types.RegisterRoomCommands()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func saveData() (err error) {

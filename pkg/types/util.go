@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
@@ -104,11 +103,4 @@ func Sign(key ed25519.PrivateKey, data []byte) []byte {
 
 func Fingerprint(key ed25519.PublicKey) string {
 	return base64.RawURLEncoding.EncodeToString(key)
-}
-
-func init() {
-	err := RegisterRoomCommands()
-	if err != nil {
-		log.Println(err.Error())
-	}
 }

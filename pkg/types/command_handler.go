@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"github.com/craumix/onionmsg/internal/daemon"
 	"log"
 	"strings"
 )
@@ -24,7 +23,8 @@ const (
 )
 
 var (
-	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
+	DeleteRoomCallback func(roomID string) error
+	commandCallbacks   = map[Command]func(Command, *Message, *Room) error{}
 )
 
 func RegisterCommand(command Command, callback func(Command, *Message, *Room) error) error {
@@ -171,7 +171,7 @@ func removeCallback(command Command, message *Message, room *Room) error {
 
 	if room.isSelf(args[1]) {
 		room.StopQueues()
-		err = daemon.DeleteRoom(room.ID.String())
+		err = DeleteRoomCallback(room.ID.String())
 		if err != nil {
 			return err
 		}
