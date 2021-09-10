@@ -237,6 +237,9 @@ func (r *Room) Info() *RoomInfo {
 		Admins: map[string]bool{},
 	}
 
+	info.Nicks[r.Self.Fingerprint()] = r.Self.Meta.Nick
+	info.Admins[r.Self.Fingerprint()] = r.Self.Meta.Admin
+
 	for _, peer := range r.Peers {
 		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
 		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Meta.Nick

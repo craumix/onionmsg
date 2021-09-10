@@ -28,6 +28,7 @@ func contClientHandler(c net.Conn) {
 	}
 
 	remoteID, _ := types.NewIdentity(types.Remote, req.LocalFP)
+	remoteID.Meta.Admin = true
 
 	convID, _ := types.NewIdentity(types.Self, "")
 
@@ -47,7 +48,7 @@ func contClientHandler(c net.Conn) {
 	}
 
 	dconn.Flush()
-	
+
 	request := &types.RoomRequest{
 		Room: types.Room{
 			Self:      convID,
