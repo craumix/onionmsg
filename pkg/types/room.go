@@ -35,15 +35,20 @@ type RoomInfo struct {
 	Admins map[string]bool   `json:"admins,omitempty"`
 }
 
-func NewRoom(ctx context.Context, contactIdentities ...RemoteIdentity) (*Room, error) {
+func NewRoom(ctx context.Context, contactIdentities ...Identity) (*Room, error) {
+	id, err := NewIdentity(Self, "")
+	if err != nil {
+		return nil, err
+	}
+
+	id.Meta.Admin = true
 	room := &Room{
-		Self:      NewIdentity(),
+		Self:      id,
 		ID:        uuid.New(),
 		SyncState: make(SyncMap),
 	}
-	room.Self.Meta.Admin = true
 
-	err := room.SetContext(ctx)
+	err = room.SetContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +73,7 @@ func (r *Room) SetContext(ctx context.Context) error {
 AddPeers adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddPeers(contactIdentities ...RemoteIdentity) error {
+func (r *Room) AddPeers(contactIdentities ...Identity) error {
 	var newPeers []*MessagingPeer
 	for _, identity := range contactIdentities {
 		newPeer, err := r.createPeerViaContactID(identity)
@@ -108,7 +113,7 @@ This function tries to add a user with the contactID to the Room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*MessagingPeer, error) {
+func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer, error) {
 	dataConn, err := connection.GetConnFunc("tcp", contactIdentity.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return nil, err
@@ -133,11 +138,18 @@ func (r *Room) createPeerViaContactID(contactIdentity RemoteIdentity) (*Messagin
 		return nil, err
 	}
 
-	if !contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig) {
+	if ok, _ := contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); !ok {
 		return nil, fmt.Errorf("invalid signature from contactIdentity %s", contactIdentity.URL())
 	}
 
-	peerID, err := NewRemoteIdentity(resp.ConvFP)
+	switch ok, err := contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); {
+	case err != nil:
+		return nil, err
+	case !ok:
+		return nil, fmt.Errorf("invalid signature from contactIdentity %s", contactIdentity.URL())
+	}
+
+	peerID, err := NewIdentity(Remote, resp.ConvFP)
 	if err != nil {
 		return nil, err
 	}
@@ -165,13 +177,13 @@ func (r *Room) RunMessageQueueForAllPeers() {
 	}
 }
 
-func (r *Room) PeerByFingerprint(fingerprint string) (RemoteIdentity, bool) {
+func (r *Room) PeerByFingerprint(fingerprint string) (Identity, bool) {
 	for _, peer := range r.Peers {
 		if peer.RIdentity.Fingerprint() == fingerprint {
 			return peer.RIdentity, true
 		}
 	}
-	return RemoteIdentity{}, false
+	return Identity{}, false
 }
 
 // StopQueues cancels this context and with that all message queues of

@@ -75,7 +75,7 @@ func roomInfo(id uuid.UUID) (*types.RoomInfo, error) {
 
 // createContactID generates and registers a new contact id and returns its fingerprint.
 func createContactID() (string, error) {
-	id := types.NewContactIdentity()
+	id, _ := types.NewIdentity(types.Contact, "")
 	err := registerContID(id)
 	if err != nil {
 		return "", err
@@ -90,9 +90,9 @@ func DeleteContactID(fingerprint string) error {
 
 // Maybe this should be run in a goroutine
 func createRoom(fingerprints []string) error {
-	var ids []types.RemoteIdentity
+	var ids []types.Identity
 	for _, fingerprint := range fingerprints {
-		id, err := types.NewRemoteIdentity(fingerprint)
+		id, err := types.NewIdentity(types.Remote, fingerprint)
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func addPeerToRoom(roomID uuid.UUID, fingerprint string) error {
 		return fmt.Errorf("no such room %s", roomID)
 	}
 
-	id, err := types.NewRemoteIdentity(fingerprint)
+	id, err := types.NewIdentity(types.Remote, fingerprint)
 	if err != nil {
 		return err
 	}
@@ -174,13 +174,13 @@ func GetRoom(id uuid.UUID) (*types.Room, bool) {
 	return nil, false
 }
 
-func GetContactID(fingerprint string) (types.ContactIdentity, bool) {
+func GetContactID(fingerprint string) (types.Identity, bool) {
 	for _, i := range data.ContactIdentities {
 		if i.Fingerprint() == fingerprint {
 			return i, true
 		}
 	}
-	return types.ContactIdentity{}, false
+	return types.Identity{}, false
 }
 
 func deleteRoomFromSlice(item *types.Room) {
@@ -199,6 +199,7 @@ func deleteContactIDFromSlice(cid types.ContactIdentity) {
 		if data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
 			data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
 			data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
+
 			break
 		}
 	}

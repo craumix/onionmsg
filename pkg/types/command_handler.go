@@ -78,7 +78,7 @@ func inviteCallback(command Command, message *Message, room *Room) error {
 		return fmt.Errorf("user %s already added, or self", args[1])
 	}
 
-	peerID, err := NewRemoteIdentity(args[1])
+	peerID, err := NewIdentity(Remote, args[1])
 	if err != nil {
 		return err
 	}

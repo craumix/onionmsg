@@ -107,7 +107,7 @@ func NewMessage(content MessageContent, sender Identity) Message {
 		Content: content,
 	}
 
-	msg.Sign(sender.Key)
+	msg.Sign(*sender.Priv)
 
 	return msg
 }
