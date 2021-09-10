@@ -126,6 +126,7 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 
 	//If the blob exists, it will never change
 	w.Header().Add("Cache-Control", "public, max-age=604800, immutable")
+	w.Header().Add("Content-Type", "application/octet-stream")
 
 	err = blobmngr.StreamTo(id, w)
 	if err != nil {

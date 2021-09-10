@@ -1,0 +1,212 @@
+openapi: 3.0.0
+info:
+  version: '1'
+  title: Allium
+servers:
+  - url: 'http://localhost:10052/v1'
+paths:
+  /status:
+    get:
+      summary: 'Returns a static "ok" response to indicate API is available'
+      responses:
+        '200':
+          description: 'Static "ok" response'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    pattern: '^ok'
+                    minLength: 2
+                    maxLength: 2
+  /tor:
+    get:
+      summary: 'Information about the used Tor-Process'
+      responses:
+        '200':
+          description: 'Information about Tor-Process'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                    log:
+                      type: string
+                    version:
+                      type: string
+                    pid:
+                      type: number
+                      format: int32
+                      minimum: 1
+                      maximum: 32768
+                    path:
+                      type: string
+  /blob:
+    get:
+      summary: 'Request a Blob from the Daemon'
+      parameters:
+          - in: query
+            name: uuid
+            schema:
+              $ref: '#/components/schemas/uuid'
+            description: 'The UUID of the blob to retrieve'
+          - in: query
+            name: filename
+            schema:
+              type: string
+            description: 'A filename to be returned in the Content-Disposition Header in the Response'
+      responses:
+        '200':
+          description: "Blob found"
+          content:
+            application/octet-stream:
+              schema:
+                  type: string
+                  format: binary
+        '400':
+          description: "Malformed query param (UUID)"
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: "Blob not found"
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: "Internal Error while sending Blob"
+          content:
+            text/plain:
+              schema:
+                type: string
+  /contact/list:
+    get:
+      summary: 'Request a list of Fingerprints for all currenty registered Contact Identities'
+      responses:
+        '200':
+          description: 'The requested list of Fingerprints'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/fingerprint'
+  /contact/create:
+    get:
+      summary: 'Creates a single Contact Identity and returns its Fingerprint'
+      responses:
+        '200':
+          description: 'Fingerprint of the newly created Identity'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    $ref: '#/components/schemas/fingerprint'
+  /contact/delete:
+    get:
+      summary: 'Deletes a single Contact Identity'
+      parameters:
+        - in: query
+          name: fingerprint
+          description: 'The Fingerprint of the Contact Identity that is to be deleted'
+          schema:
+            $ref: '#/components/schemas/fingerprint'
+      responses:
+        '200':
+          description: 'Fingerprint deleted successfully'
+        '400':
+          description: "Failed to provide a Fingerprint"
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: "Some Internal error occured while attempting to delete the Identity"
+          content:
+            text/plain:
+              schema:
+                type: string
+  /request/list:
+    get:
+      summary: 'Request a list of all currenty pending Room Requests'
+      responses:
+        '200':
+          description: 'The requested list of Requests'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    via:
+                      $ref: '#/components/schemas/fingerprint'
+                    uuid:
+                      $ref: '#/components/schemas/uuid'
+                    room:
+                      type: object
+                      properties:
+                        uuid:
+                          $ref: '#/components/schemas/uuid'
+  /request/accept:
+    get:
+      summary: 'Accepts a Room Request with the given uuid'
+      parameters:
+        - in: query
+          name: uuid
+          description: 'The UUID of the Room Request that should be accepted'
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: 'The Request was accepted successfully'
+        '400':
+          description: 'Malformed param'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: 'Internal Error while trying to accept Request'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /request/delete:
+    get:
+      summary: 'Deletes a Room Request with the given uuid'
+      parameters:
+        - in: query
+          name: uuid
+          description: 'The UUID of the Room Request that should be deleted'
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        '200':
+          description: 'The Request was deleted successfully'
+        '400':
+          description: 'Malformed param'
+          content:
+            text/plain:
+              schema:
+                type: string
+
+
+components:
+  schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      minLength: 36
+      maxLength: 36
+    fingerprint:
+      type: string
+      pattern: ^[0-9A-Za-z\-\_]{43}
+      minLength: 43
+      maxLength: 43
