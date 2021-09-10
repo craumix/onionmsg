@@ -116,15 +116,14 @@ func nickCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	sender := message.Meta.Sender
-	identity, found := room.PeerByFingerprint(sender)
-	if !found {
-		return peerNotFoundError(sender)
+	sender, err := getSender(message, room, false)
+	if err != nil {
+		return err
 	}
 
 	nickname := args[1]
-	identity.Meta.Nick = nickname
-	log.Printf("Set nickname for %s to %s", sender, nickname)
+	sender.Meta.Nick = nickname
+	log.Printf("Set nickname for %s to %s", sender.Fingerprint(), nickname)
 
 	return nil
 }
@@ -135,11 +134,9 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	sender, found := room.PeerByFingerprint(message.Meta.Sender)
-	if !found {
-		return peerNotFoundError(message.Meta.Sender)
-	} else if !sender.Meta.Admin {
-		return peerNotAdminError(message.Meta.Sender)
+	_, err = getSender(message, room, true)
+	if err != nil {
+		return err
 	}
 
 	toPromote, found := room.PeerByFingerprint(args[1])
@@ -161,14 +158,28 @@ func removePeerCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	sender, found := room.PeerByFingerprint(message.Meta.Sender)
-	if !found {
-		return peerNotFoundError(message.Meta.Sender)
-	} else if !sender.Meta.Admin {
-		return peerNotAdminError(message.Meta.Sender)
+	_, err = getSender(message, room, true)
+	if err != nil {
+		return err
 	}
 
 	return room.removePeer(args[1])
+}
+
+func getSender(msg *Message, r *Room, shouldBeAdmin bool) (Identity, error) {
+	sender, found := r.PeerByFingerprint(msg.Meta.Sender)
+	if !found {
+		if r.Self.Fingerprint() != msg.Meta.Sender {
+			return Identity{}, peerNotFoundError(msg.Meta.Sender)
+		}
+		sender = r.Self
+	}
+
+	if shouldBeAdmin && !sender.Meta.Admin {
+		return Identity{}, peerNotAdminError(msg.Meta.Sender)
+	}
+
+	return sender, nil
 }
 
 func parseCommand(message *Message, actualCommand, expectedCommand Command, expectedArgs int) ([]string, error) {
