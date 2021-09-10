@@ -86,8 +86,13 @@ func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 		return err
 	}
 
+	signed, err := id.Sign(challenge)
+	if err != nil {
+		fmt.Print(err.Error())
+	}
+
 	conn.WriteString(id.Fingerprint())
-	conn.WriteBytes(id.Sign(challenge))
+	conn.WriteBytes(signed)
 	conn.Flush()
 
 	return nil
