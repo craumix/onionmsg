@@ -194,7 +194,7 @@ func deleteRoomFromSlice(item *types.Room) {
 
 }
 
-func deleteContactIDFromSlice(cid types.ContactIdentity) {
+func deleteContactIDFromSlice(cid types.Identity) {
 	for i := 0; i < len(data.ContactIdentities); i++ {
 		if data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
 			data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]

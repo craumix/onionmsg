@@ -18,9 +18,9 @@ import (
 
 // SerializableData struct exists purely for serialization purposes
 type SerializableData struct {
-	ContactIdentities []types.ContactIdentity `json:"contactIdentities"`
-	Rooms             []*types.Room           `json:"rooms"`
-	Requests          []*types.RoomRequest    `json:"requests"`
+	ContactIdentities []types.Identity     `json:"contactIdentities"`
+	Rooms             []*types.Room        `json:"rooms"`
+	Requests          []*types.RoomRequest `json:"requests"`
 }
 
 const (
@@ -54,7 +54,7 @@ var (
 // Basically everything except the frontend API.
 func StartDaemon(interactiveArg bool) {
 	var err error
-	
+
 	interactive = interactiveArg
 
 	connection.GetConnFunc = connection.DialDataConn

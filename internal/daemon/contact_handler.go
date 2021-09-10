@@ -31,13 +31,13 @@ func contClientHandler(c net.Conn) {
 
 	convID, _ := types.NewIdentity(types.Self, "")
 
-	signed, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
+	sig, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
 	if err != nil {
-		fmt.Print(err.Error())
+		log.Println(err.Error())
 	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
-		Sig:    signed,
+		Sig:    sig,
 	}
 
 	_, err = dconn.WriteStruct(resp)
