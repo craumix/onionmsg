@@ -13,7 +13,10 @@ const (
 	RoomCommandNameRoom Command = "name_room"
 	RoomCommandNick     Command = "nick"
 	RoomCommandPromote  Command = "promote"
-	RoomCommandAccept   Command = "accept"
+	
+	//This command is essentially a No-Op,
+	//and is mainly used for indication in frontends
+	RoomCommandAccept Command = "accept"
 
 	CommandDelimiter = " "
 )
@@ -178,7 +181,10 @@ func peerNotAdminError(peer string) error {
 func ConstructCommand(message []byte, command Command) []byte {
 	if command == "" {
 		return message
+	} else if len(message) == 0 {
+		return []byte(command)
 	}
+
 	return []byte(string(command) + CommandDelimiter + string(message))
 }
 
