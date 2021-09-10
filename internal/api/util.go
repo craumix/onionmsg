@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	//FIX maybe
+	//FIX maybe (use appropriate existing headers)
 	//https://datatracker.ietf.org/doc/html/rfc6648
-	replyToHeader = "X-ReplyTo"
+	replyToHeader  = "X-ReplyTo"
+	filenameHeader = "X-Filename"
+	mimetypeHeader = "X-Mimetype"
 )
 
 func setJSONContentHeader(w http.ResponseWriter) {

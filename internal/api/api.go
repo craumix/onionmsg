@@ -150,9 +150,9 @@ func RouteContactCreate(w http.ResponseWriter, req *http.Request) {
 }
 
 func RouteContactDelete(w http.ResponseWriter, req *http.Request) {
-	fp := req.FormValue("id")
+	fp := req.FormValue("fingerprint")
 	if fp == "" {
-		http.Error(w, "Missing parameter \"id\"", http.StatusBadRequest)
+		http.Error(w, "Missing parameter \"fingerprint\"", http.StatusBadRequest)
 		return
 	}
 
@@ -193,7 +193,7 @@ func RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
-	sid := req.FormValue("id")
+	sid := req.FormValue("uuid")
 	id, err := uuid.Parse(sid)
 	if err != nil {
 		http.Error(w, "Malformed uuid", http.StatusBadRequest)
@@ -287,9 +287,9 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	filename := req.FormValue("filename")
+	filename := req.Header.Get(filenameHeader)
 
-	mimetype := req.FormValue("mimetype")
+	mimetype := req.Header.Get(mimetypeHeader)
 	if mimetype == "" {
 		mimetype = mime.TypeByExtension(filepath.Ext(filename))
 	}
