@@ -10,9 +10,9 @@ import (
 const (
 	//FIX maybe (use appropriate existing headers)
 	//https://datatracker.ietf.org/doc/html/rfc6648
-	replyToHeader  = "X-ReplyTo"
-	filenameHeader = "X-Filename"
-	mimetypeHeader = "X-Mimetype"
+	ReplyToHeader  = "X-ReplyTo"
+	FilenameHeader = "X-Filename"
+	MimetypeHeader = "X-Mimetype"
 )
 
 func setJSONContentHeader(w http.ResponseWriter) {
@@ -31,7 +31,7 @@ func sendSerialized(w http.ResponseWriter, v interface{}) {
 }
 
 func replyFromHeader(req *http.Request) (*types.Message, error) {
-	rawReply := req.Header.Get(replyToHeader)
+	rawReply := req.Header.Get(ReplyToHeader)
 	if rawReply == "" {
 		return nil, nil
 	}

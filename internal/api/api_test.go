@@ -239,7 +239,7 @@ func TestRouteContactDelete(t *testing.T) {
 	req := test.GetRequest(nil, false, true)
 
 	expected := "test id"
-	req.Form.Add("id", expected)
+	req.Form.Add("fingerprint", expected)
 
 	api.RouteContactDelete(resWriter, req)
 
@@ -274,7 +274,7 @@ func TestRouteContactDeleteError(t *testing.T) {
 
 	req := test.GetRequest(nil, false, true)
 
-	req.Form.Add("id", "test id")
+	req.Form.Add("fingerprint", "test id")
 
 	api.RouteContactDelete(resWriter, req)
 	test.AssertErrorCode(t, resWriter, http.StatusInternalServerError)
@@ -390,9 +390,8 @@ func TestRoomSendFile(t *testing.T) {
 		Data: nil,
 	}
 
-	req.Form.Add("filename", expectedMsgContent.Blob.Name)
-	req.Form.Add("mimetype", expectedMsgContent.Blob.Type)
-
+	req.Header.Set(api.FilenameHeader, expectedMsgContent.Blob.Name)
+	req.Header.Set(api.MimetypeHeader, expectedMsgContent.Blob.Type)
 	req.Header.Set("Content-Length", "69")
 
 	api.RouteRoomSendFile(resWriter, req)

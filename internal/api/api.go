@@ -287,9 +287,9 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	filename := req.Header.Get(filenameHeader)
+	filename := req.Header.Get(FilenameHeader)
 
-	mimetype := req.Header.Get(mimetypeHeader)
+	mimetype := req.Header.Get(MimetypeHeader)
 	if mimetype == "" {
 		mimetype = mime.TypeByExtension(filepath.Ext(filename))
 	}
