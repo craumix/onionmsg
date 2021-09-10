@@ -1,12 +1,11 @@
 package daemon
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"net"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"github.com/google/uuid"
 
 	"github.com/craumix/onionmsg/pkg/types"
 )
@@ -32,13 +31,13 @@ func contClientHandler(c net.Conn) {
 
 	convID, _ := types.NewIdentity(types.Self, "")
 
-	signed, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
+	sig, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
 	if err != nil {
-		fmt.Print(err.Error())
+		log.Println(err.Error())
 	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
-		Sig:    signed,
+		Sig:    sig,
 	}
 
 	_, err = dconn.WriteStruct(resp)
@@ -48,23 +47,19 @@ func contClientHandler(c net.Conn) {
 	}
 
 	dconn.Flush()
-
-	room := &types.Room{
-		Self:      convID,
-		Peers:     []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
-		ID:        req.ID,
-		SyncState: make(types.SyncMap),
-	}
-	room.SetContext(context.Background())
-
-	err = registerRoom(room)
-	if err != nil {
-		log.Println()
+	
+	request := &types.RoomRequest{
+		Room: types.Room{
+			Self:      convID,
+			Peers:     []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
+			ID:        req.ID,
+			SyncState: make(types.SyncMap),
+		},
+		ViaFingerprint: cont.Fingerprint(),
+		ID:             uuid.New(),
 	}
 
-	room.RunMessageQueueForAllPeers()
+	data.Requests = append(data.Requests, request)
 
-	//Kinda breaks interactive
-	//log.Printf("Exchange succesfull uuid %s sent id %s", id, convID.Fingerprint())
-
+	notifyNewRequest(request)
 }

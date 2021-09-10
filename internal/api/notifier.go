@@ -13,6 +13,7 @@ const (
 	NotificationTypeNewMessage = "NewMessage"
 	NotificationTypeNewRoom    = "NewRoom"
 	NotificationTypeError      = "Error"
+	NotificationTypeNewRequest = "NewRequest"
 )
 
 var (
@@ -27,12 +28,13 @@ func registerCallbacks() {
 	daemon.NewMessageCallback = NotifyNewMessage
 	daemon.NewRoomCallback = NotifyNewRoom
 	daemon.ErrorCallback = NotifyError
+	daemon.NewRequestCallback = NotifyNewRequest
 }
 
 func NotifyNewMessage(id uuid.UUID, msg ...types.Message) {
 	n := struct {
 		RoomID  uuid.UUID       `json:"uuid"`
-		Message []types.Message `json:"message"`
+		Message []types.Message `json:"messages"`
 	}{
 		id,
 		msg,
@@ -42,23 +44,15 @@ func NotifyNewMessage(id uuid.UUID, msg ...types.Message) {
 }
 
 func NotifyNewRoom(info *types.RoomInfo) {
-	n := struct {
-		RoomID *types.RoomInfo `json:"info"`
-	}{
-		info,
-	}
-
-	NotifyObservers(NotificationTypeNewRoom, n)
+	NotifyObservers(NotificationTypeNewRoom, info)
 }
 
 func NotifyError(err error) {
-	n := struct {
-		Error string `json:"error"`
-	}{
-		err.Error(),
-	}
+	NotifyObservers(NotificationTypeError, err.Error())
+}
 
-	NotifyObservers(NotificationTypeError, n)
+func NotifyNewRequest(req *types.RoomRequest) {
+	NotifyObservers(NotificationTypeNewRequest, req)
 }
 
 func NotifyObservers(ntype NotificationType, msg interface{}) {

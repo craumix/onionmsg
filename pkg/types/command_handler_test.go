@@ -115,7 +115,7 @@ func TestAddCommand(t *testing.T) {
 
 	expected := string(testCommand) + CommandDelimiter + message
 
-	actual := AddCommand([]byte(message), testCommand)
+	actual := ConstructCommand([]byte(message), testCommand)
 
 	assert.Equal(t, expected, string(actual))
 }

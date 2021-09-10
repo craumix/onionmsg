@@ -23,6 +23,10 @@ var (
 	ListMessages  = listMessages
 
 	SendMessage = sendMessage
+
+	RequestList       = requestList
+	AcceptRoomRequest = acceptRoomRequest
+	DeleteRoomRequest = deleteRoomRequest
 )
 
 // GetTorlog returns the log of the used to instance.
@@ -154,7 +158,7 @@ func listMessages(uid string, count int) ([]types.Message, error) {
 		return nil, fmt.Errorf("no such room: %s", uid)
 	}
 
-	if count > 0 {
+	if count > 0 && count < len(room.Messages) {
 		return room.Messages[len(room.Messages)-count:], nil
 	} else {
 		return room.Messages, nil
@@ -180,25 +184,63 @@ func GetContactID(fingerprint string) (types.Identity, bool) {
 }
 
 func deleteRoomFromSlice(item *types.Room) {
-	var i int
 	for j, e := range data.Rooms {
 		if e == item {
-			i = j
-		}
-	}
-
-	data.Rooms[len(data.Rooms)-1], data.Rooms[i] = data.Rooms[i], data.Rooms[len(data.Rooms)-1]
-	data.Rooms = data.Rooms[:len(data.Rooms)-1]
-}
-
-func deleteContactIDFromSlice(id types.Identity) {
-	i := 0
-	for ; i < len(data.ContactIdentities); i++ {
-		if data.ContactIdentities[i].Fingerprint() == id.Fingerprint() {
+			data.Rooms[len(data.Rooms)-1], data.Rooms[j] = data.Rooms[j], data.Rooms[len(data.Rooms)-1]
+			data.Rooms = data.Rooms[:len(data.Rooms)-1]
 			break
 		}
 	}
 
-	data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
-	data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
+}
+
+func deleteContactIDFromSlice(cid types.Identity) {
+	for i := 0; i < len(data.ContactIdentities); i++ {
+		if data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
+			data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
+			data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
+
+			break
+		}
+	}
+
+}
+
+func requestList() []*types.RoomRequest {
+	return data.Requests
+}
+
+func acceptRoomRequest(id uuid.UUID) error {
+	for _, v := range data.Requests {
+		if v.ID == id {
+			v.Room.SetContext(context.Background())
+
+			err := registerRoom(&v.Room)
+			if err != nil {
+				return err
+			}
+
+			v.Room.RunMessageQueueForAllPeers()
+
+			v.Room.SendMessageToAllPeers(types.MessageContent{
+				Type: types.ContentTypeCmd,
+				Data: types.ConstructCommand(nil, types.RoomCommandAccept),
+			})
+
+			deleteRoomRequest(id)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("room request with id %s not found", id)
+}
+
+func deleteRoomRequest(id uuid.UUID) {
+	for i := 0; i < len(data.Requests); i++ {
+		if data.Requests[i].ID == id {
+			data.Requests[len(data.Requests)-1], data.Requests[i] = data.Requests[i], data.Requests[len(data.Requests)-1]
+			data.Requests = data.Requests[:len(data.Requests)-1]
+			break
+		}
+	}
 }
