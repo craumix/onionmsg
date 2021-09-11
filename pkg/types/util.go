@@ -109,6 +109,6 @@ func Fingerprint(key ed25519.PublicKey) string {
 func init() {
 	err := RegisterRoomCommands()
 	if err != nil {
-		log.Println(err.Error())
+		log.Print(err.Error())
 	}
 }

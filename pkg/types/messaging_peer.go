@@ -128,6 +128,12 @@ func (mp *MessagingPeer) syncMsgs() error {
 	return nil
 }
 
+func (mp *MessagingPeer) Stop() {
+	if mp.stop != nil {
+		mp.stop()
+	}
+}
+
 func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 	conn.WriteStruct(ids)
 	conn.Flush()
