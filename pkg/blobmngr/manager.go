@@ -41,20 +41,6 @@ func streamTo(id uuid.UUID, w io.Writer) error {
 	defer file.Close()
 
 	io.Copy(w, file)
-	/*
-		buf := make([]byte, 4096)
-		for n, err := file.Read(buf); n > 0 && err == nil; {
-			_, err = w.Write(buf[:n])
-
-			if err != nil {
-				return err
-			}
-		}
-
-		if err != nil {
-			return err
-		}
-	*/
 
 	return nil
 }
