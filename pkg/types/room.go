@@ -248,3 +248,15 @@ func (r *Room) Info() *RoomInfo {
 
 	return info
 }
+
+func (r *Room) removePeer(toRemove string) error {
+	for i, peer := range r.Peers {
+		if peer.RIdentity.Fingerprint() == toRemove {
+			peer.Stop()
+			r.Peers = append(r.Peers[:i], r.Peers[i+1:]...)
+			return nil
+		}
+	}
+
+	return peerNotFoundError(toRemove)
+}

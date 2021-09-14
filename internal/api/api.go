@@ -21,10 +21,8 @@ import (
 )
 
 const (
-	//8K
-	maxMessageSize = 2 << 14
-	//2G
-	maxFileSize = 2 << 30
+	maxMessageSize = 2 << 14 //8K
+	maxFileSize    = 2 << 30 //2G
 
 	apiPort        = 10052
 	unixSocketName = "onionmsg.sock"
@@ -76,10 +74,12 @@ func Start(unixSocket bool) {
 	http.HandleFunc("/v1/room/send/message", RouteRoomSendMessage)
 	http.HandleFunc("/v1/room/send/file", RouteRoomSendFile)
 	http.HandleFunc("/v1/room/messages", RouteRoomMessages)
+
 	http.HandleFunc("/v1/room/command/useradd", RouteRoomCommandUseradd)
 	http.HandleFunc("/v1/room/command/nameroom", RouteRoomCommandNameRoom)
 	http.HandleFunc("/v1/room/command/setnick", RouteRoomCommandSetNick)
 	http.HandleFunc("/v1/room/command/promote", RouteRoomCommandPromote)
+	http.HandleFunc("/v1/room/command/removepeer", RouteRoomCommandRemovePeer)
 
 	err = http.Serve(listener, nil)
 	if err != nil {
@@ -268,19 +268,6 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	/*
-		lengthStr := req.Header.Get("Content-Length")
-		length, err := strconv.Atoi(lengthStr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if length > maxFileSize {
-			http.Error(w, fmt.Sprintf("file to large, cannot be larger than %d", maxFileSize), http.StatusBadRequest)
-			return
-		}
-	*/
 
 	err = blobmngr.WriteIntoFile(req.Body, file)
 	if err != nil {
@@ -382,6 +369,13 @@ func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
 
 func RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
 	errCode, err := sendMessage(req, types.RoomCommandPromote)
+	if err != nil {
+		http.Error(w, err.Error(), errCode)
+	}
+}
+
+func RouteRoomCommandRemovePeer(w http.ResponseWriter, req *http.Request) {
+	errCode, err := sendMessage(req, types.RoomCommandRemovePeer)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
