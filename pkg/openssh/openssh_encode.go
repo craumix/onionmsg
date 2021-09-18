@@ -90,10 +90,10 @@ func EncodeToBytes(key ed25519.PrivateKey) []byte {
 	return buffer.Bytes()
 }
 
-func incPadding(len int) []byte {
-	p := make([]byte, len)
+func incPadding(lenght int) []byte {
+	p := make([]byte, lenght)
 
-	for i := 0; i < len; i++ {
+	for i := 0; i < lenght; i++ {
 		p[i] = uint8(i + 1)
 	}
 
