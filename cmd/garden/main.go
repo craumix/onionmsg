@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
@@ -40,7 +41,7 @@ func main() {
 	flag.BoolVar(&anywhere, "a", anywhere, "Matches anywhere (not just at the start)")
 	flag.IntVar(&count, "c", count, "Specify an amount of Identities to generate")
 	flag.IntVar(&threads, "t", threads, "Number of threads")
-	flag.StringVar(&format, "form", format, "The output format for the keys ( base64 / openssh )")
+	flag.StringVar(&format, "form", format, "The output format for the keys ( base64 / openssh / hex )")
 	flag.BoolVar(&nowarn, "nw", nowarn, "No warning above output")
 	flag.StringVar(&file, "f", file, "Output file")
 	flag.Parse()
@@ -124,10 +125,10 @@ func outputKeys(keys []ed25519.PrivateKey, out *os.File, format string, warn boo
 
 func formatKey(key ed25519.PrivateKey, format string) string {
 	switch(format) {
-	case "base64":
-		return base64.StdEncoding.EncodeToString(key)
 	case "openssh":
 		return string(openssh.EncodeToPemBytes(key))
+	case "hex":
+		return hex.EncodeToString(key)
 	default:
 		return base64.StdEncoding.EncodeToString(key)
 	}
