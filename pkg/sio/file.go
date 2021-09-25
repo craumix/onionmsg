@@ -53,7 +53,7 @@ func LoadCompressedData(datafile string, dest interface{}) error {
 
 	json.Unmarshal(raw, dest)
 
-	log.Printf("Decoded %d bytes from file contents\n", len(raw))
+	//log.Printf("Decoded %d bytes from file contents\n", len(raw))
 
 	return nil
 }

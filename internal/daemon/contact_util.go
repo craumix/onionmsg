@@ -14,7 +14,7 @@ func initContIDServices() error {
 		}
 	}
 
-	log.Printf("Loaded %d Contact Identities\n", len(data.ContactIdentities))
+	//log.Printf("Loaded %d Contact Identities\n", len(data.ContactIdentities))
 
 	return nil
 }

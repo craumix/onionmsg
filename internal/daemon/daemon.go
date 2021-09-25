@@ -35,8 +35,6 @@ var (
 	blobdir  = "blobs"
 	datafile = "alliumd.zstd"
 
-	interactive bool
-
 	loadFuse bool
 
 	data = SerializableData{}
@@ -52,10 +50,10 @@ var (
 // StartDaemon is used to start the application for creating identities and rooms.
 // Also sending/receiving messages etc.
 // Basically everything except the frontend API.
-func StartDaemon(interactiveArg bool, baseDir string, portOffset int) {
-	interactive = interactiveArg
-
+func StartDaemon(interactive bool, baseDir string, portOffset int) {
 	connection.GetConnFunc = connection.DialDataConn
+
+	log.Print("Daemon is starting...")
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -151,6 +149,8 @@ func initHiddenServices() {
 	if err != nil {
 		panic(err)
 	}
+
+	log.Printf("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
 }
 
 func startConnectionHandlers() {
