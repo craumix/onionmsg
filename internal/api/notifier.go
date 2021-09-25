@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/craumix/onionmsg/internal/daemon"
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )

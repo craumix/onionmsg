@@ -11,8 +11,8 @@ import (
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 )
 

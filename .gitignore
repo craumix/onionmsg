@@ -1,8 +1,4 @@
 internal/tor/bindata.go
 third_party/tor/tor
 
-tordir
-onionmsgd
-onionmsgd.exe
-onionmsg.zstd
-onionblobs
+alliumd

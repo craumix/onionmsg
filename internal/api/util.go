@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 const (

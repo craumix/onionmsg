@@ -4,25 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"log"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
-)
-
-var (
-	DefaultConf = Conf{
-		SocksPort:   9050,
-		ControlPort: 9051,
-		DataDir:     "./tordir",
-		TorRC:       "./torrc",
-	}
 )
 
 //Instance represents an instance of a Tor process.
@@ -48,6 +38,15 @@ type Conf struct {
 	TorRC       string
 }
 
+func DefaultConf() Conf {
+	return Conf{
+		SocksPort:   9050,
+		ControlPort: 9051,
+		DataDir:     "./tordir",
+		TorRC:       "./torrc",
+	}
+}
+
 //NewInstance creates a Instance of a running to process.
 func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 	torBinary, err := torBinaryPath()
@@ -68,21 +67,16 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 	}
 	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
-	instance.controlPW = types.RandomString(64)
+	instance.controlPW = prngString(64)
 	err = instance.runBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Tor seems to be runnning, pid: %d\n", instance.process.Pid)
-
 	instance.controller, err = instance.connectController(instance.ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s\nTor Log:\n%s", err, instance.logBuffer.String())
 	}
-
-	v, _ := instance.controller.GetVersion()
-	log.Printf("Connected controller to tor version %s\n", v)
 
 	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
 
@@ -119,8 +113,8 @@ func (i *Instance) runBinary() error {
 }
 
 //RegisterService registers a new V3 Hidden Service, and proxies the requests to the specified local port.
-func (i *Instance) RegisterService(id types.Identity, torPort, localPort int) error {
-	s, err := torgo.OnionFromEd25519(*id.Priv)
+func (i *Instance) RegisterService(priv ed25519.PrivateKey, torPort, localPort int) error {
+	s, err := torgo.OnionFromEd25519(priv)
 	if err != nil {
 		return err
 	}
@@ -136,8 +130,8 @@ func (i *Instance) RegisterService(id types.Identity, torPort, localPort int) er
 }
 
 //DeregisterService removes a HiddenService.
-func (i *Instance) DeregisterService(id types.Identity) error {
-	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey((*id.Priv)[32:]))
+func (i *Instance) DeregisterService(pub ed25519.PublicKey) error {
+	sid, err := torgo.ServiceIDFromEd25519(pub)
 	if err != nil {
 		return err
 	}

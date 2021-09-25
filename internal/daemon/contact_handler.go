@@ -7,7 +7,7 @@ import (
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 func contClientHandler(c net.Conn) {

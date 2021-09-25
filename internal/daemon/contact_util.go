@@ -3,7 +3,7 @@ package daemon
 import (
 	"log"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 func initContIDServices() error {
@@ -32,7 +32,7 @@ func registerContID(id types.Identity) error {
 }
 
 func serveContIDService(id types.Identity) error {
-	return torInstance.RegisterService(id, types.PubContPort, loContPort)
+	return torInstance.RegisterService(*id.Priv, types.PubContPort, loContPort)
 }
 
 func deregisterContID(fingerprint string) error {
@@ -41,7 +41,7 @@ func deregisterContID(fingerprint string) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(i)
+	err := torInstance.DeregisterService(*i.Pub)
 	if err != nil {
 		return err
 	}

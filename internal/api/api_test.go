@@ -12,8 +12,8 @@ import (
 
 	"github.com/craumix/onionmsg/internal/api"
 	"github.com/craumix/onionmsg/internal/daemon"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/craumix/onionmsg/test"
 	"github.com/craumix/onionmsg/test/mocks"
 	"github.com/google/uuid"

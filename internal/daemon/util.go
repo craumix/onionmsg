@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 

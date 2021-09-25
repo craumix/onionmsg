@@ -10,10 +10,10 @@ import (
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
-	"github.com/craumix/onionmsg/internal/tor"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/pkg/tor"
 )
 
 // SerializableData struct exists purely for serialization purposes
@@ -52,57 +52,30 @@ var (
 // StartDaemon is used to start the application for creating identities and rooms.
 // Also sending/receiving messages etc.
 // Basically everything except the frontend API.
-func StartDaemon(interactiveArg bool) {
-	var err error
-
+func StartDaemon(interactiveArg bool, baseDir string, portOffset int) {
 	interactive = interactiveArg
 
 	connection.GetConnFunc = connection.DialDataConn
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("Something went seriously wrong:\n%sTrying to perfrom clean exit", err)
+			log.Printf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
 			exitDaemon()
 		}
 	}()
 	startSignalHandler()
 
-	if LastCommit != "unknown" || BuildVer != "unknown" {
-		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
-	}
+	printBuildInfo()
 
-	err = blobmngr.InitializeDir(blobdir)
-	if err != nil {
-		log.Panicln(err.Error())
-	}
+	initBlobManager()
 
-	torInstance, err = tor.NewInstance(context.Background(), tor.DefaultConf)
-	if err != nil {
-		log.Panicln(err.Error())
-	}
-	connection.DataConnProxy = torInstance.Proxy
+	startTor()
 
-	err = loadData()
-	if err != nil && !os.IsNotExist(err) {
-		log.Panicln(err.Error())
-	}
-	for _, room := range data.Rooms {
-		// TODO derive this from an actual context
-		room.SetContext(context.Background())
-	}
-	loadFuse = true
+	loadData()
 
-	err = initContIDServices()
-	if err != nil {
-		log.Panicln(err.Error())
-	}
-	err = initRooms()
-	if err != nil {
-		log.Panicln(err.Error())
-	}
+	initHiddenServices()
 
-	go sio.StartLocalServer(loContPort, contClientHandler)
-	go sio.StartLocalServer(loConvPort, convClientHandler)
+	startConnectionHandlers()
 
 	if interactive {
 		time.Sleep(time.Millisecond * 500)
@@ -110,14 +83,56 @@ func StartDaemon(interactiveArg bool) {
 	}
 }
 
-func saveData() (err error) {
-	err = sio.SaveDataCompressed(datafile, &data)
-	return
+func printBuildInfo() {
+	if LastCommit != "unknown" || BuildVer != "unknown" {
+		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
+	}
 }
 
-func loadData() (err error) {
-	err = sio.LoadCompressedData(datafile, &data)
-	return
+func initBlobManager() {
+	err := blobmngr.InitializeDir(blobdir)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func startTor() {
+	var err error
+	torInstance, err = tor.NewInstance(context.Background(), tor.DefaultConf())
+	if err != nil {
+		panic(err)
+	}
+	connection.DataConnProxy = torInstance.Proxy
+	log.Printf("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
+}
+
+func loadData() {
+	err := sio.LoadCompressedData(datafile, &data)
+	if err != nil && !os.IsNotExist(err) {
+		panic(err)
+	}
+	for _, room := range data.Rooms {
+		// TODO derive this from an actual context
+		room.SetContext(context.Background())
+	}
+	loadFuse = true
+}
+
+func initHiddenServices() {
+	err := initContIDServices()
+	if err != nil {
+		panic(err)
+	}
+
+	err = initRooms()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func startConnectionHandlers() {
+	go sio.StartLocalServer(loContPort, contClientHandler)
+	go sio.StartLocalServer(loConvPort, convClientHandler)
 }
 
 func startSignalHandler() {
@@ -143,4 +158,8 @@ func exitDaemon() {
 	}
 
 	os.Exit(0)
+}
+
+func saveData() error {
+	return sio.SaveDataCompressed(datafile, &data)
 }

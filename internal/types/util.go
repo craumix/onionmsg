@@ -2,7 +2,6 @@ package types
 
 import (
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -30,12 +29,6 @@ type ContactRequest struct {
 type ContactResponse struct {
 	ConvFP string
 	Sig    []byte
-}
-
-func RandomString(size int) string {
-	r := make([]byte, size)
-	rand.Read(r)
-	return base64.RawStdEncoding.EncodeToString(r)
 }
 
 func CopySyncMap(m SyncMap) SyncMap {

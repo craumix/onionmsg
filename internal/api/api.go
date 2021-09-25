@@ -13,9 +13,9 @@ import (
 	"strconv"
 
 	"github.com/craumix/onionmsg/internal/daemon"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )

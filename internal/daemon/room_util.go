@@ -3,7 +3,7 @@ package daemon
 import (
 	"log"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -39,7 +39,7 @@ func registerRoom(room *types.Room) error {
 }
 
 func serveConvIDService(i types.Identity) error {
-	return torInstance.RegisterService(i, types.PubConvPort, loConvPort)
+	return torInstance.RegisterService(*i.Priv, types.PubConvPort, loConvPort)
 }
 
 func deregisterRoom(id uuid.UUID) error {
@@ -48,7 +48,7 @@ func deregisterRoom(id uuid.UUID) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(r.Self)
+	err := torInstance.DeregisterService(*r.Self.Pub)
 	if err != nil {
 		return err
 	}
