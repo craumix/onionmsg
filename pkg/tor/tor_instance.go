@@ -80,10 +80,12 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 
 	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
 
+	/* Maybe we find a good reason to do this, until then it wastes bandwith
 	go func() {
 		<-instance.ctx.Done()
 		os.RemoveAll(instance.Config.DataDir)
 	}()
+	*/
 
 	return instance, nil
 }
