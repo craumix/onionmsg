@@ -19,11 +19,11 @@ func main() {
 	flag.BoolVar(&interactive, "i", interactive, "Start interactive mode")
 	flag.BoolVar(&useUnixSocket, "u", useUnixSocket, "Wether to use a unix socket for the API")
 	flag.StringVar(&baseDir, "d", baseDir, "The base directory for the daemons files")
-	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used (shifted by SumOfPorts (5) * Offset)")
+	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used")
 	flag.Parse()
 
 	daemon.StartDaemon(interactive, baseDir, portOffset)
-	api.Start(useUnixSocket)
+	api.Start(useUnixSocket, portOffset)
 
 	for {
 		time.Sleep(time.Second * 10)

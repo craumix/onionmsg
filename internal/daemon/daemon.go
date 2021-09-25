@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -23,18 +24,17 @@ type SerializableData struct {
 	Requests          []*types.RoomRequest `json:"requests"`
 }
 
-const (
+var (
 	socksPort   = 10048
 	controlPort = 10049
 	loContPort  = 10050
 	loConvPort  = 10051
 
-	tordir   = "tordir"
-	blobdir  = "onionblobs"
-	datafile = "onionmsg.zstd"
-)
+	torrc    = "torrc"
+	tordir   = "tor"
+	blobdir  = "blobs"
+	datafile = "alliumd.zstd"
 
-var (
 	interactive bool
 
 	loadFuse bool
@@ -67,6 +67,8 @@ func StartDaemon(interactiveArg bool, baseDir string, portOffset int) {
 
 	printBuildInfo()
 
+	parseParams(baseDir, portOffset)
+
 	initBlobManager()
 
 	startTor()
@@ -89,6 +91,22 @@ func printBuildInfo() {
 	}
 }
 
+func parseParams(baseDir string, portOffset int) {
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		os.MkdirAll(baseDir, 0700)
+	}
+
+	socksPort += portOffset
+	controlPort += portOffset
+	loContPort += portOffset
+	loConvPort += portOffset
+
+	torrc = filepath.Join(baseDir, torrc)
+	tordir = filepath.Join(baseDir, tordir)
+	blobdir = filepath.Join(baseDir, blobdir)
+	datafile = filepath.Join(baseDir, datafile)
+}
+
 func initBlobManager() {
 	err := blobmngr.InitializeDir(blobdir)
 	if err != nil {
@@ -98,7 +116,12 @@ func initBlobManager() {
 
 func startTor() {
 	var err error
-	torInstance, err = tor.NewInstance(context.Background(), tor.DefaultConf())
+	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
+		SocksPort: socksPort,
+		ControlPort: controlPort,
+		DataDir: tordir,
+		TorRC: torrc,
+	})
 	if err != nil {
 		panic(err)
 	}

@@ -24,8 +24,11 @@ const (
 	maxMessageSize = 2 << 14 //8K
 	maxFileSize    = 2 << 30 //2G
 
-	apiPort        = 10052
 	unixSocketName = "onionmsg.sock"
+)
+
+var (
+	apiPort = 10052
 )
 
 var (
@@ -35,11 +38,13 @@ var (
 	}
 )
 
-func Start(unixSocket bool) {
+func Start(unixSocket bool, portOffset int) {
 	var (
 		listener net.Listener
 		err      error
 	)
+
+	apiPort += portOffset
 
 	if unixSocket {
 		listener, err = sio.CreateUnixSocket(unixSocketName)

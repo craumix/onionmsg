@@ -42,8 +42,8 @@ func DefaultConf() Conf {
 	return Conf{
 		SocksPort:   9050,
 		ControlPort: 9051,
-		DataDir:     "./tordir",
-		TorRC:       "./torrc",
+		DataDir:     "tor",
+		TorRC:       "torrc",
 	}
 }
 
