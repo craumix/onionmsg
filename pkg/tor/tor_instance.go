@@ -36,6 +36,7 @@ type Conf struct {
 	ControlPort int
 	DataDir     string
 	TorRC       string
+	ControlPass bool
 }
 
 func DefaultConf() Conf {
@@ -44,6 +45,7 @@ func DefaultConf() Conf {
 		ControlPort: 9051,
 		DataDir:     "tor",
 		TorRC:       "torrc",
+		ControlPass: true,
 	}
 }
 
@@ -67,7 +69,10 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 	}
 	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
-	instance.controlPW = prngString(64)
+	if conf.ControlPass {
+		instance.controlPW = prngString(64)
+	}
+
 	err = instance.runBinary()
 	if err != nil {
 		return nil, err

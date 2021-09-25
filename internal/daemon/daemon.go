@@ -50,7 +50,7 @@ var (
 // StartDaemon is used to start the application for creating identities and rooms.
 // Also sending/receiving messages etc.
 // Basically everything except the frontend API.
-func StartDaemon(interactive bool, baseDir string, portOffset int) {
+func StartDaemon(interactive bool, baseDir string, portOffset int, torControlPass bool) {
 	connection.GetConnFunc = connection.DialDataConn
 
 	log.Print("Daemon is starting...")
@@ -69,7 +69,7 @@ func StartDaemon(interactive bool, baseDir string, portOffset int) {
 
 	initBlobManager()
 
-	startTor()
+	startTor(torControlPass)
 
 	loadData()
 
@@ -112,13 +112,14 @@ func initBlobManager() {
 	}
 }
 
-func startTor() {
+func startTor(useControlPass bool) {
 	var err error
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
 		SocksPort: socksPort,
 		ControlPort: controlPort,
 		DataDir: tordir,
 		TorRC: torrc,
+		ControlPass: useControlPass,
 	})
 	if err != nil {
 		panic(err)

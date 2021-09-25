@@ -13,6 +13,7 @@ var (
 	useUnixSocket = false
 	baseDir       = "alliumd"
 	portOffset    = 0
+	noControlPass = false
 )
 
 func main() {
@@ -20,9 +21,10 @@ func main() {
 	flag.BoolVar(&useUnixSocket, "u", useUnixSocket, "Wether to use a unix socket for the API")
 	flag.StringVar(&baseDir, "d", baseDir, "The base directory for the daemons files")
 	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used")
+	flag.BoolVar(&noControlPass, "no-pass", noControlPass, "Disable the usage of a password for the Tor Control-Port")
 	flag.Parse()
 
-	daemon.StartDaemon(interactive, baseDir, portOffset)
+	daemon.StartDaemon(interactive, baseDir, portOffset, !noControlPass)
 	api.Start(useUnixSocket, portOffset)
 
 	for {
