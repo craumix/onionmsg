@@ -18,7 +18,7 @@ var (
 
 func main() {
 	flag.BoolVar(&interactive, "i", interactive, "Start interactive mode")
-	flag.BoolVar(&useUnixSocket, "u", useUnixSocket, "Wether to use a unix socket for the API")
+	flag.BoolVar(&useUnixSocket, "u", useUnixSocket, "Whether to use a unix socket for the API")
 	flag.StringVar(&baseDir, "d", baseDir, "The base directory for the daemons files")
 	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used")
 	flag.BoolVar(&noControlPass, "no-pass", noControlPass, "Disable the usage of a password for the Tor Control-Port")
