@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/api"
 	"github.com/craumix/onionmsg/internal/daemon"
@@ -16,6 +19,14 @@ var (
 	noControlPass = false
 	autoAccept    = false
 )
+
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+		TimestampFormat: "15:04:05",
+	})
+}
 
 func main() {
 	flag.BoolVar(&interactive, "i", interactive, "Start interactive mode")

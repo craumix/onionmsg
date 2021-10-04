@@ -2,15 +2,15 @@ package daemon
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/craumix/onionmsg/pkg/sio/connection"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
@@ -87,6 +87,7 @@ func StartDaemon(conf Config) {
 
 	if conf.Interactive {
 		time.Sleep(time.Millisecond * 500)
+		log.Info("ello")
 		go startInteractive()
 	}
 }

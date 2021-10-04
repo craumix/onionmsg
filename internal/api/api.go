@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"mime"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/internal/types"
