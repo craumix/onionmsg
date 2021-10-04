@@ -3,9 +3,10 @@ package types
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio/connection"
@@ -40,22 +41,32 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 	mp.ctx, mp.stop = context.WithCancel(ctx)
 
+	df := log.Fields{
+		"Room ID": mp.Room.ID,
+		"Peer":    mp.RIdentity.Fingerprint(),
+	}
+
 	for {
+		log.WithFields(df).Debug("Starting Message Queue")
 		select {
 		case <-mp.ctx.Done():
-			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
+			log.Debugf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
 			return
 		default:
 			if SyncMapsEqual(mp.Room.SyncState, mp.LastSyncState) {
 				break
 			}
 
+			startSync := time.Now()
+
+			log.WithFields(df).Debug("Running MessageSync")
+
 			err := mp.syncMsgs()
 			if err != nil {
-				//TODO Uncomment
-				//log.Println(err)
+				log.WithError(err).WithFields(df).Debug("MessageSync failed")
 			} else {
 				mp.LastSyncState = CopySyncMap(mp.Room.SyncState)
+				log.WithField("time", time.Since(startSync)).WithFields(df).Debug("MessageSync done")
 			}
 		}
 

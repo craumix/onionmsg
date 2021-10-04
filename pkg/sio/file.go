@@ -3,7 +3,6 @@ package sio
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/klauspost/compress/zstd"
@@ -30,7 +29,7 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 		return err
 	}
 
-	log.Printf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp))/float64(len(raw)))*100)
+	//log.Printf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp))/float64(len(raw)))*100)
 
 	return nil
 }
