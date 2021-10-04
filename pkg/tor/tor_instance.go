@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,11 +33,12 @@ type Instance struct {
 
 //Conf is used to pass config values to create a Tor Instance.
 type Conf struct {
-	SocksPort   int
-	ControlPort int
-	DataDir     string
-	TorRC       string
-	ControlPass bool
+	SocksPort      int
+	ControlPort    int
+	DataDir        string
+	TorRC          string
+	ControlPass    bool
+	StdOut, StdErr io.Writer
 }
 
 func DefaultConf() Conf {
@@ -115,7 +117,7 @@ func (i *Instance) runBinary() error {
 		args = append(args, "HashedControlPassword", hash)
 	}
 
-	i.process, i.logBuffer, err = runExecutable(i.ctx, i.binaryPath, args, true)
+	i.process, i.logBuffer, err = runExecutable(i.ctx, i.binaryPath, args, true, i.Config.StdOut, i.Config.StdErr)
 	return err
 }
 
