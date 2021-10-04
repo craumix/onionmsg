@@ -14,6 +14,7 @@ var (
 	baseDir       = "alliumd"
 	portOffset    = 0
 	noControlPass = false
+	autoAccept    = false
 )
 
 func main() {
@@ -22,9 +23,16 @@ func main() {
 	flag.StringVar(&baseDir, "d", baseDir, "The base directory for the daemons files")
 	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used")
 	flag.BoolVar(&noControlPass, "no-pass", noControlPass, "Disable the usage of a password for the Tor Control-Port")
+	flag.BoolVar(&autoAccept, "auto-accept", autoAccept, "Accept invitations automatically")
 	flag.Parse()
 
-	daemon.StartDaemon(interactive, baseDir, portOffset, !noControlPass)
+	daemon.StartDaemon(daemon.Config{
+		Interactive:    interactive,
+		BaseDir:        baseDir,
+		PortOffset:     portOffset,
+		UseControlPass: !noControlPass,
+		AutoAccept:     autoAccept,
+	})
 	api.Start(useUnixSocket, portOffset)
 
 	for {

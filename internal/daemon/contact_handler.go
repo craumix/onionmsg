@@ -10,6 +10,10 @@ import (
 	"github.com/craumix/onionmsg/internal/types"
 )
 
+var (
+	autoAcceptRequests = false
+)
+
 func contClientHandler(c net.Conn) {
 	dconn := connection.WrapConnection(c)
 	defer dconn.Close()
@@ -62,5 +66,9 @@ func contClientHandler(c net.Conn) {
 
 	data.Requests = append(data.Requests, request)
 
-	notifyNewRequest(request)
+	if autoAcceptRequests {
+		acceptRoomRequest(request.ID)
+	} else {
+		notifyNewRequest(request)
+	}
 }

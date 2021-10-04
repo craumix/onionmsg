@@ -24,6 +24,14 @@ type SerializableData struct {
 	Requests          []*types.RoomRequest `json:"requests"`
 }
 
+type Config struct {
+	Interactive    bool
+	BaseDir        string
+	PortOffset     int
+	UseControlPass bool
+	AutoAccept     bool
+}
+
 var (
 	socksPort   = 10048
 	controlPort = 10049
@@ -31,7 +39,7 @@ var (
 	loConvPort  = 10051
 
 	torrc    = "torrc"
-	tordir   = "tor"
+	tordir   = "cache/tor"
 	blobdir  = "blobs"
 	datafile = "alliumd.zstd"
 
@@ -50,7 +58,7 @@ var (
 // StartDaemon is used to start the application for creating identities and rooms.
 // Also sending/receiving messages etc.
 // Basically everything except the frontend API.
-func StartDaemon(interactive bool, baseDir string, portOffset int, torControlPass bool) {
+func StartDaemon(conf Config) {
 	connection.GetConnFunc = connection.DialDataConn
 
 	log.Print("Daemon is starting...")
@@ -65,19 +73,19 @@ func StartDaemon(interactive bool, baseDir string, portOffset int, torControlPas
 
 	printBuildInfo()
 
-	parseParams(baseDir, portOffset)
+	parseParams(conf.BaseDir, conf.PortOffset)
 
 	initBlobManager()
 
-	startTor(torControlPass)
+	startTor(conf.UseControlPass)
 
 	loadData()
 
 	initHiddenServices()
 
-	startConnectionHandlers()
+	startConnectionHandlers(conf.AutoAccept)
 
-	if interactive {
+	if conf.Interactive {
 		time.Sleep(time.Millisecond * 500)
 		go startInteractive()
 	}
@@ -115,10 +123,10 @@ func initBlobManager() {
 func startTor(useControlPass bool) {
 	var err error
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
-		SocksPort: socksPort,
+		SocksPort:   socksPort,
 		ControlPort: controlPort,
-		DataDir: tordir,
-		TorRC: torrc,
+		DataDir:     tordir,
+		TorRC:       torrc,
 		ControlPass: useControlPass,
 	})
 	if err != nil {
@@ -154,7 +162,8 @@ func initHiddenServices() {
 	log.Printf("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
 }
 
-func startConnectionHandlers() {
+func startConnectionHandlers(autoAccept bool) {
+	autoAcceptRequests = autoAccept
 	go sio.StartLocalServer(loContPort, contClientHandler)
 	go sio.StartLocalServer(loConvPort, convClientHandler)
 }
