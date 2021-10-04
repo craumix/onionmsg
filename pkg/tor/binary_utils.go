@@ -16,16 +16,15 @@ func runExecutable(ctx context.Context, binaryPath string, args []string, inheri
 		cmd.Env = os.Environ()
 	}
 
-	
 	logBuffer := new(bytes.Buffer)
 	if stdout != nil {
 		cmd.Stdout = io.MultiWriter(logBuffer, stdout)
-	}else {
+	} else {
 		cmd.Stdout = logBuffer
 	}
 	if stderr != nil {
 		cmd.Stderr = io.MultiWriter(logBuffer, stderr)
-	}else {
+	} else {
 		cmd.Stderr = logBuffer
 	}
 

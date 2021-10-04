@@ -25,11 +25,9 @@ type SerializableData struct {
 }
 
 type Config struct {
-	Interactive    bool
-	BaseDir        string
-	PortOffset     int
-	UseControlPass bool
-	AutoAccept     bool
+	BaseDir, TorBinary                      string
+	PortOffset                              int
+	UseControlPass, AutoAccept, Interactive bool
 }
 
 var (
@@ -77,7 +75,7 @@ func StartDaemon(conf Config) {
 
 	initBlobManager()
 
-	startTor(conf.UseControlPass)
+	startTor(conf.UseControlPass, conf.TorBinary)
 
 	loadData()
 
@@ -121,7 +119,7 @@ func initBlobManager() {
 	}
 }
 
-func startTor(useControlPass bool) {
+func startTor(useControlPass bool, binaryPath string) {
 	var err error
 
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
@@ -130,6 +128,7 @@ func startTor(useControlPass bool) {
 		DataDir:     tordir,
 		TorRC:       torrc,
 		ControlPass: useControlPass,
+		Binary:      binaryPath,
 		StdOut: StringWriter{
 			OnWrite: func(s string) {
 				log.Trace("Tor-Out: " + s)

@@ -20,6 +20,7 @@ var (
 	autoAccept    = false
 	debug         = false
 	trace         = false
+	torBinary     = "tor"
 )
 
 func init() {
@@ -39,6 +40,7 @@ func main() {
 	flag.BoolVar(&autoAccept, "auto-accept", autoAccept, "Accept invitations automatically")
 	flag.BoolVar(&debug, "debug", debug, "Set Log-Level to Debug")
 	flag.BoolVar(&trace, "trace", trace, "Set Log-Level to Trace (includes Debug)")
+	flag.StringVar(&torBinary, "tor-binary", torBinary, "Select the Tor-Binary to be used")
 	flag.Parse()
 
 	if debug {
@@ -54,6 +56,7 @@ func main() {
 		PortOffset:     portOffset,
 		UseControlPass: !noControlPass,
 		AutoAccept:     autoAccept,
+		TorBinary:      torBinary,
 	})
 	api.Start(useUnixSocket, portOffset)
 

@@ -33,12 +33,10 @@ type Instance struct {
 
 //Conf is used to pass config values to create a Tor Instance.
 type Conf struct {
-	SocksPort      int
-	ControlPort    int
-	DataDir        string
-	TorRC          string
-	ControlPass    bool
-	StdOut, StdErr io.Writer
+	SocksPort, ControlPort int
+	DataDir, Binary, TorRC string
+	ControlPass            bool
+	StdOut, StdErr         io.Writer
 }
 
 func DefaultConf() Conf {
@@ -48,14 +46,20 @@ func DefaultConf() Conf {
 		DataDir:     "tor",
 		TorRC:       "torrc",
 		ControlPass: true,
+		Binary:      "tor",
 	}
 }
 
 //NewInstance creates a Instance of a running to process.
 func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
-	torBinary, err := torBinaryPath()
-	if err != nil {
-		return nil, err
+	var err error
+	torBinary := conf.Binary
+
+	if torBinary == "" {
+		torBinary, err = torBinaryPath()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = checkTorV3Support(torBinary)
@@ -82,7 +86,7 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 
 	instance.controller, err = instance.connectController(instance.ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s\nTor Log:\n%s", err, instance.logBuffer.String())
+		return nil, fmt.Errorf("%s", err)
 	}
 
 	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
