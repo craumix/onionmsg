@@ -18,6 +18,7 @@ var (
 	portOffset    = 0
 	noControlPass = false
 	autoAccept    = false
+	trace = false
 )
 
 func init() {
@@ -35,7 +36,12 @@ func main() {
 	flag.IntVar(&portOffset, "o", portOffset, "The Offset for all the ports used")
 	flag.BoolVar(&noControlPass, "no-pass", noControlPass, "Disable the usage of a password for the Tor Control-Port")
 	flag.BoolVar(&autoAccept, "auto-accept", autoAccept, "Accept invitations automatically")
+	flag.BoolVar(&trace, "trace", trace, "Set Log-Level to Trace")
 	flag.Parse()
+
+	if trace {
+		log.SetLevel(log.TraceLevel)
+	}
 
 	daemon.StartDaemon(daemon.Config{
 		Interactive:    interactive,
