@@ -10,10 +10,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/pkg/tor"
 )
 
@@ -123,16 +123,28 @@ func initBlobManager() {
 
 func startTor(useControlPass bool) {
 	var err error
+
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
 		SocksPort:   socksPort,
 		ControlPort: controlPort,
 		DataDir:     tordir,
 		TorRC:       torrc,
 		ControlPass: useControlPass,
+		StdOut: StringWriter{
+			OnWrite: func(s string) {
+				log.Trace("Tor-Out: " + s)
+			},
+		},
+		StdErr: StringWriter{
+			OnWrite: func(s string) {
+				log.Debug("Tor-Err: " + s)
+			},
+		},
 	})
 	if err != nil {
 		panic(err)
 	}
+
 	connection.DataConnProxy = torInstance.Proxy
 	log.Printf("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
 }

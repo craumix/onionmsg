@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
@@ -28,6 +29,21 @@ var (
 	AcceptRoomRequest = acceptRoomRequest
 	DeleteRoomRequest = deleteRoomRequest
 )
+
+type StringWriter struct {
+	OnWrite func(string)
+}
+
+func (w StringWriter) Write(p []byte) (int, error) {
+	if w.OnWrite != nil {
+		lines := strings.Split(string(p), "\n")
+		lines = lines[:len(lines)-1]
+		for _, v := range lines {
+			w.OnWrite(v)
+		}
+	}
+	return len(p), nil
+}
 
 // GetTorlog returns the log of the used to instance.
 func getTorInfo() interface{} {
