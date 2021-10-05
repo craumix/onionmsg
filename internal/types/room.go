@@ -3,9 +3,10 @@ package types
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -154,8 +155,8 @@ func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer,
 		return nil, err
 	}
 
-	log.Printf("Validated %s\n", contactIdentity.URL())
-	log.Printf("Conversiation ID %s\n", resp.ConvFP)
+	log.Debugf("Validated %s\n", contactIdentity.URL())
+	log.Debugf("Conversiation ID %s\n", resp.ConvFP)
 
 	peer := NewMessagingPeer(peerID)
 	return peer, nil
@@ -189,7 +190,7 @@ func (r *Room) PeerByFingerprint(fingerprint string) (Identity, bool) {
 // StopQueues cancels this context and with that all message queues of
 // MessagingPeer's in this Room
 func (r *Room) StopQueues() {
-	log.Printf("Stopping Room %s", r.ID.String())
+	log.Debugf("Stopping Room %s", r.ID.String())
 	r.stop()
 }
 
@@ -207,11 +208,11 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			if msg.Content.Type == ContentTypeCmd {
 				err := HandleCommand(&msg, r)
 				if err != nil {
-					log.Print(err.Error())
+					log.Warn(err.Error())
 				}
 			}
 
-			log.Printf("New message for room %s: %s", r.ID, msg.Content.Data)
+			log.Debugf("New message for room %s: %s", r.ID, msg.Content.Data)
 			r.Messages = append(r.Messages, msg)
 		}
 	}

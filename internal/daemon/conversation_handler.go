@@ -6,8 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 
@@ -22,33 +23,33 @@ func convClientHandler(c net.Conn) {
 
 	fingerprint, err := readFingerprintWithChallenge(conn)
 	if err != nil {
-		log.Println(err.Error())
+		log.Debug(err.Error())
 		conn.WriteString("auth_failed")
 		return
 	}
 
 	idRaw, err := conn.ReadBytes()
 	if err != nil {
-		log.Println(err.Error())
+		log.Debug(err.Error())
 		return
 	}
 
 	id, err := uuid.FromBytes(idRaw)
 	if err != nil {
-		log.Println(err.Error())
+		log.Debug(err.Error())
 		conn.WriteString("malformed_uuid")
 		return
 	}
 
 	room, ok := GetRoom(id)
 	if !ok {
-		log.Printf("Unknown room with %s\n", id)
+		log.Debugf("Unknown room with %s\n", id)
 		conn.WriteString("auth_failed")
 		return
 	}
 
 	if _, ok := room.PeerByFingerprint(fingerprint); !ok {
-		log.Printf("Peer %s is not part of room %s", fingerprint, id)
+		log.Debugf("Peer %s is not part of room %s", fingerprint, id)
 		conn.WriteString("auth_failed")
 		return
 	}
@@ -63,7 +64,7 @@ func convClientHandler(c net.Conn) {
 	for _, msg := range newMsgs {
 		if !msg.SigIsValid() {
 			raw, _ := json.Marshal(msg)
-			log.Printf("Sig for %s is not valid", string(raw))
+			log.Debugf("Sig for %s is not valid", string(raw))
 			conn.WriteString("message_sig_invalid " + string(raw))
 			return
 		}
@@ -74,7 +75,7 @@ func convClientHandler(c net.Conn) {
 
 	err = readBlobs(conn)
 	if err != nil {
-		log.Println(err.Error())
+		log.Debug(err.Error())
 	}
 
 	room.PushMessages(newMsgs...)

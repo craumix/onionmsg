@@ -20,7 +20,7 @@ var (
 	autoAccept    = false
 	debug         = false
 	trace         = false
-	torBinary     = "tor"
+	torBinary     = ""
 )
 
 func init() {

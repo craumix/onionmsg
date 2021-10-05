@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
@@ -31,7 +31,7 @@ func registerRoom(room *types.Room) error {
 	}
 
 	data.Rooms = append(data.Rooms, room)
-	log.Printf("Registered Room %s\n", room.ID)
+	log.Infof("Registered Room %s\n", room.ID)
 
 	notifyNewRoom(room.Info())
 
@@ -57,7 +57,7 @@ func deregisterRoom(id uuid.UUID) error {
 
 	deleteRoomFromSlice(r)
 
-	log.Printf("Deregistered Room %s\n", id)
+	log.Infof("Deregistered Room %s\n", id)
 
 	return nil
 }

@@ -4,8 +4,9 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
@@ -102,6 +103,6 @@ func Fingerprint(key ed25519.PublicKey) string {
 func init() {
 	err := RegisterRoomCommands()
 	if err != nil {
-		log.Print(err.Error())
+		log.Warnf(err.Error())
 	}
 }

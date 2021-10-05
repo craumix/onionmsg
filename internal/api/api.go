@@ -56,7 +56,7 @@ func Start(unixSocket bool, portOffset int) {
 		log.Panic(err)
 	}
 
-	log.Printf("Starting API-Server %s\n", listener.Addr())
+	log.Infof("Starting API-Server %s\n", listener.Addr())
 
 	http.HandleFunc("/v1/ws", routeOpenWS)
 
@@ -96,7 +96,7 @@ func Start(unixSocket bool, portOffset int) {
 func routeOpenWS(w http.ResponseWriter, req *http.Request) {
 	c, err := wsUpgrader.Upgrade(w, req, nil)
 	if err != nil {
-		log.Printf("error upgrading connection %s", err)
+		log.Warnf("error upgrading connection %s", err)
 	}
 
 	observerList = append(observerList, c)

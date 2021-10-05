@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
+
+	//We use the new logger but dont really implement the changes, because this will remove
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"

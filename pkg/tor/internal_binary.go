@@ -38,7 +38,7 @@ func binToMem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("Wrote %d bytes to %s", n, memfd)
+	//log.Printf("Wrote %d bytes to %s", n, memfd)
 
 	torBinMemFD = memfd
 

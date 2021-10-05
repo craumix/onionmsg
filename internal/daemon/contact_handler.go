@@ -22,7 +22,7 @@ func contClientHandler(c net.Conn) {
 	req := &types.ContactRequest{}
 	err := dconn.ReadStruct(req)
 	if err != nil {
-		log.Println(err.Error())
+		log.Debug(err.Error())
 		return
 	}
 

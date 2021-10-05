@@ -46,8 +46,9 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 		"Peer":    mp.RIdentity.Fingerprint(),
 	}
 
+	log.WithFields(df).Debug("Starting Message Queue")
+	
 	for {
-		log.WithFields(df).Debug("Starting Message Queue")
 		select {
 		case <-mp.ctx.Done():
 			log.Debugf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
@@ -190,7 +191,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 			return err
 		}
 
-		log.Printf("Transferred Blob %s", id.String())
+		log.Debugf("Transferred Blob %s", id.String())
 	}
 
 	return nil

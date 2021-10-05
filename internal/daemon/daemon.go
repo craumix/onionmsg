@@ -59,11 +59,11 @@ var (
 func StartDaemon(conf Config) {
 	connection.GetConnFunc = connection.DialDataConn
 
-	log.Print("Daemon is starting...")
+	log.Info("Daemon is starting...")
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
+			log.Errorf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
 			exitDaemon()
 		}
 	}()
@@ -92,7 +92,7 @@ func StartDaemon(conf Config) {
 
 func printBuildInfo() {
 	if LastCommit != "unknown" || BuildVer != "unknown" {
-		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
+		log.Infof("Built from #%s with %s\n", LastCommit, BuildVer)
 	}
 }
 
@@ -145,7 +145,7 @@ func startTor(useControlPass bool, binaryPath string) {
 	}
 
 	connection.DataConnProxy = torInstance.Proxy
-	log.Printf("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
+	log.Infof("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
 }
 
 func loadData() {
@@ -171,13 +171,18 @@ func initHiddenServices() {
 		panic(err)
 	}
 
-	log.Printf("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
+	log.Infof("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
 }
 
 func startConnectionHandlers(autoAccept bool) {
 	autoAcceptRequests = autoAccept
-	go sio.StartLocalServer(loContPort, contClientHandler)
-	go sio.StartLocalServer(loConvPort, convClientHandler)
+
+	go sio.StartLocalServer(loContPort, contClientHandler, func(err error) {
+		log.WithError(err).Debugf("Contact-Handler")
+	})
+	go sio.StartLocalServer(loConvPort, convClientHandler, func(err error) {
+		log.WithError(err).Debugf("Conversation-Handler")
+	})
 }
 
 func startSignalHandler() {
@@ -185,7 +190,7 @@ func startSignalHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Printf("Received shutdown signal, exiting gracefully...")
+		log.Info("Received shutdown signal, exiting gracefully...")
 		exitDaemon()
 	}()
 }
@@ -198,7 +203,8 @@ func exitDaemon() {
 	if loadFuse {
 		err := saveData()
 		if err != nil {
-			log.Println(err.Error())
+			log.Error(err.Error())
+			//TODO save struct in case of unable to save
 		}
 	}
 
