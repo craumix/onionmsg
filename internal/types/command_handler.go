@@ -95,7 +95,11 @@ func inviteCallback(command Command, message *Message, room *Room) error {
 
 	go newPeer.RunMessageQueue(room.Ctx, room)
 
-	log.Debugf("New peer %s added to Room %s\n", newPeer.RIdentity.Fingerprint(), room.ID)
+	lf := log.Fields{
+		"peer": newPeer.RIdentity.Fingerprint(),
+		"room": room.ID,
+	}
+	log.WithFields(lf).Debug("new peer added to room")
 	return nil
 }
 

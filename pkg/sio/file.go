@@ -2,6 +2,7 @@ package sio
 
 import (
 	"encoding/json"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 
@@ -29,7 +30,7 @@ func SaveDataCompressed(datafile string, src interface{}) error {
 		return err
 	}
 
-	//log.Printf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp))/float64(len(raw)))*100)
+	log.Debugf("Written %d compressed bytes, was %d (%.2f%%)\n", len(comp), len(raw), (float64(len(comp))/float64(len(raw)))*100)
 
 	return nil
 }
@@ -52,7 +53,7 @@ func LoadCompressedData(datafile string, dest interface{}) error {
 
 	json.Unmarshal(raw, dest)
 
-	//log.Printf("Decoded %d bytes from file contents\n", len(raw))
+	log.Debugf("Decoded %d bytes from file contents\n", len(raw))
 
 	return nil
 }

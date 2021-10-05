@@ -23,33 +23,37 @@ func convClientHandler(c net.Conn) {
 
 	fingerprint, err := readFingerprintWithChallenge(conn)
 	if err != nil {
-		log.Debug(err.Error())
+		log.WithError(err).Debug()
 		conn.WriteString("auth_failed")
 		return
 	}
 
 	idRaw, err := conn.ReadBytes()
 	if err != nil {
-		log.Debug(err.Error())
+		log.WithError(err).Debug()
 		return
 	}
 
 	id, err := uuid.FromBytes(idRaw)
 	if err != nil {
-		log.Debug(err.Error())
+		log.WithError(err).Debug()
 		conn.WriteString("malformed_uuid")
 		return
 	}
 
 	room, ok := GetRoom(id)
 	if !ok {
-		log.Debugf("Unknown room with %s\n", id)
+		log.WithField("room", id).Debug("unknown room")
 		conn.WriteString("auth_failed")
 		return
 	}
 
 	if _, ok := room.PeerByFingerprint(fingerprint); !ok {
-		log.Debugf("Peer %s is not part of room %s", fingerprint, id)
+		df := log.Fields{
+			"peer": fingerprint,
+			"room": id,
+		}
+		log.WithFields(df).Debug("peer is not part of room")
 		conn.WriteString("auth_failed")
 		return
 	}
@@ -64,7 +68,7 @@ func convClientHandler(c net.Conn) {
 	for _, msg := range newMsgs {
 		if !msg.SigIsValid() {
 			raw, _ := json.Marshal(msg)
-			log.Debugf("Sig for %s is not valid", string(raw))
+			log.WithField("message", string(raw)).Debug("signature is not valid")
 			conn.WriteString("message_sig_invalid " + string(raw))
 			return
 		}
@@ -75,7 +79,7 @@ func convClientHandler(c net.Conn) {
 
 	err = readBlobs(conn)
 	if err != nil {
-		log.Debug(err.Error())
+		log.WithError(err).Debug()
 	}
 
 	room.PushMessages(newMsgs...)

@@ -2,6 +2,7 @@ package sio
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net"
 	"os"
 	"runtime"
@@ -16,13 +17,13 @@ func CreateUnixSocket(name string) (socket net.Listener, err error) {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 		if runtimeDir == "" {
 			runtimeDir = "/tmp"
-			//log.Printf("Unable to determine Env XDG_RUNTIME_DIR, using %s\n", runtimeDir)
+			log.Debugf("Unable to determine Env XDG_RUNTIME_DIR, using %s\n", runtimeDir)
 		}
 
 		socketPath := runtimeDir + "/" + name
 
 		if _, ferr := os.Stat(socketPath); ferr == nil {
-			//log.Printf("Unix socket already exists, removing")
+			log.Debugf("Unix socket already exists, removing")
 			err = os.Remove(socketPath)
 			if err != nil {
 				return

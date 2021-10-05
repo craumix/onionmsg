@@ -15,7 +15,7 @@ func initRooms() (err error) {
 		}
 	}
 
-	//log.Printf("Loaded %d Rooms\n", len(data.Rooms))
+	log.Infof("Loaded %d Rooms\n", len(data.Rooms))
 
 	for _, room := range data.Rooms {
 		room.RunMessageQueueForAllPeers()
@@ -31,7 +31,7 @@ func registerRoom(room *types.Room) error {
 	}
 
 	data.Rooms = append(data.Rooms, room)
-	log.Infof("Registered Room %s\n", room.ID)
+	log.WithField("room", room.ID.String()).Info("registered room")
 
 	notifyNewRoom(room.Info())
 
@@ -57,7 +57,7 @@ func deregisterRoom(id uuid.UUID) error {
 
 	deleteRoomFromSlice(r)
 
-	log.Infof("Deregistered Room %s\n", id)
+	log.WithField("room", id.String()).Info("degistered room")
 
 	return nil
 }

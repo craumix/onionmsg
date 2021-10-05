@@ -58,15 +58,15 @@ func (m *Message) Sign(key ed25519.PrivateKey) {
 func (m *Message) SigIsValid() bool {
 	rawKey, err := base64.RawURLEncoding.DecodeString(m.Meta.Sender)
 	if err != nil {
-		log.Debugf("Unable to decode %s as message sender!", m.Meta.Sender)
+		log.Debugf("unable to decode %s as message sender!", m.Meta.Sender)
 		return false
 	} else if len(rawKey) != ed25519.PublicKeySize {
-		log.Debugf("Invalid length for Public Key, %d instead of %d!", len(rawKey), ed25519.PublicKeySize)
+		log.Debugf("invalid length for public key, %d instead of %d!", len(rawKey), ed25519.PublicKeySize)
 		return false
 	}
 
 	if m.Content.ReplyTo != nil && !m.Content.ReplyTo.SigIsValid() {
-		log.Warnf("Recursive Signature check faild for message!")
+		log.Warn("recursive signature check failed for message")
 		return false
 	}
 

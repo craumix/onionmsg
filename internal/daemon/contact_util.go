@@ -24,7 +24,7 @@ func registerContID(id types.Identity) error {
 	}
 
 	data.ContactIdentities = append(data.ContactIdentities, id)
-	log.Infof("Registered contact identity %s\n", id.Fingerprint())
+	log.WithField("fingerprint", id.Fingerprint()).Info("registered contact identity")
 
 	return nil
 }
@@ -46,7 +46,7 @@ func deregisterContID(fingerprint string) error {
 
 	deleteContactIDFromSlice(i)
 
-	log.Debugf("Deregistered contact identity %s\n", i.Fingerprint())
+	log.WithField("fingerprint", i.Fingerprint()).Debugf("deregistered contact identity")
 
 	return nil
 }

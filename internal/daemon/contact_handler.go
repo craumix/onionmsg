@@ -22,13 +22,13 @@ func contClientHandler(c net.Conn) {
 	req := &types.ContactRequest{}
 	err := dconn.ReadStruct(req)
 	if err != nil {
-		log.Debug(err.Error())
+		log.WithError(err).Debug()
 		return
 	}
 
 	cont, ok := GetContactID(req.RemoteFP)
 	if !ok {
-		log.WithField("fingerprint", req.RemoteFP).Debugf("Contact Handler was adressed by unknown name")
+		log.WithField("fingerprint", req.RemoteFP).Debug("contact handler was addressed by unknown name")
 		return
 	}
 
@@ -39,7 +39,7 @@ func contClientHandler(c net.Conn) {
 
 	sig, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
 	if err != nil {
-		log.Warn(err.Error())
+		log.WithError(err).Warn()
 	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
@@ -48,7 +48,7 @@ func contClientHandler(c net.Conn) {
 
 	_, err = dconn.WriteStruct(resp)
 	if err != nil {
-		log.Warn(err.Error())
+		log.WithError(err).Warn()
 		return
 	}
 

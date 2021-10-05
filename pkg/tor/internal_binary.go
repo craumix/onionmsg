@@ -6,10 +6,8 @@ package tor
 import (
 	"fmt"
 	"github.com/craumix/onionmsg/pkg/sio"
-	"log"
 	"os"
 	"runtime"
-	"strconv"
 )
 
 var (

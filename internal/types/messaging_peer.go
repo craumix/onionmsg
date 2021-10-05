@@ -41,17 +41,17 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 	mp.ctx, mp.stop = context.WithCancel(ctx)
 
-	df := log.Fields{
-		"Room ID": mp.Room.ID,
-		"Peer":    mp.RIdentity.Fingerprint(),
+	lf := log.Fields{
+		"room": mp.Room.ID,
+		"peer": mp.RIdentity.Fingerprint(),
 	}
 
-	log.WithFields(df).Debug("Starting Message Queue")
-	
+	log.WithFields(lf).Debug("starting message queue...")
+
 	for {
 		select {
 		case <-mp.ctx.Done():
-			log.Debugf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
+			log.WithFields(lf).Debug("queue terminated")
 			return
 		default:
 			if SyncMapsEqual(mp.Room.SyncState, mp.LastSyncState) {
@@ -60,14 +60,14 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 			startSync := time.Now()
 
-			log.WithFields(df).Debug("Running MessageSync")
+			log.WithFields(lf).Debug("running message sync")
 
 			err := mp.syncMsgs()
 			if err != nil {
-				log.WithError(err).WithFields(df).Debug("MessageSync failed")
+				log.WithError(err).WithFields(lf).Debug("message sync failed")
 			} else {
 				mp.LastSyncState = CopySyncMap(mp.Room.SyncState)
-				log.WithField("time", time.Since(startSync)).WithFields(df).Debug("MessageSync done")
+				log.WithField("time", time.Since(startSync)).WithFields(lf).Debug("message sync done")
 			}
 		}
 
@@ -191,7 +191,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 			return err
 		}
 
-		log.Debugf("Transferred Blob %s", id.String())
+		log.WithField("blob", id.String()).Debug("transferred blob")
 	}
 
 	return nil

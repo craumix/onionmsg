@@ -67,6 +67,7 @@ func StartDaemon(conf Config) {
 			exitDaemon()
 		}
 	}()
+
 	startSignalHandler()
 
 	printBuildInfo()
@@ -85,14 +86,13 @@ func StartDaemon(conf Config) {
 
 	if conf.Interactive {
 		time.Sleep(time.Millisecond * 500)
-		log.Info("ello")
 		go startInteractive()
 	}
 }
 
 func printBuildInfo() {
 	if LastCommit != "unknown" || BuildVer != "unknown" {
-		log.Infof("Built from #%s with %s\n", LastCommit, BuildVer)
+		log.Debugf("Built from #%s with %s\n", LastCommit, BuildVer)
 	}
 }
 
@@ -145,7 +145,12 @@ func startTor(useControlPass bool, binaryPath string) {
 	}
 
 	connection.DataConnProxy = torInstance.Proxy
-	log.Infof("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
+
+	lf := log.Fields{
+		"pid":     torInstance.Pid(),
+		"version": torInstance.Version(),
+	}
+	log.WithFields(lf).Info("tor is running...")
 }
 
 func loadData() {
@@ -178,10 +183,10 @@ func startConnectionHandlers(autoAccept bool) {
 	autoAcceptRequests = autoAccept
 
 	go sio.StartLocalServer(loContPort, contClientHandler, func(err error) {
-		log.WithError(err).Debugf("Contact-Handler")
+		log.WithError(err).Debug("error starting contact handler")
 	})
 	go sio.StartLocalServer(loConvPort, convClientHandler, func(err error) {
-		log.WithError(err).Debugf("Conversation-Handler")
+		log.WithError(err).Debug("error starting conversation handler")
 	})
 }
 
@@ -190,7 +195,7 @@ func startSignalHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Info("Received shutdown signal, exiting gracefully...")
+		log.Info("received shutdown signal, exiting gracefully...")
 		exitDaemon()
 	}()
 }
@@ -203,7 +208,7 @@ func exitDaemon() {
 	if loadFuse {
 		err := saveData()
 		if err != nil {
-			log.Error(err.Error())
+			log.WithError(err).Error()
 			//TODO save struct in case of unable to save
 		}
 	}
