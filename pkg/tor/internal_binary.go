@@ -6,10 +6,8 @@ package tor
 import (
 	"fmt"
 	"github.com/craumix/onionmsg/pkg/sio"
-	"log"
 	"os"
 	"runtime"
-	"strconv"
 )
 
 var (
@@ -38,7 +36,7 @@ func binToMem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("Wrote %d bytes to %s", n, memfd)
+	//log.Printf("Wrote %d bytes to %s", n, memfd)
 
 	torBinMemFD = memfd
 

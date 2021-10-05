@@ -1,8 +1,9 @@
 package daemon
 
 import (
-	"log"
 	"net"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
@@ -21,13 +22,13 @@ func contClientHandler(c net.Conn) {
 	req := &types.ContactRequest{}
 	err := dconn.ReadStruct(req)
 	if err != nil {
-		log.Println(err.Error())
+		log.WithError(err).Debug()
 		return
 	}
 
 	cont, ok := GetContactID(req.RemoteFP)
 	if !ok {
-		log.Printf("Contact id %s unknown\n", req.RemoteFP)
+		log.WithField("fingerprint", req.RemoteFP).Debug("contact handler was addressed by unknown name")
 		return
 	}
 
@@ -38,7 +39,7 @@ func contClientHandler(c net.Conn) {
 
 	sig, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
 	if err != nil {
-		log.Println(err.Error())
+		log.WithError(err).Warn()
 	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
@@ -47,7 +48,7 @@ func contClientHandler(c net.Conn) {
 
 	_, err = dconn.WriteStruct(resp)
 	if err != nil {
-		log.Println(err.Error())
+		log.WithError(err).Warn()
 		return
 	}
 

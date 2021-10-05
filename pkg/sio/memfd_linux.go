@@ -1,7 +1,7 @@
 package sio
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 
 	"golang.org/x/sys/unix"
@@ -11,8 +11,7 @@ import (
 func CreateMemFD(name string) (path string, err error) {
 	handle, err := unix.MemfdCreate(name, 0)
 	if err != nil {
-		log.Printf("Unable to create Memfd \"%s\"!\n", name)
-		return "", err
+		return "", fmt.Errorf("unable to create Memfd \"%s\"  %s", name, err)
 	}
 
 	path = "/proc/self/fd/" + strconv.Itoa(handle)

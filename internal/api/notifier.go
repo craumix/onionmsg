@@ -68,7 +68,6 @@ func NotifyObservers(ntype NotificationType, msg interface{}) {
 		err := c.WriteJSON(notification)
 		if err != nil {
 			//TODO remove dead sockets
-			//log.Print(err)
 			c.Close()
 		}
 	}

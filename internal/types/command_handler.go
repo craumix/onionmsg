@@ -2,8 +2,9 @@ package types
 
 import (
 	"fmt"
-	"log"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Command string
@@ -94,7 +95,11 @@ func inviteCallback(command Command, message *Message, room *Room) error {
 
 	go newPeer.RunMessageQueue(room.Ctx, room)
 
-	log.Printf("New peer %s added to Room %s\n", newPeer.RIdentity.Fingerprint(), room.ID)
+	lf := log.Fields{
+		"peer": newPeer.RIdentity.Fingerprint(),
+		"room": room.ID,
+	}
+	log.WithFields(lf).Debug("new peer added to room")
 	return nil
 }
 
@@ -105,7 +110,7 @@ func nameRoomCallback(command Command, message *Message, room *Room) error {
 	}
 
 	room.Name = args[1]
-	log.Printf("Room with id %s renamed to %s", room.ID, room.Name)
+	log.Debugf("Room with id %s renamed to %s", room.ID, room.Name)
 
 	return nil
 }
@@ -123,7 +128,7 @@ func nickCallback(command Command, message *Message, room *Room) error {
 
 	nickname := args[1]
 	sender.Meta.Nick = nickname
-	log.Printf("Set nickname for %s to %s", sender.Fingerprint(), nickname)
+	log.Debugf("Set nickname for %s to %s", sender.Fingerprint(), nickname)
 
 	return nil
 }
@@ -197,7 +202,7 @@ func parseCommand(message *Message, actualCommand, expectedCommand Command, expe
 
 func enoughArgs(args []string, needed int) bool {
 	if len(args) < needed {
-		log.Printf("Not enough args for command \"%s\"\n", strings.Join(args, " "))
+		log.Warnf("Not enough args for command \"%s\"\n", strings.Join(args, " "))
 		return false
 	}
 	return true

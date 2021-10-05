@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"mime"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/internal/types"
@@ -52,10 +53,10 @@ func Start(unixSocket bool, portOffset int) {
 		listener, err = sio.CreateTCPSocket(apiPort)
 	}
 	if err != nil {
-		log.Panic(err)
+		log.WithError(err).Panic()
 	}
 
-	log.Printf("Starting API-Server %s\n", listener.Addr())
+	log.WithField("address", listener.Addr()).Info("Starting API-Server")
 
 	http.HandleFunc("/v1/ws", routeOpenWS)
 
@@ -88,14 +89,14 @@ func Start(unixSocket bool, portOffset int) {
 
 	err = http.Serve(listener, nil)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.WithError(err).Fatal()
 	}
 }
 
 func routeOpenWS(w http.ResponseWriter, req *http.Request) {
 	c, err := wsUpgrader.Upgrade(w, req, nil)
 	if err != nil {
-		log.Printf("error upgrading connection %s", err)
+		log.WithError(err).Warn("error when upgrading connection")
 	}
 
 	observerList = append(observerList, c)

@@ -2,18 +2,18 @@ package daemon
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/craumix/onionmsg/pkg/sio/connection"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
+	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/pkg/tor"
 )
 
@@ -25,11 +25,9 @@ type SerializableData struct {
 }
 
 type Config struct {
-	Interactive    bool
-	BaseDir        string
-	PortOffset     int
-	UseControlPass bool
-	AutoAccept     bool
+	BaseDir, TorBinary                      string
+	PortOffset                              int
+	UseControlPass, AutoAccept, Interactive bool
 }
 
 var (
@@ -61,14 +59,15 @@ var (
 func StartDaemon(conf Config) {
 	connection.GetConnFunc = connection.DialDataConn
 
-	log.Print("Daemon is starting...")
+	log.Info("Daemon is starting...")
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
+			log.Errorf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
 			exitDaemon()
 		}
 	}()
+
 	startSignalHandler()
 
 	printBuildInfo()
@@ -77,7 +76,7 @@ func StartDaemon(conf Config) {
 
 	initBlobManager()
 
-	startTor(conf.UseControlPass)
+	startTor(conf.UseControlPass, conf.TorBinary)
 
 	loadData()
 
@@ -93,7 +92,7 @@ func StartDaemon(conf Config) {
 
 func printBuildInfo() {
 	if LastCommit != "unknown" || BuildVer != "unknown" {
-		log.Printf("Built from #%s with %s\n", LastCommit, BuildVer)
+		log.Debugf("Built from #%s with %s\n", LastCommit, BuildVer)
 	}
 }
 
@@ -120,20 +119,38 @@ func initBlobManager() {
 	}
 }
 
-func startTor(useControlPass bool) {
+func startTor(useControlPass bool, binaryPath string) {
 	var err error
+
 	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
 		SocksPort:   socksPort,
 		ControlPort: controlPort,
 		DataDir:     tordir,
 		TorRC:       torrc,
 		ControlPass: useControlPass,
+		Binary:      binaryPath,
+		StdOut: StringWriter{
+			OnWrite: func(s string) {
+				log.Trace("Tor-Out: " + s)
+			},
+		},
+		StdErr: StringWriter{
+			OnWrite: func(s string) {
+				log.Debug("Tor-Err: " + s)
+			},
+		},
 	})
 	if err != nil {
 		panic(err)
 	}
+
 	connection.DataConnProxy = torInstance.Proxy
-	log.Printf("Tor %s running! PID: %d\n", torInstance.Version(), torInstance.Pid())
+
+	lf := log.Fields{
+		"pid":     torInstance.Pid(),
+		"version": torInstance.Version(),
+	}
+	log.WithFields(lf).Info("tor is running...")
 }
 
 func loadData() {
@@ -159,13 +176,18 @@ func initHiddenServices() {
 		panic(err)
 	}
 
-	log.Printf("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
+	log.Infof("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
 }
 
 func startConnectionHandlers(autoAccept bool) {
 	autoAcceptRequests = autoAccept
-	go sio.StartLocalServer(loContPort, contClientHandler)
-	go sio.StartLocalServer(loConvPort, convClientHandler)
+
+	go sio.StartLocalServer(loContPort, contClientHandler, func(err error) {
+		log.WithError(err).Debug("error starting contact handler")
+	})
+	go sio.StartLocalServer(loConvPort, convClientHandler, func(err error) {
+		log.WithError(err).Debug("error starting conversation handler")
+	})
 }
 
 func startSignalHandler() {
@@ -173,7 +195,7 @@ func startSignalHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Printf("Received shutdown signal, exiting gracefully...")
+		log.Info("received shutdown signal, exiting gracefully...")
 		exitDaemon()
 	}()
 }
@@ -186,7 +208,8 @@ func exitDaemon() {
 	if loadFuse {
 		err := saveData()
 		if err != nil {
-			log.Println(err.Error())
+			log.WithError(err).Error()
+			//TODO save struct in case of unable to save
 		}
 	}
 
