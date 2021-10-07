@@ -21,14 +21,14 @@ var (
 )
 
 func init() {
-	registerCallbacks()
+	registerHooks()
 }
 
-func registerCallbacks() {
-	daemon.NewMessageCallback = NotifyNewMessage
-	daemon.NewRoomCallback = NotifyNewRoom
-	daemon.ErrorCallback = NotifyError
-	daemon.NewRequestCallback = NotifyNewRequest
+func registerHooks() {
+	daemon.NewMessageHook = NotifyNewMessage
+	daemon.NewRoomHook = NotifyNewRoom
+	daemon.ErrorHook = NotifyError
+	daemon.NewRequestHook = NotifyNewRequest
 }
 
 func NotifyNewMessage(id uuid.UUID, msg ...types.Message) {
