@@ -15,8 +15,6 @@ func initRooms() (err error) {
 		}
 	}
 
-	log.Infof("Loaded %d Rooms\n", len(data.Rooms))
-
 	for _, room := range data.Rooms {
 		room.RunMessageQueueForAllPeers()
 	}
