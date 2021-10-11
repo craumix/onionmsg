@@ -14,7 +14,6 @@ func initRooms() (err error) {
 			return
 		}
 	}
-
 	log.Printf("Loaded %d Rooms\n", len(data.Rooms))
 
 	for _, room := range data.Rooms {
