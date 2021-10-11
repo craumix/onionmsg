@@ -16,7 +16,7 @@ import (
 
 	"github.com/craumix/onionmsg/pkg/generator"
 	"github.com/craumix/onionmsg/pkg/openssh"
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 const (

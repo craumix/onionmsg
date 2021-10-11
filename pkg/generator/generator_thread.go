@@ -7,7 +7,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 type GeneratorThread struct {
