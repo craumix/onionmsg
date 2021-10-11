@@ -2,7 +2,7 @@ package api
 
 import (
 	"github.com/craumix/onionmsg/internal/daemon"
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -68,7 +68,6 @@ func NotifyObservers(ntype NotificationType, msg interface{}) {
 		err := c.WriteJSON(notification)
 		if err != nil {
 			//TODO remove dead sockets
-			//log.Print(err)
 			c.Close()
 		}
 	}

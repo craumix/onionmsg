@@ -1,9 +1,9 @@
 package daemon
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +14,6 @@ func initRooms() (err error) {
 			return
 		}
 	}
-	log.Printf("Loaded %d Rooms\n", len(data.Rooms))
 
 	for _, room := range data.Rooms {
 		room.RunMessageQueueForAllPeers()
@@ -30,7 +29,7 @@ func registerRoom(room *types.Room) error {
 	}
 
 	data.Rooms = append(data.Rooms, room)
-	log.Printf("Registered Room %s\n", room.ID)
+	log.WithField("room", room.ID.String()).Info("registered room")
 
 	notifyNewRoom(room.Info())
 
@@ -38,7 +37,7 @@ func registerRoom(room *types.Room) error {
 }
 
 func serveConvIDService(i types.Identity) error {
-	return torInstance.RegisterService(i, types.PubConvPort, loConvPort)
+	return torInstance.RegisterService(*i.Priv, types.PubConvPort, loConvPort)
 }
 
 func deregisterRoom(id uuid.UUID) error {
@@ -47,7 +46,7 @@ func deregisterRoom(id uuid.UUID) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(r.Self)
+	err := torInstance.DeregisterService(*r.Self.Pub)
 	if err != nil {
 		return err
 	}
@@ -56,7 +55,7 @@ func deregisterRoom(id uuid.UUID) error {
 
 	deleteRoomFromSlice(r)
 
-	log.Printf("Deregistered Room %s\n", id)
+	log.WithField("room", id.String()).Info("degistered room")
 
 	return nil
 }

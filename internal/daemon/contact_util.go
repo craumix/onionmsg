@@ -1,9 +1,9 @@
 package daemon
 
 import (
-	"log"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/craumix/onionmsg/pkg/types"
+	"github.com/craumix/onionmsg/internal/types"
 )
 
 func initContIDServices() error {
@@ -13,8 +13,6 @@ func initContIDServices() error {
 			return err
 		}
 	}
-
-	log.Printf("Loaded %d Contact Identities\n", len(data.ContactIdentities))
 
 	return nil
 }
@@ -26,13 +24,13 @@ func registerContID(id types.Identity) error {
 	}
 
 	data.ContactIdentities = append(data.ContactIdentities, id)
-	log.Printf("Registered contact identity %s\n", id.Fingerprint())
+	log.WithField("fingerprint", id.Fingerprint()).Info("registered contact identity")
 
 	return nil
 }
 
 func serveContIDService(id types.Identity) error {
-	return torInstance.RegisterService(id, types.PubContPort, loContPort)
+	return torInstance.RegisterService(*id.Priv, types.PubContPort, loContPort)
 }
 
 func deregisterContID(fingerprint string) error {
@@ -41,14 +39,14 @@ func deregisterContID(fingerprint string) error {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(i)
+	err := torInstance.DeregisterService(*i.Pub)
 	if err != nil {
 		return err
 	}
 
 	deleteContactIDFromSlice(i)
 
-	log.Printf("Deregistered contact identity %s\n", i.Fingerprint())
+	log.WithField("fingerprint", i.Fingerprint()).Debugf("deregistered contact identity")
 
 	return nil
 }

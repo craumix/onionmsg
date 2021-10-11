@@ -1,25 +1,32 @@
 package tor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func runExecutable(ctx context.Context, binaryPath string, args []string, inheritEnv bool) (*os.Process, *bytes.Buffer, error) {
+func runExecutable(ctx context.Context, binaryPath string, args []string, inheritEnv bool, stdout, stderr io.Writer) (*os.Process, *bytes.Buffer, error) {
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
 	if inheritEnv {
 		cmd.Env = os.Environ()
 	}
 
 	logBuffer := new(bytes.Buffer)
-	logWriter := bufio.NewWriter(logBuffer)
-	cmd.Stdout = logWriter
-	cmd.Stderr = logWriter
+	if stdout != nil {
+		cmd.Stdout = io.MultiWriter(logBuffer, stdout)
+	} else {
+		cmd.Stdout = logBuffer
+	}
+	if stderr != nil {
+		cmd.Stderr = io.MultiWriter(logBuffer, stderr)
+	} else {
+		cmd.Stderr = logBuffer
+	}
 
 	err := cmd.Start()
 	if err != nil {

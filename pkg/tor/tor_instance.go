@@ -4,25 +4,16 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"log"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/craumix/onionmsg/pkg/types"
 	"github.com/wybiral/torgo"
 	"golang.org/x/net/proxy"
-)
-
-var (
-	DefaultConf = Conf{
-		SocksPort:   9050,
-		ControlPort: 9051,
-		DataDir:     "./tordir",
-		TorRC:       "./torrc",
-	}
 )
 
 //Instance represents an instance of a Tor process.
@@ -42,17 +33,33 @@ type Instance struct {
 
 //Conf is used to pass config values to create a Tor Instance.
 type Conf struct {
-	SocksPort   int
-	ControlPort int
-	DataDir     string
-	TorRC       string
+	SocksPort, ControlPort int
+	DataDir, Binary, TorRC string
+	ControlPass            bool
+	StdOut, StdErr         io.Writer
+}
+
+func DefaultConf() Conf {
+	return Conf{
+		SocksPort:   9050,
+		ControlPort: 9051,
+		DataDir:     "tor",
+		TorRC:       "torrc",
+		ControlPass: true,
+		Binary:      "tor",
+	}
 }
 
 //NewInstance creates a Instance of a running to process.
 func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
-	torBinary, err := torBinaryPath()
-	if err != nil {
-		return nil, err
+	var err error
+	torBinary := conf.Binary
+
+	if torBinary == "" {
+		torBinary, err = torBinaryPath()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = checkTorV3Support(torBinary)
@@ -68,28 +75,28 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 	}
 	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
-	instance.controlPW = types.RandomString(64)
+	if conf.ControlPass {
+		instance.controlPW = prngString(64)
+	}
+
 	err = instance.runBinary()
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Tor seems to be runnning, pid: %d\n", instance.process.Pid)
-
 	instance.controller, err = instance.connectController(instance.ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s", err)
 	}
-
-	v, _ := instance.controller.GetVersion()
-	log.Printf("Connected controller to tor version %s\n", v)
 
 	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
 
+	/* Maybe we find a good reason to do this, until then it wastes bandwith
 	go func() {
 		<-instance.ctx.Done()
 		os.RemoveAll(instance.Config.DataDir)
 	}()
+	*/
 
 	return instance, nil
 }
@@ -114,13 +121,13 @@ func (i *Instance) runBinary() error {
 		args = append(args, "HashedControlPassword", hash)
 	}
 
-	i.process, i.logBuffer, err = runExecutable(i.ctx, i.binaryPath, args, true)
+	i.process, i.logBuffer, err = runExecutable(i.ctx, i.binaryPath, args, true, i.Config.StdOut, i.Config.StdErr)
 	return err
 }
 
 //RegisterService registers a new V3 Hidden Service, and proxies the requests to the specified local port.
-func (i *Instance) RegisterService(id types.Identity, torPort, localPort int) error {
-	s, err := torgo.OnionFromEd25519(*id.Priv)
+func (i *Instance) RegisterService(priv ed25519.PrivateKey, torPort, localPort int) error {
+	s, err := torgo.OnionFromEd25519(priv)
 	if err != nil {
 		return err
 	}
@@ -136,8 +143,8 @@ func (i *Instance) RegisterService(id types.Identity, torPort, localPort int) er
 }
 
 //DeregisterService removes a HiddenService.
-func (i *Instance) DeregisterService(id types.Identity) error {
-	sid, err := torgo.ServiceIDFromEd25519(ed25519.PublicKey((*id.Priv)[32:]))
+func (i *Instance) DeregisterService(pub ed25519.PublicKey) error {
+	sid, err := torgo.ServiceIDFromEd25519(pub)
 	if err != nil {
 		return err
 	}

@@ -2,11 +2,11 @@ package types
 
 import (
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
@@ -30,12 +30,6 @@ type ContactRequest struct {
 type ContactResponse struct {
 	ConvFP string
 	Sig    []byte
-}
-
-func RandomString(size int) string {
-	r := make([]byte, size)
-	rand.Read(r)
-	return base64.RawStdEncoding.EncodeToString(r)
 }
 
 func CopySyncMap(m SyncMap) SyncMap {
@@ -109,6 +103,6 @@ func Fingerprint(key ed25519.PublicKey) string {
 func init() {
 	err := RegisterRoomCommands()
 	if err != nil {
-		log.Print(err.Error())
+		log.WithError(err).Warn()
 	}
 }

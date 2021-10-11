@@ -1,10 +1,12 @@
 package types_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	. "github.com/craumix/onionmsg/internal/types"
 )
-import . "github.com/craumix/onionmsg/pkg/types"
 
 const testCommand Command = "test-command"
 

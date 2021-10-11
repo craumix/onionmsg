@@ -3,9 +3,10 @@ package types
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio/connection"
@@ -40,22 +41,33 @@ func (mp *MessagingPeer) RunMessageQueue(ctx context.Context, room *Room) {
 
 	mp.ctx, mp.stop = context.WithCancel(ctx)
 
+	lf := log.Fields{
+		"room": mp.Room.ID,
+		"peer": mp.RIdentity.Fingerprint(),
+	}
+
+	log.WithFields(lf).Debug("starting message queue...")
+
 	for {
 		select {
 		case <-mp.ctx.Done():
-			log.Printf("Queue with %s in %s terminated!\n", mp.RIdentity.Fingerprint(), room.ID.String())
+			log.WithFields(lf).Debug("queue terminated")
 			return
 		default:
 			if SyncMapsEqual(mp.Room.SyncState, mp.LastSyncState) {
 				break
 			}
 
+			startSync := time.Now()
+
+			log.WithFields(lf).Debug("running message sync")
+
 			err := mp.syncMsgs()
 			if err != nil {
-				//TODO Uncomment
-				//log.Println(err)
+				log.WithError(err).WithFields(lf).Debug("message sync failed")
 			} else {
 				mp.LastSyncState = CopySyncMap(mp.Room.SyncState)
+				log.WithField("time", time.Since(startSync)).WithFields(lf).Debug("message sync done")
 			}
 		}
 
@@ -179,7 +191,7 @@ func sendBlobs(conn connection.ConnWrapper, ids []uuid.UUID) error {
 			return err
 		}
 
-		log.Printf("Transferred Blob %s", id.String())
+		log.WithField("blob", id.String()).Debug("transferred blob")
 	}
 
 	return nil
