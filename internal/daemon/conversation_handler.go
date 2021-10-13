@@ -34,16 +34,16 @@ func (d *Daemon) convClientHandler(c net.Conn) {
 		return
 	}
 
-	id, err := uuid.FromBytes(idRaw)
+	roomID, err := uuid.FromBytes(idRaw)
 	if err != nil {
 		log.WithError(err).Debug()
 		conn.WriteString("malformed_uuid")
 		return
 	}
 
-	room, ok := d.GetRoom(id)
+	room, ok := d.GetRoomByID(roomID.String())
 	if !ok {
-		log.WithField("room", id).Debug("unknown room")
+		log.WithField("room", roomID).Debug("unknown room")
 		conn.WriteString("auth_failed")
 		return
 	}
@@ -51,7 +51,7 @@ func (d *Daemon) convClientHandler(c net.Conn) {
 	if _, ok := room.PeerByFingerprint(fingerprint); !ok {
 		df := log.Fields{
 			"peer": fingerprint,
-			"room": id,
+			"room": roomID,
 		}
 		log.WithFields(df).Debug("peer is not part of room")
 		conn.WriteString("auth_failed")
@@ -85,7 +85,7 @@ func (d *Daemon) convClientHandler(c net.Conn) {
 	room.PushMessages(newMsgs...)
 
 	if len(newMsgs) > 0 {
-		d.Notifier.NotifyNewMessage(id, newMsgs...)
+		d.Notifier.NotifyNewMessage(roomID, newMsgs...)
 	}
 
 	conn.WriteString("sync_ok")

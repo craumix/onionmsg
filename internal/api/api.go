@@ -162,18 +162,18 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteContactList(w http.ResponseWriter, _ *http.Request) {
-	sendSerialized(w, api.backend.ListContactIDs())
+	sendSerialized(w, api.backend.GetContactIDsAsStrings())
 }
 
 func (api *API) RouteContactCreate(w http.ResponseWriter, _ *http.Request) {
-	fp, err := api.backend.CreateContactID()
+	cID, err := api.backend.CreateAndRegisterNewContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	setJSONContentHeader(w)
-	w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", fp)))
+	w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", cID.Fingerprint())))
 }
 
 func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
@@ -183,7 +183,7 @@ func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err := api.backend.DeleteContactID(fp)
+	err := api.backend.DeregisterAndRemoveContactIDByFingerprint(fp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -191,7 +191,7 @@ func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRequestList(w http.ResponseWriter, _ *http.Request) {
-	sendSerialized(w, api.backend.RequestList())
+	sendSerialized(w, api.backend.GetRoomRequests())
 }
 
 func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
@@ -202,7 +202,7 @@ func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = api.backend.AcceptRoomRequest(id)
+	err = api.backend.AcceptRoomRequest(id.String())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -216,7 +216,7 @@ func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	api.backend.DeleteRoomRequest(id)
+	api.backend.RemoveRoomRequestByID(id.String())
 }
 
 func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
@@ -227,7 +227,7 @@ func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	info, err := api.backend.RoomInfo(id)
+	info, err := api.backend.GetRoomInfoByID(id.String())
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
@@ -237,7 +237,7 @@ func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomList(w http.ResponseWriter, _ *http.Request) {
-	sendSerialized(w, api.backend.ListRooms())
+	sendSerialized(w, api.backend.GetInfoForAllRooms())
 }
 
 func (api *API) RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
@@ -267,7 +267,7 @@ func (api *API) RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
-	err := api.backend.DeleteRoom(req.FormValue("uuid"))
+	err := api.backend.DeregisterAndDeleteRoomByID(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -320,7 +320,7 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = api.backend.SendMessage(req.FormValue("uuid"), types.MessageContent{
+	err = api.backend.SendMessageInRoom(req.FormValue("uuid"), types.MessageContent{
 		Type:    types.ContentTypeFile,
 		ReplyTo: replyto,
 		Blob: &types.BlobMeta{
@@ -350,7 +350,7 @@ func (api *API) RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	messages, err := api.backend.ListMessages(req.FormValue("uuid"), count)
+	messages, err := api.backend.ListMessagesInRoom(req.FormValue("uuid"), count)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -374,7 +374,7 @@ func (api *API) RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request
 
 	fingerprint := string(content)
 
-	if err := api.backend.AddPeerToRoom(roomID, fingerprint); err != nil {
+	if err := api.backend.AddNewPeerToRoom(roomID.String(), fingerprint); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -427,7 +427,7 @@ func (api *API) sendMessage(req *http.Request, roomCommand types.Command) (int, 
 		return http.StatusBadRequest, err
 	}
 
-	err = api.backend.SendMessage(req.FormValue("uuid"), types.MessageContent{
+	err = api.backend.SendMessageInRoom(req.FormValue("uuid"), types.MessageContent{
 		Type:    msgType,
 		ReplyTo: replyto,
 		Data:    types.ConstructCommand(content, roomCommand),

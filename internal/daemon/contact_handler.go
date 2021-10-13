@@ -21,7 +21,7 @@ func (d *Daemon) handleContact(conn net.Conn) {
 		return
 	}
 
-	cID, found := d.GetContactID(cReq.RemoteFP)
+	cID, found := d.GetContactIDByFingerprint(cReq.RemoteFP)
 	if !found {
 		log.WithError(fmt.Errorf("contact handler was addressed by unknown name")).Debug()
 		return
@@ -35,10 +35,10 @@ func (d *Daemon) handleContact(conn net.Conn) {
 
 	dataConn.Flush()
 
-	d.data.Requests = append(d.data.Requests, rReq)
+	d.AddRoomRequest(rReq)
 
 	if d.Config.AutoAccept {
-		d.AcceptRoomRequest(rReq.ID)
+		d.AcceptRoomRequest(rReq.ID.String())
 	} else {
 		d.Notifier.NotifyNewRequest(rReq)
 	}

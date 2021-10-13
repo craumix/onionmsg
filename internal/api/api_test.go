@@ -325,7 +325,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 			expectedErrorCode: http.StatusBadRequest,
 		},
 		{
-			name:              "AddPeerToRoom error",
+			name:              "AddNewPeerToRoom error",
 			req:               getRequest([]string{"test content"}, false, true),
 			uuid:              test.GetValidUUID(),
 			expectedErrorCode: http.StatusInternalServerError,
@@ -402,7 +402,7 @@ func TestRoomSendFile(t *testing.T) {
 	assertZeroStatusCode(t, resWriter)
 
 	assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
-	assert.Equal(t, expectedID, actualID, "SendMessage didn't get the Id from the request")
+	assert.Equal(t, expectedID, actualID, "SendMessageInRoom didn't get the Id from the request")
 	assert.Equal(t, expectedMsgContent, actualMsgContent)
 }
 
@@ -504,7 +504,7 @@ func TestRouteRoomMessages(t *testing.T) {
 			expectedErrCode: http.StatusBadRequest,
 		},
 		{
-			name:            "ListMessages error",
+			name:            "ListMessagesInRoom error",
 			ListMessagesErr: test.GetTestError(),
 			expectedErrCode: http.StatusBadRequest,
 		},

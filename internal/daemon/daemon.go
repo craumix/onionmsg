@@ -70,12 +70,12 @@ func NewDaemon(conf Config) (*Daemon, error) {
 		TorRC:       torrc,
 		ControlPass: conf.UseControlPass,
 		Binary:      conf.TorBinary,
-		StdOut: StringWriter{
+		StdOut: TorStringWriter{
 			OnWrite: func(s string) {
 				log.Trace("Tor-Out: " + s)
 			},
 		},
-		StdErr: StringWriter{
+		StdErr: TorStringWriter{
 			OnWrite: func(s string) {
 				log.Debug("Tor-Err: " + s)
 			},
@@ -192,7 +192,7 @@ func (d *Daemon) loadData() error {
 		return err
 	}
 
-	for _, room := range d.data.Rooms {
+	for _, room := range d.GetRooms() {
 		room.SetContext(d.ctx)
 	}
 
@@ -201,7 +201,7 @@ func (d *Daemon) loadData() error {
 }
 
 func (d *Daemon) initHiddenServices() {
-	err := d.initContIDServices()
+	err := d.initContactIDServices()
 	if err != nil {
 		panic(err)
 	}
