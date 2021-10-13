@@ -2,3 +2,4 @@ internal/tor/bindata.go
 third_party/tor/tor
 
 alliumd
+cache

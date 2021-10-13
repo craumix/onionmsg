@@ -123,9 +123,12 @@ func (d *Daemon) StartDaemon(ctx context.Context) error {
 		log.WithField("dir", d.Config.BaseDir).Debug("base directory not found, created it")
 	}
 
-	d.initBlobManager()
+	err := d.initBlobManager()
+	if err != nil {
+		log.WithError(err).Debug()
+	}
 
-	err := d.startTor()
+	err = d.startTor()
 	if err != nil {
 		return err
 	}
@@ -157,8 +160,12 @@ func (d *Daemon) createBaseDirIfNotExists() bool {
 	return false
 }
 
-func (d *Daemon) initBlobManager() {
-	blobmngr.InitializeDir(filepath.Join(d.blobDir, blobDir))
+func (d *Daemon) initBlobManager() error {
+	err := blobmngr.InitializeDir(d.blobDir)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *Daemon) startTor() error {
