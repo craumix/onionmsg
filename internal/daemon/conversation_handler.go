@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func convClientHandler(c net.Conn) {
+func (d *Daemon) convClientHandler(c net.Conn) {
 	conn := connection.WrapConnection(c)
 	defer conn.Close()
 
@@ -41,7 +41,7 @@ func convClientHandler(c net.Conn) {
 		return
 	}
 
-	room, ok := GetRoom(id)
+	room, ok := d.GetRoom(id)
 	if !ok {
 		log.WithField("room", id).Debug("unknown room")
 		conn.WriteString("auth_failed")
@@ -85,7 +85,7 @@ func convClientHandler(c net.Conn) {
 	room.PushMessages(newMsgs...)
 
 	if len(newMsgs) > 0 {
-		notifyNewMessages(id, newMsgs...)
+		d.Notifier.NotifyNewMessage(id, newMsgs...)
 	}
 
 	conn.WriteString("sync_ok")

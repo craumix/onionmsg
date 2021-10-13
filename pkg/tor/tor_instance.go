@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -20,7 +19,7 @@ import (
 //It can be stopped using the Stop() CancelFunc.
 type Instance struct {
 	Proxy  proxy.Dialer
-	Config Conf
+	Config Config
 	Stop   context.CancelFunc
 
 	controller *torgo.Controller
@@ -31,16 +30,16 @@ type Instance struct {
 	binaryPath string
 }
 
-//Conf is used to pass config values to create a Tor Instance.
-type Conf struct {
+//Config is used to pass config values to create a Tor Instance.
+type Config struct {
 	SocksPort, ControlPort int
 	DataDir, Binary, TorRC string
 	ControlPass            bool
 	StdOut, StdErr         io.Writer
 }
 
-func DefaultConf() Conf {
-	return Conf{
+func DefaultConfig() Config {
+	return Config{
 		SocksPort:   9050,
 		ControlPort: 9051,
 		DataDir:     "tor",
@@ -50,8 +49,8 @@ func DefaultConf() Conf {
 	}
 }
 
-//NewInstance creates a Instance of a running to process.
-func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
+//NewInstance creates an Instance of a running to process.
+func NewInstance(conf Config) (*Instance, error) {
 	var err error
 	torBinary := conf.Binary
 
@@ -62,43 +61,43 @@ func NewInstance(ctx context.Context, conf Conf) (*Instance, error) {
 		}
 	}
 
-	err = checkTorV3Support(torBinary)
-	if err != nil {
-		return nil, err
-	}
-
 	absPath, _ := exec.LookPath(torBinary)
 	absPath, _ = filepath.Abs(absPath)
 	instance := &Instance{
 		Config:     conf,
 		binaryPath: absPath,
 	}
-	instance.ctx, instance.Stop = context.WithCancel(ctx)
 
 	if conf.ControlPass {
 		instance.controlPW = prngString(64)
 	}
 
-	err = instance.runBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	instance.controller, err = instance.connectController(instance.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s", err)
-	}
-
-	instance.Proxy, _ = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(conf.SocksPort), nil, nil)
-
-	/* Maybe we find a good reason to do this, until then it wastes bandwith
-	go func() {
-		<-instance.ctx.Done()
-		os.RemoveAll(instance.Config.DataDir)
-	}()
-	*/
-
 	return instance, nil
+}
+func (i *Instance) Start(ctx context.Context) error {
+	i.ctx, i.Stop = context.WithCancel(ctx)
+
+	err := checkTorV3Support(i.binaryPath)
+	if err != nil {
+		return err
+	}
+
+	err = i.runBinary()
+	if err != nil {
+		return err
+	}
+
+	i.controller, err = i.connectController(i.ctx)
+	if err != nil {
+		return err
+	}
+
+	i.Proxy, err = proxy.SOCKS5("tcp", "127.0.0.1:"+strconv.Itoa(i.Config.SocksPort), nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *Instance) runBinary() error {
@@ -207,4 +206,19 @@ func (i *Instance) Version() string {
 
 func (i *Instance) BinaryPath() string {
 	return i.binaryPath
+}
+
+// Info returns the log of the used to instance.
+func (i *Instance) Info() interface{} {
+	return struct {
+		Log        string `json:"log"`
+		Version    string `json:"version"`
+		PID        int    `json:"pid"`
+		BinaryPath string `json:"path"`
+	}{
+		i.Log(),
+		i.Version(),
+		i.Pid(),
+		i.BinaryPath(),
+	}
 }

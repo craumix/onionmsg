@@ -7,53 +7,53 @@ import (
 	"github.com/google/uuid"
 )
 
-func initRooms() (err error) {
-	for _, r := range data.Rooms {
-		err = serveConvIDService(r.Self)
+func (d *Daemon) initRooms() error {
+	for _, r := range d.data.Rooms {
+		err := d.serveConvIDService(r.Self)
 		if err != nil {
-			return
+			return err
 		}
 	}
 
-	for _, room := range data.Rooms {
+	for _, room := range d.data.Rooms {
 		room.RunMessageQueueForAllPeers()
 	}
-
-	return
-}
-
-func registerRoom(room *types.Room) error {
-	err := serveConvIDService(room.Self)
-	if err != nil {
-		return err
-	}
-
-	data.Rooms = append(data.Rooms, room)
-	log.WithField("room", room.ID.String()).Info("registered room")
-
-	notifyNewRoom(room.Info())
 
 	return nil
 }
 
-func serveConvIDService(i types.Identity) error {
-	return torInstance.RegisterService(*i.Priv, types.PubConvPort, loConvPort)
+func (d *Daemon) registerRoom(room *types.Room) error {
+	err := d.serveConvIDService(room.Self)
+	if err != nil {
+		return err
+	}
+
+	d.data.Rooms = append(d.data.Rooms, room)
+	log.WithField("room", room.ID.String()).Info("registered room")
+
+	d.Notifier.NotifyNewRoom(room.Info())
+
+	return nil
 }
 
-func deregisterRoom(id uuid.UUID) error {
-	r, ok := GetRoom(id)
+func (d *Daemon) serveConvIDService(i types.Identity) error {
+	return d.Tor.RegisterService(*i.Priv, types.PubConvPort, d.loConvPort)
+}
+
+func (d *Daemon) deregisterRoom(id uuid.UUID) error {
+	r, ok := d.GetRoom(id)
 	if !ok {
 		return nil
 	}
 
-	err := torInstance.DeregisterService(*r.Self.Pub)
+	err := d.Tor.DeregisterService(*r.Self.Pub)
 	if err != nil {
 		return err
 	}
 
 	r.StopQueues()
 
-	deleteRoomFromSlice(r)
+	d.DeleteRoomFromSlice(r)
 
 	log.WithField("room", id.String()).Info("degistered room")
 

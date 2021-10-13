@@ -1,9 +1,9 @@
 package daemon
 
 import (
-	"net"
-
+	"fmt"
 	log "github.com/sirupsen/logrus"
+	"net"
 
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
@@ -11,65 +11,77 @@ import (
 	"github.com/craumix/onionmsg/internal/types"
 )
 
-var (
-	autoAcceptRequests = false
-)
+func (d *Daemon) handleContact(conn net.Conn) {
+	dataConn := connection.WrapConnection(conn)
+	defer dataConn.Close()
 
-func contClientHandler(c net.Conn) {
-	dconn := connection.WrapConnection(c)
-	defer dconn.Close()
-
-	req := &types.ContactRequest{}
-	err := dconn.ReadStruct(req)
+	cReq, err := readContactRequest(dataConn)
 	if err != nil {
 		log.WithError(err).Debug()
 		return
 	}
 
-	cont, ok := GetContactID(req.RemoteFP)
-	if !ok {
-		log.WithField("fingerprint", req.RemoteFP).Debug("contact handler was addressed by unknown name")
+	cID, found := d.GetContactID(cReq.RemoteFP)
+	if !found {
+		log.WithError(fmt.Errorf("contact handler was addressed by unknown name")).Debug()
 		return
 	}
 
-	remoteID, _ := types.NewIdentity(types.Remote, req.LocalFP)
+	rReq, err := writeContactResponse(dataConn, cReq, cID)
+	if err != nil {
+		log.WithError(err).Debug()
+		return
+	}
+
+	dataConn.Flush()
+
+	d.data.Requests = append(d.data.Requests, rReq)
+
+	if d.Config.AutoAccept {
+		d.AcceptRoomRequest(rReq.ID)
+	} else {
+		d.Notifier.NotifyNewRequest(rReq)
+	}
+}
+
+func writeContactResponse(dataConn connection.ConnWrapper, cReq *types.ContactRequest, cID types.Identity) (*types.RoomRequest, error) {
+	remoteID, _ := types.NewIdentity(types.Remote, cReq.LocalFP)
 	remoteID.Meta.Admin = true
 
 	convID, _ := types.NewIdentity(types.Self, "")
 
-	sig, err := cont.Sign(append([]byte(convID.Fingerprint()), req.ID[:]...))
+	sig, err := cID.Sign(append([]byte(convID.Fingerprint()), cReq.ID[:]...))
 	if err != nil {
-		log.WithError(err).Warn()
+		return nil, err
 	}
 	resp := &types.ContactResponse{
 		ConvFP: convID.Fingerprint(),
 		Sig:    sig,
 	}
 
-	_, err = dconn.WriteStruct(resp)
+	_, err = dataConn.WriteStruct(resp)
 	if err != nil {
-		log.WithError(err).Warn()
-		return
+		return nil, err
 	}
 
-	dconn.Flush()
-
-	request := &types.RoomRequest{
+	return &types.RoomRequest{
 		Room: types.Room{
 			Self:      convID,
 			Peers:     []*types.MessagingPeer{types.NewMessagingPeer(remoteID)},
-			ID:        req.ID,
+			ID:        cReq.ID,
 			SyncState: make(types.SyncMap),
 		},
-		ViaFingerprint: cont.Fingerprint(),
+		ViaFingerprint: cID.Fingerprint(),
 		ID:             uuid.New(),
+	}, nil
+}
+
+func readContactRequest(dataConn connection.ConnWrapper) (*types.ContactRequest, error) {
+	cReq := &types.ContactRequest{}
+	err := dataConn.ReadStruct(cReq)
+	if err != nil {
+		return nil, err
 	}
 
-	data.Requests = append(data.Requests, request)
-
-	if autoAcceptRequests {
-		acceptRoomRequest(request.ID)
-	} else {
-		notifyNewRequest(request)
-	}
+	return cReq, err
 }

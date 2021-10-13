@@ -2,19 +2,35 @@ package daemon
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/pkg/tor"
+)
+
+const (
+	defaultSocksPort   = 10048
+	defaultControlPort = 10049
+
+	defaultLocalControlPort      = 10050
+	defaultLocalConversationPort = 10051
+
+	torrc    = "torrc"
+	torDir   = "cache/Tor"
+	blobDir  = "blobs"
+	datafile = "alliumd.zstd"
+
+	// LastCommit is the first 7 letters of the last commit, injected at build time
+	LastCommit = "unknown"
+	// BuildVer is the Go Version used to build this program, obviously injected at build time
+	BuildVer = "unknown"
 )
 
 // SerializableData struct exists purely for serialization purposes
@@ -25,110 +41,35 @@ type SerializableData struct {
 }
 
 type Config struct {
-	BaseDir, TorBinary                      string
-	PortOffset                              int
-	UseControlPass, AutoAccept, Interactive bool
+	BaseDir, TorBinary         string
+	PortOffset                 int
+	UseControlPass, AutoAccept bool
 }
 
-var (
-	socksPort   = 10048
-	controlPort = 10049
-	loContPort  = 10050
-	loConvPort  = 10051
+type Daemon struct {
+	Config Config
 
-	torrc    = "torrc"
-	tordir   = "cache/tor"
-	blobdir  = "blobs"
-	datafile = "alliumd.zstd"
+	data *SerializableData
+	Tor  *tor.Instance
 
-	loadFuse bool
+	//BlobManager blobmngr.BlobManager
+	Notifier types.Notifier
 
-	data = SerializableData{}
+	ctx context.Context
 
-	torInstance *tor.Instance
-
-	// LastCommit is the first 7 letters of the last commit, injected at build time
-	LastCommit = "unknown"
-	// BuildVer is the Go Version used to build this program, obviously injected at build time
-	BuildVer = "unknown"
-)
-
-// StartDaemon is used to start the application for creating identities and rooms.
-// Also sending/receiving messages etc.
-// Basically everything except the frontend API.
-func StartDaemon(conf Config) {
-	connection.GetConnFunc = connection.DialDataConn
-
-	log.Info("Daemon is starting...")
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.Errorf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
-			exitDaemon()
-		}
-	}()
-
-	startSignalHandler()
-
-	printBuildInfo()
-
-	parseParams(conf.BaseDir, conf.PortOffset)
-
-	initBlobManager()
-
-	startTor(conf.UseControlPass, conf.TorBinary)
-
-	loadData()
-
-	initHiddenServices()
-
-	startConnectionHandlers(conf.AutoAccept)
-
-	if conf.Interactive {
-		time.Sleep(time.Millisecond * 500)
-		go startInteractive()
-	}
+	loContPort, loConvPort int
+	datafile, blobDir      string
+	loadFuse               bool
 }
 
-func printBuildInfo() {
-	if LastCommit != "unknown" || BuildVer != "unknown" {
-		log.Debugf("Built from #%s with %s\n", LastCommit, BuildVer)
-	}
-}
-
-func parseParams(baseDir string, portOffset int) {
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		os.MkdirAll(baseDir, 0700)
-	}
-
-	socksPort += portOffset
-	controlPort += portOffset
-	loContPort += portOffset
-	loConvPort += portOffset
-
-	torrc = filepath.Join(baseDir, torrc)
-	tordir = filepath.Join(baseDir, tordir)
-	blobdir = filepath.Join(baseDir, blobdir)
-	datafile = filepath.Join(baseDir, datafile)
-}
-
-func initBlobManager() {
-	err := blobmngr.InitializeDir(blobdir)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func startTor(useControlPass bool, binaryPath string) {
-	var err error
-
-	torInstance, err = tor.NewInstance(context.Background(), tor.Conf{
-		SocksPort:   socksPort,
-		ControlPort: controlPort,
-		DataDir:     tordir,
+func NewDaemon(conf Config) (*Daemon, error) {
+	newTorInstance, err := tor.NewInstance(tor.Config{
+		SocksPort:   defaultSocksPort,
+		ControlPort: defaultControlPort,
+		DataDir:     torDir,
 		TorRC:       torrc,
-		ControlPass: useControlPass,
-		Binary:      binaryPath,
+		ControlPass: conf.UseControlPass,
+		Binary:      conf.TorBinary,
 		StdOut: StringWriter{
 			OnWrite: func(s string) {
 				log.Trace("Tor-Out: " + s)
@@ -140,73 +81,158 @@ func startTor(useControlPass bool, binaryPath string) {
 			},
 		},
 	})
+
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	connection.DataConnProxy = torInstance.Proxy
+	return &Daemon{
+		Config: conf,
+		data:   &SerializableData{},
+		Tor:    newTorInstance,
+		//BlobManager: blobmngr.NewBlobManager(filepath.Join(conf.BaseDir, blobDir)),
+		Notifier:   types.Notifier{},
+		loadFuse:   false,
+		loContPort: defaultLocalControlPort + conf.PortOffset,
+		loConvPort: defaultLocalConversationPort + conf.PortOffset,
+		datafile:   filepath.Join(conf.BaseDir, datafile),
+		blobDir:    filepath.Join(conf.BaseDir, blobDir),
+	}, nil
+}
+
+// StartDaemon is used to start the application for creating identities and rooms.
+// Also sending/receiving messages etc.
+// Basically everything except the frontend API.
+func (d *Daemon) StartDaemon(ctx context.Context) error {
+	connection.GetConnFunc = connection.DialDataConn
+	d.ctx = ctx
+
+	printBuildInfo()
+	log.Info("Daemon is starting...")
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Errorf("Something went seriously wrong:\n%s\nTrying to perfrom clean exit!", err)
+			d.exitDaemon()
+		}
+	}()
+
+	d.startSignalHandler()
+
+	if d.createBaseDirIfNotExists() {
+		log.WithField("dir", d.Config.BaseDir).Debug("base directory not found, created it")
+	}
+
+	d.initBlobManager()
+
+	err := d.startTor()
+	if err != nil {
+		return err
+	}
+
+	err = d.loadData()
+	if err != nil {
+		return err
+	}
+
+	d.initHiddenServices()
+
+	d.startConnectionHandlers()
+
+	return nil
+}
+
+func printBuildInfo() {
+	if LastCommit != "unknown" || BuildVer != "unknown" {
+		log.Debugf("Built from #%s with %s\n", LastCommit, BuildVer)
+	}
+}
+
+func (d *Daemon) createBaseDirIfNotExists() bool {
+	if _, err := os.Stat(d.Config.BaseDir); os.IsNotExist(err) {
+		os.MkdirAll(d.Config.BaseDir, 0700)
+		return true
+	}
+
+	return false
+}
+
+func (d *Daemon) initBlobManager() {
+	blobmngr.InitializeDir(filepath.Join(d.blobDir, blobDir))
+}
+
+func (d *Daemon) startTor() error {
+
+	err := d.Tor.Start(d.ctx)
+	if err != nil {
+		return err
+	}
+
+	connection.DataConnProxy = d.Tor.Proxy
 
 	lf := log.Fields{
-		"pid":     torInstance.Pid(),
-		"version": torInstance.Version(),
+		"pid":     d.Tor.Pid(),
+		"version": d.Tor.Version(),
 	}
-	log.WithFields(lf).Info("tor is running...")
+	log.WithFields(lf).Info("Tor is running...")
+
+	return nil
 }
 
-func loadData() {
-	err := sio.LoadCompressedData(datafile, &data)
+func (d *Daemon) loadData() error {
+	err := sio.LoadCompressedData(d.datafile, d.data)
 	if err != nil && !os.IsNotExist(err) {
-		panic(err)
+		return err
 	}
-	for _, room := range data.Rooms {
-		// TODO derive this from an actual context
-		room.SetContext(context.Background())
+
+	for _, room := range d.data.Rooms {
+		room.SetContext(d.ctx)
 	}
-	loadFuse = true
+
+	d.loadFuse = true
+	return nil
 }
 
-func initHiddenServices() {
-	err := initContIDServices()
+func (d *Daemon) initHiddenServices() {
+	err := d.initContIDServices()
 	if err != nil {
 		panic(err)
 	}
 
-	err = initRooms()
+	err = d.initRooms()
 	if err != nil {
 		panic(err)
 	}
 
-	log.Infof("Loaded %d Contact IDs, and %d Rooms", len(data.ContactIdentities), len(data.Rooms))
+	log.Infof("Loaded %d Contact IDs, and %d Rooms", len(d.data.ContactIdentities), len(d.data.Rooms))
 }
 
-func startConnectionHandlers(autoAccept bool) {
-	autoAcceptRequests = autoAccept
-
-	go sio.StartLocalServer(loContPort, contClientHandler, func(err error) {
+func (d *Daemon) startConnectionHandlers() {
+	go sio.StartLocalServer(d.loContPort, d.handleContact, func(err error) {
 		log.WithError(err).Debug("error starting contact handler")
 	})
-	go sio.StartLocalServer(loConvPort, convClientHandler, func(err error) {
+	go sio.StartLocalServer(d.loConvPort, d.convClientHandler, func(err error) {
 		log.WithError(err).Debug("error starting conversation handler")
 	})
 }
 
-func startSignalHandler() {
+func (d *Daemon) startSignalHandler() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		log.Info("received shutdown signal, exiting gracefully...")
-		exitDaemon()
+		d.exitDaemon()
 	}()
 }
 
-func exitDaemon() {
-	if torInstance != nil {
-		torInstance.Stop()
+func (d *Daemon) exitDaemon() {
+	if d.Tor != nil {
+		d.Tor.Stop()
 	}
 
-	if loadFuse {
-		err := saveData()
+	if d.loadFuse {
+		err := d.saveData()
 		if err != nil {
 			log.WithError(err).Error()
 			//TODO save struct in case of unable to save
@@ -216,6 +242,10 @@ func exitDaemon() {
 	os.Exit(0)
 }
 
-func saveData() error {
-	return sio.SaveDataCompressed(datafile, &data)
+func (d *Daemon) saveData() error {
+	return sio.SaveDataCompressed(d.datafile, d.data)
+}
+
+func (d *Daemon) TorInfo() interface{} {
+	return d.Tor.Info()
 }

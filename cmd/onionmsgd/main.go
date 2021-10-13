@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"time"
@@ -21,9 +22,13 @@ var (
 	debug         = false
 	trace         = false
 	torBinary     = ""
+
+	mainCxt context.Context
 )
 
 func init() {
+	mainCxt = context.Background()
+
 	log.SetOutput(os.Stdout)
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp:   true,
@@ -43,16 +48,31 @@ func main() {
 		log.SetLevel(log.TraceLevel)
 	}
 
-	daemon.StartDaemon(daemon.Config{
-		Interactive:    interactive,
+	backend, err := daemon.NewDaemon(daemon.Config{
 		BaseDir:        baseDir,
 		PortOffset:     portOffset,
 		UseControlPass: !noControlPass,
 		AutoAccept:     autoAccept,
 		TorBinary:      torBinary,
 	})
+	if err != nil {
+		log.WithError(err).Panic()
+	}
 
-	api.Start(useUnixSocket, portOffset)
+	err = backend.StartDaemon(mainCxt)
+	if err != nil {
+		log.WithError(err).Panic()
+	}
+
+	frontend := api.NewAPI(api.Config{
+		UseUnixSocket: useUnixSocket,
+		PortOffset:    portOffset,
+	}, backend)
+
+	err = frontend.Start()
+	if err != nil {
+		log.WithError(err).Panic()
+	}
 
 	for {
 		time.Sleep(time.Second * 10)

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"io/ioutil"
 	"mime"
 	"net"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/internal/types"
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -26,92 +26,112 @@ const (
 	maxFileSize    = 2 << 30 //2G
 
 	unixSocketName = "onionmsg.sock"
+	defaultApiPort = 10052
 )
 
-var (
-	apiPort = 10052
-)
-
-var (
-	wsUpgrader = websocket.Upgrader{
+func defaultUpgrader() websocket.Upgrader {
+	return websocket.Upgrader{
 		//TODO Fixme
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-)
+}
 
-func Start(unixSocket bool, portOffset int) {
+type Config struct {
+	UseUnixSocket bool
+	PortOffset    int
+}
+
+type API struct {
+	config Config
+
+	port       int
+	backend    *daemon.Daemon
+	wsUpgrader websocket.Upgrader
+}
+
+func NewAPI(config Config, backend *daemon.Daemon) *API {
+	return &API{
+		config: config,
+
+		port:       defaultApiPort + config.PortOffset,
+		backend:    backend,
+		wsUpgrader: defaultUpgrader(),
+	}
+}
+
+func (api *API) Start() error {
 	var (
 		listener net.Listener
 		err      error
 	)
 
-	apiPort += portOffset
-
-	if unixSocket {
+	if api.config.UseUnixSocket {
 		listener, err = sio.CreateUnixSocket(unixSocketName)
 	} else {
-		listener, err = sio.CreateTCPSocket(apiPort)
+		listener, err = sio.CreateTCPSocket(defaultApiPort)
 	}
+
 	if err != nil {
-		log.WithError(err).Panic()
+		return err
 	}
 
 	log.WithField("address", listener.Addr()).Info("Starting API-Server")
 
-	http.HandleFunc("/v1/ws", routeOpenWS)
+	api.setupHandleFuncs()
 
-	http.HandleFunc("/v1/status", RouteStatus)
-	http.HandleFunc("/v1/tor", RouteTorInfo)
-
-	http.HandleFunc("/v1/blob", RouteBlob)
-
-	http.HandleFunc("/v1/contact/list", RouteContactList)
-	http.HandleFunc("/v1/contact/create", RouteContactCreate)
-	http.HandleFunc("/v1/contact/delete", RouteContactDelete)
-
-	http.HandleFunc("/v1/request/list", RouteRequestList)
-	http.HandleFunc("/v1/request/accept", RouteRequestAccept)
-	http.HandleFunc("/v1/request/delete", RouteRequestDelete)
-
-	http.HandleFunc("/v1/room/info", RouteRoomInfo)
-	http.HandleFunc("/v1/room/list", RouteRoomList)
-	http.HandleFunc("/v1/room/create", RouteRoomCreate)
-	http.HandleFunc("/v1/room/delete", RouteRoomDelete)
-	http.HandleFunc("/v1/room/send/message", RouteRoomSendMessage)
-	http.HandleFunc("/v1/room/send/file", RouteRoomSendFile)
-	http.HandleFunc("/v1/room/messages", RouteRoomMessages)
-
-	http.HandleFunc("/v1/room/command/useradd", RouteRoomCommandUseradd)
-	http.HandleFunc("/v1/room/command/nameroom", RouteRoomCommandNameRoom)
-	http.HandleFunc("/v1/room/command/setnick", RouteRoomCommandSetNick)
-	http.HandleFunc("/v1/room/command/promote", RouteRoomCommandPromote)
-	http.HandleFunc("/v1/room/command/removepeer", RouteRoomCommandRemovePeer)
-
-	err = http.Serve(listener, nil)
-	if err != nil {
-		log.WithError(err).Fatal()
-	}
+	return http.Serve(listener, nil)
 }
 
-func routeOpenWS(w http.ResponseWriter, req *http.Request) {
-	c, err := wsUpgrader.Upgrade(w, req, nil)
+func (api *API) setupHandleFuncs() {
+	http.HandleFunc("/v1/ws", api.routeOpenWS)
+
+	http.HandleFunc("/v1/status", api.RouteStatus)
+	http.HandleFunc("/v1/tor", api.RouteTorInfo)
+
+	http.HandleFunc("/v1/blob", api.RouteBlob)
+
+	http.HandleFunc("/v1/contact/list", api.RouteContactList)
+	http.HandleFunc("/v1/contact/create", api.RouteContactCreate)
+	http.HandleFunc("/v1/contact/delete", api.RouteContactDelete)
+
+	http.HandleFunc("/v1/request/list", api.RouteRequestList)
+	http.HandleFunc("/v1/request/accept", api.RouteRequestAccept)
+	http.HandleFunc("/v1/request/delete", api.RouteRequestDelete)
+
+	http.HandleFunc("/v1/room/info", api.RouteRoomInfo)
+	http.HandleFunc("/v1/room/list", api.RouteRoomList)
+	http.HandleFunc("/v1/room/create", api.RouteRoomCreate)
+	http.HandleFunc("/v1/room/delete", api.RouteRoomDelete)
+	http.HandleFunc("/v1/room/send/message", api.RouteRoomSendMessage)
+	http.HandleFunc("/v1/room/send/file", api.RouteRoomSendFile)
+	http.HandleFunc("/v1/room/messages", api.RouteRoomMessages)
+
+	http.HandleFunc("/v1/room/command/useradd", api.RouteRoomCommandUseradd)
+	http.HandleFunc("/v1/room/command/nameroom", api.RouteRoomCommandNameRoom)
+	http.HandleFunc("/v1/room/command/setnick", api.RouteRoomCommandSetNick)
+	http.HandleFunc("/v1/room/command/promote", api.RouteRoomCommandPromote)
+	http.HandleFunc("/v1/room/command/removepeer", api.RouteRoomCommandRemovePeer)
+}
+
+func (api *API) routeOpenWS(w http.ResponseWriter, req *http.Request) {
+	conn, err := api.wsUpgrader.Upgrade(w, req, nil)
 	if err != nil {
 		log.WithError(err).Warn("error when upgrading connection")
 	}
 
-	observerList = append(observerList, c)
+	api.backend.Notifier.AddObserver(conn)
 }
 
-func RouteStatus(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteStatus(w http.ResponseWriter, _ *http.Request) {
 	setJSONContentHeader(w)
 	w.Write([]byte("{\"status\":\"ok\"}"))
 }
 
-func RouteTorInfo(w http.ResponseWriter, req *http.Request) {
-	sendSerialized(w, daemon.TorInfo())
+func (api *API) RouteTorInfo(w http.ResponseWriter, _ *http.Request) {
+	sendSerialized(w, api.backend.TorInfo())
 }
 
-func RouteBlob(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 	id, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -125,9 +145,9 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 	}
 
 	//To set correct filename for downloads
-	respFilname := req.FormValue("filename")
-	if respFilname != "" {
-		w.Header().Add("Content-Disposition", "attachment; filename=\""+respFilname+"\"")
+	respFilename := req.FormValue("filename")
+	if respFilename != "" {
+		w.Header().Add("Content-Disposition", "attachment; filename=\""+respFilename+"\"")
 	}
 
 	//If the blob exists, it will never change
@@ -141,12 +161,12 @@ func RouteBlob(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func RouteContactList(w http.ResponseWriter, req *http.Request) {
-	sendSerialized(w, daemon.ListContactIDs())
+func (api *API) RouteContactList(w http.ResponseWriter, _ *http.Request) {
+	sendSerialized(w, api.backend.ListContactIDs())
 }
 
-func RouteContactCreate(w http.ResponseWriter, req *http.Request) {
-	fp, err := daemon.CreateContactID()
+func (api *API) RouteContactCreate(w http.ResponseWriter, _ *http.Request) {
+	fp, err := api.backend.CreateContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -156,25 +176,25 @@ func RouteContactCreate(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte(fmt.Sprintf("{\"id\":\"%s\"}", fp)))
 }
 
-func RouteContactDelete(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 	fp := req.FormValue("fingerprint")
 	if fp == "" {
 		http.Error(w, "Missing parameter \"fingerprint\"", http.StatusBadRequest)
 		return
 	}
 
-	err := daemon.DeleteContact(fp)
+	err := api.backend.DeleteContactID(fp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func RouteRequestList(w http.ResponseWriter, req *http.Request) {
-	sendSerialized(w, daemon.RequestList())
+func (api *API) RouteRequestList(w http.ResponseWriter, _ *http.Request) {
+	sendSerialized(w, api.backend.RequestList())
 }
 
-func RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
 	sid := req.FormValue("uuid")
 	id, err := uuid.Parse(sid)
 	if err != nil {
@@ -182,13 +202,13 @@ func RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.AcceptRoomRequest(id)
+	err = api.backend.AcceptRoomRequest(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 	sid := req.FormValue("uuid")
 	id, err := uuid.Parse(sid)
 	if err != nil {
@@ -196,10 +216,10 @@ func RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	daemon.DeleteRoomRequest(id)
+	api.backend.DeleteRoomRequest(id)
 }
 
-func RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 	sid := req.FormValue("uuid")
 	id, err := uuid.Parse(sid)
 	if err != nil {
@@ -207,7 +227,7 @@ func RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	info, err := daemon.RoomInfo(id)
+	info, err := api.backend.RoomInfo(id)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
@@ -216,11 +236,11 @@ func RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 	sendSerialized(w, info)
 }
 
-func RouteRoomList(w http.ResponseWriter, req *http.Request) {
-	sendSerialized(w, daemon.Rooms())
+func (api *API) RouteRoomList(w http.ResponseWriter, _ *http.Request) {
+	sendSerialized(w, api.backend.ListRooms())
 }
 
-func RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
 	var ids []string
 
 	body, err := ioutil.ReadAll(req.Body)
@@ -240,29 +260,29 @@ func RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.CreateRoom(ids)
+	err = api.backend.CreateRoom(ids)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
-	err := daemon.DeleteRoom(req.FormValue("uuid"))
+func (api *API) RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
+	err := api.backend.DeleteRoom(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-// Modify this to only send messages and create extra endpoint for blobs
-func RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, "")
+func (api *API) RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
+	//TODO Modify this to only send messages and create extra endpoint for blobs
+	errCode, err := api.sendMessage(req, "")
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	id, err := blobmngr.MakeBlob()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -300,7 +320,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
+	err = api.backend.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type:    types.ContentTypeFile,
 		ReplyTo: replyto,
 		Blob: &types.BlobMeta{
@@ -316,7 +336,7 @@ func RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 	var (
 		count = 0
 		err   error
@@ -330,7 +350,7 @@ func RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	messages, err := daemon.ListMessages(req.FormValue("uuid"), count)
+	messages, err := api.backend.ListMessages(req.FormValue("uuid"), count)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -339,7 +359,7 @@ func RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 	sendSerialized(w, messages)
 }
 
-func RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
+func (api *API) RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 	roomID, err := uuid.Parse(req.FormValue("uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -354,40 +374,40 @@ func RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
 
 	fingerprint := string(content)
 
-	if err := daemon.AddPeerToRoom(roomID, fingerprint); err != nil {
+	if err := api.backend.AddPeerToRoom(roomID, fingerprint); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, types.RoomCommandNameRoom)
+func (api *API) RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
+	errCode, err := api.sendMessage(req, types.RoomCommandNameRoom)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, types.RoomCommandNick)
+func (api *API) RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
+	errCode, err := api.sendMessage(req, types.RoomCommandNick)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, types.RoomCommandPromote)
+func (api *API) RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
+	errCode, err := api.sendMessage(req, types.RoomCommandPromote)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func RouteRoomCommandRemovePeer(w http.ResponseWriter, req *http.Request) {
-	errCode, err := sendMessage(req, types.RoomCommandRemovePeer)
+func (api *API) RouteRoomCommandRemovePeer(w http.ResponseWriter, req *http.Request) {
+	errCode, err := api.sendMessage(req, types.RoomCommandRemovePeer)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
+func (api *API) sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -407,7 +427,7 @@ func sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 		return http.StatusBadRequest, err
 	}
 
-	err = daemon.SendMessage(req.FormValue("uuid"), types.MessageContent{
+	err = api.backend.SendMessage(req.FormValue("uuid"), types.MessageContent{
 		Type:    msgType,
 		ReplyTo: replyto,
 		Data:    types.ConstructCommand(content, roomCommand),

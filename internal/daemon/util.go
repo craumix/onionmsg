@@ -9,27 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	TorInfo = getTorInfo
-
-	ListContactIDs  = listContactIDs
-	CreateContactID = createContactID
-	DeleteContact   = DeleteContactID
-
-	RoomInfo      = roomInfo
-	Rooms         = listRooms
-	CreateRoom    = createRoom
-	DeleteRoom    = deleteRoom
-	AddPeerToRoom = addPeerToRoom
-	ListMessages  = listMessages
-
-	SendMessage = sendMessage
-
-	RequestList       = requestList
-	AcceptRoomRequest = acceptRoomRequest
-	DeleteRoomRequest = deleteRoomRequest
-)
-
 type StringWriter struct {
 	OnWrite func(string)
 }
@@ -45,42 +24,27 @@ func (w StringWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// GetTorlog returns the log of the used to instance.
-func getTorInfo() interface{} {
-	return struct {
-		Log        string `json:"log"`
-		Version    string `json:"version"`
-		PID        int    `json:"pid"`
-		BinaryPath string `json:"path"`
-	}{
-		torInstance.Log(),
-		torInstance.Version(),
-		torInstance.Pid(),
-		torInstance.BinaryPath(),
-	}
-}
-
 // listContactIDs returns a list of all the contactId's fingerprints.
-func listContactIDs() []string {
+func (d *Daemon) ListContactIDs() []string {
 	var contIDs []string
-	for _, id := range data.ContactIdentities {
+	for _, id := range d.data.ContactIdentities {
 		contIDs = append(contIDs, id.Fingerprint())
 	}
 	return contIDs
 }
 
 // listRooms returns a marshaled list of all the rooms with most information
-func listRooms() []*types.RoomInfo {
+func (d *Daemon) ListRooms() []*types.RoomInfo {
 	var rooms []*types.RoomInfo
-	for _, r := range data.Rooms {
+	for _, r := range d.data.Rooms {
 		rooms = append(rooms, r.Info())
 	}
 
 	return rooms
 }
 
-func roomInfo(id uuid.UUID) (*types.RoomInfo, error) {
-	for _, r := range data.Rooms {
+func (d *Daemon) RoomInfo(id uuid.UUID) (*types.RoomInfo, error) {
+	for _, r := range d.data.Rooms {
 		if r.ID == id {
 			return r.Info(), nil
 		}
@@ -90,9 +54,9 @@ func roomInfo(id uuid.UUID) (*types.RoomInfo, error) {
 }
 
 // createContactID generates and registers a new contact id and returns its fingerprint.
-func createContactID() (string, error) {
+func (d *Daemon) CreateContactID() (string, error) {
 	id, _ := types.NewIdentity(types.Contact, "")
-	err := registerContID(id)
+	err := d.registerContID(id)
 	if err != nil {
 		return "", err
 	}
@@ -100,12 +64,12 @@ func createContactID() (string, error) {
 }
 
 // DeleteContactID deletes and deregisters a contact id.
-func DeleteContactID(fingerprint string) error {
-	return deregisterContID(fingerprint)
+func (d *Daemon) DeleteContactID(fingerprint string) error {
+	return d.deregisterContID(fingerprint)
 }
 
 // Maybe this should be run in a goroutine
-func createRoom(fingerprints []string) error {
+func (d *Daemon) CreateRoom(fingerprints []string) error {
 	var ids []types.Identity
 	for _, fingerprint := range fingerprints {
 		id, err := types.NewIdentity(types.Remote, fingerprint)
@@ -115,19 +79,18 @@ func createRoom(fingerprints []string) error {
 		ids = append(ids, id)
 	}
 
-	// TODO derive this from an actual context
-	room, err := types.NewRoom(context.Background(), ids...)
+	room, err := types.NewRoom(d.ctx, ids...)
 	if err != nil {
 		return err
 	}
 
-	return registerRoom(room)
+	return d.registerRoom(room)
 }
 
 // Maybe this should be run in a goroutine
-func addPeerToRoom(roomID uuid.UUID, fingerprint string) error {
-	room, ok := GetRoom(roomID)
-	if !ok {
+func (d *Daemon) AddPeerToRoom(roomID uuid.UUID, fingerprint string) error {
+	room, found := d.GetRoom(roomID)
+	if !found {
 		return fmt.Errorf("no such room %s", roomID)
 	}
 
@@ -140,22 +103,22 @@ func addPeerToRoom(roomID uuid.UUID, fingerprint string) error {
 }
 
 // deleteRoom deletes the room with the specified uuid.
-func deleteRoom(uid string) error {
+func (d *Daemon) DeleteRoom(uid string) error {
 	id, err := uuid.Parse(uid)
 	if err != nil {
 		return err
 	}
-	return deregisterRoom(id)
+	return d.deregisterRoom(id)
 }
 
-func sendMessage(uid string, content types.MessageContent) error {
+func (d *Daemon) SendMessage(uid string, content types.MessageContent) error {
 	id, err := uuid.Parse(uid)
 	if err != nil {
 		return err
 	}
 
-	room, ok := GetRoom(id)
-	if !ok {
+	room, found := d.GetRoom(id)
+	if !found {
 		return fmt.Errorf("no such room: %s", uid)
 	}
 
@@ -163,14 +126,14 @@ func sendMessage(uid string, content types.MessageContent) error {
 	return nil
 }
 
-func listMessages(uid string, count int) ([]types.Message, error) {
+func (d *Daemon) ListMessages(uid string, count int) ([]types.Message, error) {
 	id, err := uuid.Parse(uid)
 	if err != nil {
 		return nil, err
 	}
 
-	room, ok := GetRoom(id)
-	if !ok {
+	room, found := d.GetRoom(id)
+	if !found {
 		return nil, fmt.Errorf("no such room: %s", uid)
 	}
 
@@ -181,8 +144,8 @@ func listMessages(uid string, count int) ([]types.Message, error) {
 	}
 }
 
-func GetRoom(id uuid.UUID) (*types.Room, bool) {
-	for _, r := range data.Rooms {
+func (d *Daemon) GetRoom(id uuid.UUID) (*types.Room, bool) {
+	for _, r := range d.data.Rooms {
 		if r.ID == id {
 			return r, true
 		}
@@ -190,8 +153,8 @@ func GetRoom(id uuid.UUID) (*types.Room, bool) {
 	return nil, false
 }
 
-func GetContactID(fingerprint string) (types.Identity, bool) {
-	for _, i := range data.ContactIdentities {
+func (d *Daemon) GetContactID(fingerprint string) (types.Identity, bool) {
+	for _, i := range d.data.ContactIdentities {
 		if i.Fingerprint() == fingerprint {
 			return i, true
 		}
@@ -199,22 +162,22 @@ func GetContactID(fingerprint string) (types.Identity, bool) {
 	return types.Identity{}, false
 }
 
-func deleteRoomFromSlice(item *types.Room) {
-	for j, e := range data.Rooms {
+func (d *Daemon) DeleteRoomFromSlice(item *types.Room) {
+	for j, e := range d.data.Rooms {
 		if e == item {
-			data.Rooms[len(data.Rooms)-1], data.Rooms[j] = data.Rooms[j], data.Rooms[len(data.Rooms)-1]
-			data.Rooms = data.Rooms[:len(data.Rooms)-1]
+			d.data.Rooms[len(d.data.Rooms)-1], d.data.Rooms[j] = d.data.Rooms[j], d.data.Rooms[len(d.data.Rooms)-1]
+			d.data.Rooms = d.data.Rooms[:len(d.data.Rooms)-1]
 			break
 		}
 	}
 
 }
 
-func deleteContactIDFromSlice(cid types.Identity) {
-	for i := 0; i < len(data.ContactIdentities); i++ {
-		if data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
-			data.ContactIdentities[len(data.ContactIdentities)-1], data.ContactIdentities[i] = data.ContactIdentities[i], data.ContactIdentities[len(data.ContactIdentities)-1]
-			data.ContactIdentities = data.ContactIdentities[:len(data.ContactIdentities)-1]
+func (d *Daemon) DeleteContactIDFromSlice(cid types.Identity) {
+	for i := 0; i < len(d.data.ContactIdentities); i++ {
+		if d.data.ContactIdentities[i].Fingerprint() == cid.Fingerprint() {
+			d.data.ContactIdentities[len(d.data.ContactIdentities)-1], d.data.ContactIdentities[i] = d.data.ContactIdentities[i], d.data.ContactIdentities[len(d.data.ContactIdentities)-1]
+			d.data.ContactIdentities = d.data.ContactIdentities[:len(d.data.ContactIdentities)-1]
 
 			break
 		}
@@ -222,16 +185,16 @@ func deleteContactIDFromSlice(cid types.Identity) {
 
 }
 
-func requestList() []*types.RoomRequest {
-	return data.Requests
+func (d *Daemon) RequestList() []*types.RoomRequest {
+	return d.data.Requests
 }
 
-func acceptRoomRequest(id uuid.UUID) error {
-	for _, v := range data.Requests {
+func (d *Daemon) AcceptRoomRequest(id uuid.UUID) error {
+	for _, v := range d.data.Requests {
 		if v.ID == id {
 			v.Room.SetContext(context.Background())
 
-			err := registerRoom(&v.Room)
+			err := d.registerRoom(&v.Room)
 			if err != nil {
 				return err
 			}
@@ -243,7 +206,7 @@ func acceptRoomRequest(id uuid.UUID) error {
 				Data: types.ConstructCommand(nil, types.RoomCommandAccept),
 			})
 
-			deleteRoomRequest(id)
+			d.DeleteRoomRequest(id)
 			return nil
 		}
 	}
@@ -251,11 +214,11 @@ func acceptRoomRequest(id uuid.UUID) error {
 	return fmt.Errorf("room request with id %s not found", id)
 }
 
-func deleteRoomRequest(id uuid.UUID) {
-	for i := 0; i < len(data.Requests); i++ {
-		if data.Requests[i].ID == id {
-			data.Requests[len(data.Requests)-1], data.Requests[i] = data.Requests[i], data.Requests[len(data.Requests)-1]
-			data.Requests = data.Requests[:len(data.Requests)-1]
+func (d *Daemon) DeleteRoomRequest(id uuid.UUID) {
+	for i := 0; i < len(d.data.Requests); i++ {
+		if d.data.Requests[i].ID == id {
+			d.data.Requests[len(d.data.Requests)-1], d.data.Requests[i] = d.data.Requests[i], d.data.Requests[len(d.data.Requests)-1]
+			d.data.Requests = d.data.Requests[:len(d.data.Requests)-1]
 			break
 		}
 	}
