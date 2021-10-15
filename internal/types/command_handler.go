@@ -93,7 +93,7 @@ func inviteCallback(command Command, message *Message, room *Room) error {
 	newPeer := NewMessagingPeer(peerID)
 	room.Peers = append(room.Peers, newPeer)
 
-	go newPeer.RunMessageQueue(room.Ctx, room)
+	go newPeer.RunMessageQueue(room.ctx, room)
 
 	lf := log.Fields{
 		"peer": newPeer.RIdentity.Fingerprint(),

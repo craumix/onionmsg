@@ -11,7 +11,6 @@ import (
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/craumix/onionmsg/pkg/tor"
 )
 
@@ -53,7 +52,8 @@ type Daemon struct {
 	Tor  *tor.Instance
 
 	//BlobManager blobmngr.BlobManager
-	Notifier types.Notifier
+	Notifier          types.Notifier
+	ConnectionManager types.ConnectionManager
 
 	ctx context.Context
 
@@ -104,7 +104,6 @@ func NewDaemon(conf Config) (*Daemon, error) {
 // Also sending/receiving messages etc.
 // Basically everything except the frontend API.
 func (d *Daemon) StartDaemon(ctx context.Context) error {
-	connection.GetConnFunc = connection.DialDataConn
 	d.ctx = ctx
 
 	printBuildInfo()
@@ -169,13 +168,12 @@ func (d *Daemon) initBlobManager() error {
 }
 
 func (d *Daemon) startTor() error {
-
 	err := d.Tor.Start(d.ctx)
 	if err != nil {
 		return err
 	}
 
-	connection.DataConnProxy = d.Tor.Proxy
+	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy)
 
 	lf := log.Fields{
 		"pid":     d.Tor.Pid(),
@@ -194,6 +192,7 @@ func (d *Daemon) loadData() error {
 
 	for _, room := range d.GetRooms() {
 		room.SetContext(d.ctx)
+		room.SetConnectionManager(d.ConnectionManager)
 	}
 
 	d.loadFuse = true

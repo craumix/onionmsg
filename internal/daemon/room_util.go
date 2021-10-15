@@ -67,7 +67,7 @@ func (d *Daemon) CreateRoom(fingerprints []string) error {
 		ids = append(ids, id)
 	}
 
-	room, err := types.NewRoom(d.ctx, ids...)
+	room, err := types.NewRoom(d.ctx, d.ConnectionManager, ids...)
 	if err != nil {
 		return err
 	}

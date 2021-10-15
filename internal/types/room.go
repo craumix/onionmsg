@@ -3,12 +3,9 @@ package types
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 
 	"github.com/google/uuid"
 )
@@ -20,10 +17,12 @@ type Room struct {
 	Name     string           `json:"name"`
 	Messages []Message        `json:"messages"`
 
+	connectionManager ConnectionManager
+
 	SyncState      SyncMap `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
 
-	Ctx  context.Context `json:"-"`
+	ctx  context.Context
 	stop context.CancelFunc
 }
 
@@ -36,7 +35,7 @@ type RoomInfo struct {
 	Admins map[string]bool   `json:"admins,omitempty"`
 }
 
-func NewRoom(ctx context.Context, contactIdentities ...Identity) (*Room, error) {
+func NewRoom(ctx context.Context, cManager ConnectionManager, contactIdentities ...Identity) (*Room, error) {
 	id, err := NewIdentity(Self, "")
 	if err != nil {
 		return nil, err
@@ -44,15 +43,13 @@ func NewRoom(ctx context.Context, contactIdentities ...Identity) (*Room, error) 
 
 	id.Meta.Admin = true
 	room := &Room{
-		Self:      id,
-		ID:        uuid.New(),
-		SyncState: make(SyncMap),
+		Self:              id,
+		ID:                uuid.New(),
+		connectionManager: cManager,
+		SyncState:         make(SyncMap),
 	}
 
-	err = room.SetContext(ctx)
-	if err != nil {
-		return nil, err
-	}
+	room.SetContext(ctx)
 
 	err = room.AddPeers(contactIdentities...)
 	if err != nil {
@@ -62,12 +59,12 @@ func NewRoom(ctx context.Context, contactIdentities ...Identity) (*Room, error) 
 	return room, nil
 }
 
-func (r *Room) SetContext(ctx context.Context) error {
-	if r.Ctx == nil {
-		r.Ctx, r.stop = context.WithCancel(ctx)
-		return nil
-	}
-	return fmt.Errorf("%s already has a context", r.ID.String())
+func (r *Room) SetContext(ctx context.Context) {
+	r.ctx, r.stop = context.WithCancel(ctx)
+}
+
+func (r *Room) SetConnectionManager(manager ConnectionManager) {
+	r.connectionManager = manager
 }
 
 /*
@@ -87,7 +84,7 @@ func (r *Room) AddPeers(contactIdentities ...Identity) error {
 	r.Peers = append(r.Peers, newPeers...)
 
 	for _, peer := range newPeers {
-		go peer.RunMessageQueue(r.Ctx, r)
+		go peer.RunMessageQueue(r.ctx, r)
 	}
 
 	r.syncPeerLists()
@@ -114,26 +111,7 @@ This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
 func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer, error) {
-	dataConn, err := connection.GetConnFunc("tcp", contactIdentity.URL()+":"+strconv.Itoa(PubContPort))
-	if err != nil {
-		return nil, err
-	}
-	defer dataConn.Close()
-
-	req := &ContactRequest{
-		RemoteFP: contactIdentity.Fingerprint(),
-		LocalFP:  r.Self.Fingerprint(),
-		ID:       r.ID,
-	}
-	_, err = dataConn.WriteStruct(req)
-	if err != nil {
-		return nil, err
-	}
-
-	dataConn.Flush()
-
-	resp := &ContactResponse{}
-	err = dataConn.ReadStruct(resp)
+	resp, err := r.connectionManager.ContactPeer(r, contactIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +156,7 @@ func (r *Room) SendMessageToAllPeers(content MessageContent) {
 
 func (r *Room) RunMessageQueueForAllPeers() {
 	for _, peer := range r.Peers {
-		go peer.RunMessageQueue(r.Ctx, r)
+		go peer.RunMessageQueue(r.ctx, r)
 	}
 }
 
@@ -268,4 +246,20 @@ func (r *Room) removePeer(toRemove string) error {
 	}
 
 	return peerNotFoundError(toRemove)
+}
+
+func (r *Room) findMessagesToSync(remoteSyncTimes SyncMap) []Message {
+	msgs := make([]Message, 0)
+
+	for _, msg := range r.Messages {
+		if last, ok := remoteSyncTimes[msg.Meta.Sender]; !ok || msg.Meta.Time.After(last) {
+			msgs = append(msgs, msg)
+		}
+	}
+
+	return msgs
+}
+
+func (r *Room) syncMsgs(peerRID Identity) error {
+	return r.connectionManager.syncMsgs(r, peerRID)
 }

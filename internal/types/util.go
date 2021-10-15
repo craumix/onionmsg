@@ -1,8 +1,6 @@
 package types
 
 import (
-	"crypto/ed25519"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -15,8 +13,6 @@ import (
 const (
 	PubContPort = 10050
 	PubConvPort = 10051
-
-	blocksize = 1 << 19 // 512K
 )
 
 type SyncMap map[string]time.Time
@@ -63,17 +59,6 @@ func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 	return ids
 }
 
-func expectResponse(conn connection.ConnWrapper, expResp string) error {
-	resp, err := conn.ReadString()
-	if err != nil {
-		return err
-	} else if resp != expResp {
-		return fmt.Errorf("received response \"%s\" wanted \"%s\"", resp, expResp)
-	}
-
-	return nil
-}
-
 func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 	challenge, err := conn.ReadBytes()
 	if err != nil {
@@ -90,14 +75,6 @@ func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
 	conn.Flush()
 
 	return nil
-}
-
-func Sign(key ed25519.PrivateKey, data []byte) []byte {
-	return ed25519.Sign(key, data)
-}
-
-func Fingerprint(key ed25519.PublicKey) string {
-	return base64.RawURLEncoding.EncodeToString(key)
 }
 
 func init() {

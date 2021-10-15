@@ -8,7 +8,6 @@ import (
 	"net"
 
 	"github.com/klauspost/compress/zstd"
-	"golang.org/x/net/proxy"
 )
 
 const (
@@ -18,36 +17,12 @@ const (
 	compThreshold = 1 << 7
 )
 
-var (
-	DataConnProxy proxy.Dialer
-)
-
 //DataConn is a helper struct to simplify communication over a net.Conn.
 //Also tries to save bandwidth by using a manually flushed bufio.ReadWriter.
 //Has a artificial limit of 16K for message size.
 type DataConn struct {
 	buffer *bufio.ReadWriter
 	conn   net.Conn
-}
-
-//DialDataConn creates a new connection that uses the, possibly set, proxy
-//and then wraps it in a DataConn
-func DialDataConn(network, address string) (ConnWrapper, error) {
-	var (
-		c   net.Conn
-		err error
-	)
-
-	if DataConnProxy != nil {
-		c, err = DataConnProxy.Dial(network, address)
-	} else {
-		c, err = net.Dial(network, address)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return WrapConnection(c), nil
 }
 
 //WrapConnection creates a new DataConn from a net.Conn

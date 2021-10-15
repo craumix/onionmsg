@@ -28,6 +28,7 @@ func (d *Daemon) AcceptRoomRequest(toAccept string) error {
 	}
 
 	request.Room.SetContext(d.ctx)
+	request.Room.SetConnectionManager(d.ConnectionManager)
 
 	err := d.registerRoom(&request.Room)
 	if err != nil {
