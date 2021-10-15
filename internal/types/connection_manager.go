@@ -26,8 +26,7 @@ const (
 	BlobOK     = "blob_ok"
 
 	MessageSigInvalid = "message_sig_invalid"
-
-	MalformedUUID = "malformed_uuid"
+	MalformedUUID     = "malformed_uuid"
 
 	blocksize = 1 << 19 // 512K
 )
@@ -71,7 +70,7 @@ func (m ConnectionManager) dialConn(network, address string) (MessageConnection,
 	}, nil
 }
 
-func (mc MessageConnection) expectResponse(expected string) error {
+func (mc MessageConnection) expectString(expected string) error {
 	resp, err := mc.conn.ReadString()
 	if err != nil {
 		return err
@@ -83,7 +82,7 @@ func (mc MessageConnection) expectResponse(expected string) error {
 }
 
 func (mc MessageConnection) ExpectStatusMessage(expected StatusMessage) error {
-	return mc.expectResponse(string(expected))
+	return mc.expectString(string(expected))
 }
 
 func (mc MessageConnection) SendStatusMessage(msg StatusMessage) error {
@@ -103,6 +102,16 @@ func (mc MessageConnection) SendMessages(messages ...Message) error {
 	return nil
 }
 
+func (mc MessageConnection) ReadMessages() ([]Message, error) {
+	msgs := make([]Message, 0)
+	err := mc.conn.ReadStruct(&msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	return msgs, nil
+}
+
 func (mc MessageConnection) SendUUIDs(ids ...uuid.UUID) error {
 	_, err := mc.conn.WriteStruct(ids)
 	if err != nil {
@@ -114,7 +123,80 @@ func (mc MessageConnection) SendUUIDs(ids ...uuid.UUID) error {
 	return nil
 }
 
-func (mc MessageConnection) SolveFingerprintChallenge(sID Identity, roomID uuid.UUID) error {
+func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
+	raw, err := mc.conn.ReadBytes()
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	id, err := uuid.FromBytes(raw)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	return id, nil
+}
+
+func (mc MessageConnection) SendSyncMap(syncMap SyncMap) error {
+	_, err := mc.conn.WriteStruct(syncMap)
+	if err != nil {
+		return err
+	}
+	mc.conn.Flush()
+	return nil
+}
+
+func (mc MessageConnection) ReadSyncMap() (SyncMap, error) {
+	remoteSyncTimes := make(SyncMap)
+	err := mc.conn.ReadStruct(&remoteSyncTimes)
+	if err != nil {
+		return nil, err
+	}
+
+	return remoteSyncTimes, nil
+}
+
+func (mc MessageConnection) SendContactRequest(request ContactRequest) error {
+	_, err := mc.conn.WriteStruct(&request)
+	if err != nil {
+		return err
+	}
+	mc.conn.Flush()
+	return nil
+}
+
+func (mc MessageConnection) ReadContactRequest() (*ContactRequest, error) {
+	cReq := &ContactRequest{}
+	err := mc.conn.ReadStruct(cReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return cReq, err
+}
+
+func (mc MessageConnection) SendContactResponse(response ContactResponse) error {
+	_, err := mc.conn.WriteStruct(&response)
+	if err != nil {
+		return err
+	}
+
+	mc.conn.Flush()
+
+	return nil
+}
+
+func (mc MessageConnection) ReadContactResponse() (ContactResponse, error) {
+	resp := ContactResponse{}
+	err := mc.conn.ReadStruct(&resp)
+	if err != nil {
+		return ContactResponse{}, err
+	}
+
+	return resp, nil
+}
+
+func (mc MessageConnection) SolveFingerprintChallenge(sID Identity) error {
 	if mc.conn == nil {
 		log.Print("OOF")
 	}
@@ -131,11 +213,35 @@ func (mc MessageConnection) SolveFingerprintChallenge(sID Identity, roomID uuid.
 
 	mc.conn.WriteString(sID.Fingerprint())
 	mc.conn.WriteBytes(signed)
-	mc.conn.WriteBytes(roomID[:])
 
 	mc.conn.Flush()
 
 	return nil
+}
+
+func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
+	challenge, _ := mc.writeRandom(32)
+
+	fingerprint, err := mc.conn.ReadString()
+	if err != nil {
+		return "", err
+	}
+	sig, err := mc.conn.ReadBytes()
+	if err != nil {
+		return "", err
+	}
+
+	keyBytes, err := base64.RawURLEncoding.DecodeString(fingerprint)
+	if err != nil {
+		return "", err
+	}
+
+	key := ed25519.PublicKey(keyBytes)
+	if !ed25519.Verify(key, challenge, sig) {
+		return "", fmt.Errorf("remote failed challenge")
+	}
+
+	return fingerprint, nil
 }
 
 func (mc MessageConnection) SendBlobs(blobIds ...uuid.UUID) error {
@@ -233,69 +339,6 @@ func (mc MessageConnection) ReadAndCreateBlobs() error {
 	return nil
 }
 
-func (mc MessageConnection) SendSyncMap(syncMap SyncMap) error {
-	_, err := mc.conn.WriteStruct(syncMap)
-	if err != nil {
-		return err
-	}
-	mc.conn.Flush()
-	return nil
-}
-
-func (mc MessageConnection) ReadSyncMap() (SyncMap, error) {
-	remoteSyncTimes := make(SyncMap)
-	err := mc.conn.ReadStruct(&remoteSyncTimes)
-	if err != nil {
-		return nil, err
-	}
-
-	return remoteSyncTimes, nil
-}
-
-func (mc MessageConnection) SendContactRequest(request ContactRequest) error {
-	_, err := mc.conn.WriteStruct(&request)
-	if err != nil {
-		return err
-	}
-	mc.conn.Flush()
-	return nil
-}
-
-func (mc MessageConnection) ReadContactRequest() (*ContactRequest, error) {
-	cReq := &ContactRequest{}
-	err := mc.conn.ReadStruct(cReq)
-	if err != nil {
-		return nil, err
-	}
-
-	return cReq, err
-}
-
-func (mc MessageConnection) SendContactResponse(response ContactResponse) error {
-	_, err := mc.conn.WriteStruct(&response)
-	if err != nil {
-		return err
-	}
-
-	mc.conn.Flush()
-
-	return nil
-}
-
-func (mc MessageConnection) ReadContactResponse() (ContactResponse, error) {
-	resp := ContactResponse{}
-	err := mc.conn.ReadStruct(&resp)
-	if err != nil {
-		return ContactResponse{}, err
-	}
-
-	return resp, nil
-}
-
-func (mc MessageConnection) Close() error {
-	return mc.conn.Close()
-}
-
 func (m ConnectionManager) contactPeer(room *Room, peerCID Identity) (ContactResponse, error) {
 	conn, err := m.dialConn("tcp", peerCID.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
@@ -333,45 +376,6 @@ func (mc MessageConnection) writeRandom(length int) ([]byte, error) {
 	return r, nil
 }
 
-func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
-	raw, err := mc.conn.ReadBytes()
-	if err != nil {
-		return uuid.UUID{}, err
-	}
-
-	id, err := uuid.FromBytes(raw)
-	if err != nil {
-		return uuid.UUID{}, err
-	}
-
-	return id, nil
-}
-
-func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
-	challenge, _ := mc.writeRandom(32)
-
-	fingerprint, err := mc.conn.ReadString()
-	if err != nil {
-		return "", err
-	}
-	sig, err := mc.conn.ReadBytes()
-	if err != nil {
-		return "", err
-	}
-
-	keyBytes, err := base64.RawURLEncoding.DecodeString(fingerprint)
-	if err != nil {
-		return "", err
-	}
-
-	key := ed25519.PublicKey(keyBytes)
-	if !ed25519.Verify(key, challenge, sig) {
-		return "", fmt.Errorf("remote failed challenge")
-	}
-
-	return fingerprint, nil
-}
-
 func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	if room == nil {
 		return fmt.Errorf("room not set")
@@ -383,10 +387,12 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	}
 	defer conn.Close()
 
-	err = conn.SolveFingerprintChallenge(room.Self, room.ID)
+	err = conn.SolveFingerprintChallenge(room.Self)
 	if err != nil {
 		return err
 	}
+
+	conn.SendUUIDs(room.ID)
 
 	err = conn.ExpectStatusMessage(AuthOK)
 	if err != nil {
@@ -419,12 +425,6 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	return nil
 }
 
-func (mc MessageConnection) ReadMessages() ([]Message, error) {
-	msgs := make([]Message, 0)
-	err := mc.conn.ReadStruct(&msgs)
-	if err != nil {
-		return nil, err
-	}
-
-	return msgs, nil
+func (mc MessageConnection) Close() error {
+	return mc.conn.Close()
 }
