@@ -111,7 +111,7 @@ This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
 func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer, error) {
-	resp, err := r.connectionManager.ContactPeer(r, contactIdentity)
+	resp, err := r.connectionManager.contactPeer(r, contactIdentity)
 	if err != nil {
 		return nil, err
 	}

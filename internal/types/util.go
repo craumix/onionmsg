@@ -1,12 +1,10 @@
 package types
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/craumix/onionmsg/pkg/sio/connection"
 	"github.com/google/uuid"
 )
 
@@ -59,22 +57,30 @@ func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 	return ids
 }
 
-func fingerprintChallenge(conn connection.ConnWrapper, id Identity) error {
-	challenge, err := conn.ReadBytes()
+func (r ContactRequest) GenerateResponse(cID Identity) (ContactResponse, RoomRequest, error) {
+	remoteID, _ := NewIdentity(Remote, r.LocalFP)
+	remoteID.Meta.Admin = true
+
+	convID, _ := NewIdentity(Self, "")
+
+	sig, err := cID.Sign(append([]byte(convID.Fingerprint()), r.ID[:]...))
 	if err != nil {
-		return err
+		return ContactResponse{}, RoomRequest{}, err
 	}
 
-	signed, err := id.Sign(challenge)
-	if err != nil {
-		fmt.Print(err.Error())
-	}
-
-	conn.WriteString(id.Fingerprint())
-	conn.WriteBytes(signed)
-	conn.Flush()
-
-	return nil
+	return ContactResponse{
+			ConvFP: convID.Fingerprint(),
+			Sig:    sig,
+		}, RoomRequest{
+			Room: Room{
+				Self:      convID,
+				Peers:     []*MessagingPeer{NewMessagingPeer(remoteID)},
+				ID:        r.ID,
+				SyncState: make(SyncMap),
+			},
+			ViaFingerprint: cID.Fingerprint(),
+			ID:             uuid.New(),
+		}, nil
 }
 
 func init() {

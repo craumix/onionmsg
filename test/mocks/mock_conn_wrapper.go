@@ -2,7 +2,7 @@ package mocks
 
 import (
 	"encoding/json"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"github.com/craumix/onionmsg/pkg/sio"
 )
 
 var MockedConn *MockConnWrapper
@@ -106,7 +106,7 @@ func (m *MockConnWrapper) Buffered() int {
 	return m.BufferedInt
 }
 
-func GetMockedConnWrapper(network, address string) (connection.ConnWrapper, error) {
+func GetMockedConnWrapper(network, address string) (sio.ConnWrapper, error) {
 	MockedConn.GetMockedConnWrapperCalled = true
 	return MockedConn, MockedConn.GetMockedConnWrapperError
 }

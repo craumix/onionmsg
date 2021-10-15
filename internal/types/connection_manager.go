@@ -1,11 +1,14 @@
 package types
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
-	"github.com/craumix/onionmsg/pkg/sio/connection"
+	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/proxy"
 	"net"
 	"strconv"
@@ -15,10 +18,16 @@ type StatusMessage string
 
 const (
 	AuthOK     = "auth_ok"
+	AuthFailed = "auth_failed"
+
 	MessagesOK = "messages_ok"
 	SyncOK     = "sync_ok"
 	BlockOK    = "block_ok"
 	BlobOK     = "blob_ok"
+
+	MessageSigInvalid = "message_sig_invalid"
+
+	MalformedUUID = "malformed_uuid"
 
 	blocksize = 1 << 19 // 512K
 )
@@ -28,12 +37,18 @@ type ConnectionManager struct {
 }
 
 type MessageConnection struct {
-	conn connection.ConnWrapper
+	conn sio.ConnWrapper
 }
 
 func NewConnectionManager(proxy proxy.Dialer) ConnectionManager {
 	return ConnectionManager{
 		Proxy: proxy,
+	}
+}
+
+func (m ConnectionManager) UseConnection(conn net.Conn) MessageConnection {
+	return MessageConnection{
+		conn: sio.WrapConnection(conn),
 	}
 }
 
@@ -51,14 +66,8 @@ func (m ConnectionManager) dialConn(network, address string) (MessageConnection,
 		return MessageConnection{}, err
 	}
 
-	wrappedConn := connection.WrapConnection(conn)
-
-	if wrappedConn == nil {
-		log.Print("OH NO")
-	}
-
 	return MessageConnection{
-		wrappedConn,
+		sio.WrapConnection(conn),
 	}, nil
 }
 
@@ -75,6 +84,12 @@ func (mc MessageConnection) expectResponse(expected string) error {
 
 func (mc MessageConnection) ExpectStatusMessage(expected StatusMessage) error {
 	return mc.expectResponse(string(expected))
+}
+
+func (mc MessageConnection) SendStatusMessage(msg StatusMessage) error {
+	_, err := mc.conn.WriteString(string(msg))
+	mc.conn.Flush()
+	return err
 }
 
 func (mc MessageConnection) SendMessages(messages ...Message) error {
@@ -173,7 +188,61 @@ func (mc MessageConnection) SendBlobs(blobIds ...uuid.UUID) error {
 	return nil
 }
 
-func (mc MessageConnection) ReadRemoteSyncMap() (SyncMap, error) {
+func (mc MessageConnection) ReadAndCreateBlobs() error {
+	ids := make([]uuid.UUID, 0)
+	mc.conn.ReadStruct(&ids)
+
+	for _, id := range ids {
+		blockcount, err := mc.conn.ReadInt()
+		if err != nil {
+			return err
+		}
+
+		file, err := blobmngr.FileFromID(id)
+		if err != nil {
+			return err
+		}
+
+		rcvOK := false
+		defer func() {
+			file.Close()
+			if !rcvOK {
+				blobmngr.RemoveBlob(id)
+			}
+		}()
+
+		for i := 0; i < blockcount; i++ {
+			buf, err := mc.conn.ReadBytes()
+			if err != nil {
+				return err
+			}
+
+			_, err = file.Write(buf)
+			if err != nil {
+				return err
+			}
+
+			mc.SendStatusMessage(BlockOK)
+		}
+
+		mc.SendStatusMessage(BlobOK)
+
+		rcvOK = true
+	}
+
+	return nil
+}
+
+func (mc MessageConnection) SendSyncMap(syncMap SyncMap) error {
+	_, err := mc.conn.WriteStruct(syncMap)
+	if err != nil {
+		return err
+	}
+	mc.conn.Flush()
+	return nil
+}
+
+func (mc MessageConnection) ReadSyncMap() (SyncMap, error) {
 	remoteSyncTimes := make(SyncMap)
 	err := mc.conn.ReadStruct(&remoteSyncTimes)
 	if err != nil {
@@ -185,6 +254,25 @@ func (mc MessageConnection) ReadRemoteSyncMap() (SyncMap, error) {
 
 func (mc MessageConnection) SendContactRequest(request ContactRequest) error {
 	_, err := mc.conn.WriteStruct(&request)
+	if err != nil {
+		return err
+	}
+	mc.conn.Flush()
+	return nil
+}
+
+func (mc MessageConnection) ReadContactRequest() (*ContactRequest, error) {
+	cReq := &ContactRequest{}
+	err := mc.conn.ReadStruct(cReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return cReq, err
+}
+
+func (mc MessageConnection) SendContactResponse(response ContactResponse) error {
+	_, err := mc.conn.WriteStruct(&response)
 	if err != nil {
 		return err
 	}
@@ -208,7 +296,7 @@ func (mc MessageConnection) Close() error {
 	return mc.conn.Close()
 }
 
-func (m ConnectionManager) ContactPeer(room *Room, peerCID Identity) (ContactResponse, error) {
+func (m ConnectionManager) contactPeer(room *Room, peerCID Identity) (ContactResponse, error) {
 	conn, err := m.dialConn("tcp", peerCID.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return ContactResponse{}, err
@@ -233,6 +321,57 @@ func (m ConnectionManager) ContactPeer(room *Room, peerCID Identity) (ContactRes
 	return resp, nil
 }
 
+func (mc MessageConnection) writeRandom(length int) ([]byte, error) {
+	r := make([]byte, length)
+	rand.Read(r)
+	_, err := mc.conn.WriteBytes(r)
+	if err != nil {
+		return nil, err
+	}
+	mc.conn.Flush()
+
+	return r, nil
+}
+
+func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
+	raw, err := mc.conn.ReadBytes()
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	id, err := uuid.FromBytes(raw)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	return id, nil
+}
+
+func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
+	challenge, _ := mc.writeRandom(32)
+
+	fingerprint, err := mc.conn.ReadString()
+	if err != nil {
+		return "", err
+	}
+	sig, err := mc.conn.ReadBytes()
+	if err != nil {
+		return "", err
+	}
+
+	keyBytes, err := base64.RawURLEncoding.DecodeString(fingerprint)
+	if err != nil {
+		return "", err
+	}
+
+	key := ed25519.PublicKey(keyBytes)
+	if !ed25519.Verify(key, challenge, sig) {
+		return "", fmt.Errorf("remote failed challenge")
+	}
+
+	return fingerprint, nil
+}
+
 func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	if room == nil {
 		return fmt.Errorf("room not set")
@@ -242,7 +381,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	if err != nil {
 		return err
 	}
-	//defer conn.Close()
+	defer conn.Close()
 
 	err = conn.SolveFingerprintChallenge(room.Self, room.ID)
 	if err != nil {
@@ -254,7 +393,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 		return err
 	}
 
-	remoteSyncTimes, err := conn.ReadRemoteSyncMap()
+	remoteSyncTimes, err := conn.ReadSyncMap()
 	if err != nil {
 		return err
 	}
@@ -278,4 +417,14 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	}
 
 	return nil
+}
+
+func (mc MessageConnection) ReadMessages() ([]Message, error) {
+	msgs := make([]Message, 0)
+	err := mc.conn.ReadStruct(&msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	return msgs, nil
 }
