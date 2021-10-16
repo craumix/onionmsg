@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"io/ioutil"
 	"mime"
 	"net"
@@ -138,7 +137,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err = blobmngr.StatFromID(id)
+	_, err = api.backend.BlobManager.StatFromID(id)
 	if os.IsNotExist(err) {
 		http.Error(w, "Blob not found!", http.StatusNotFound)
 		return
@@ -154,7 +153,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Cache-Control", "public, max-age=604800, immutable")
 	w.Header().Add("Content-Type", "application/octet-stream")
 
-	err = blobmngr.StreamTo(id, w)
+	err = api.backend.BlobManager.StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -283,19 +282,13 @@ func (api *API) RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
-	id, err := blobmngr.MakeBlob()
+	id, err := api.backend.BlobManager.MakeBlob()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	file, err := blobmngr.FileFromID(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = blobmngr.WriteIntoFile(req.Body, file)
+	err = api.backend.BlobManager.WriteIntoBlob(req.Body, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -309,7 +302,7 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	filesize := 0
-	fileStat, err := blobmngr.StatFromID(id)
+	fileStat, err := api.backend.BlobManager.StatFromID(id)
 	if err == nil {
 		filesize = int(fileStat.Size())
 	}

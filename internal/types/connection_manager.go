@@ -32,16 +32,18 @@ const (
 )
 
 type ConnectionManager struct {
-	Proxy proxy.Dialer
+	proxy       proxy.Dialer
+	blobManager blobmngr.BlobManager
 }
 
 type MessageConnection struct {
 	conn sio.ConnWrapper
 }
 
-func NewConnectionManager(proxy proxy.Dialer) ConnectionManager {
+func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.BlobManager) ConnectionManager {
 	return ConnectionManager{
-		Proxy: proxy,
+		proxy:       proxy,
+		blobManager: blobManager,
 	}
 }
 
@@ -55,8 +57,8 @@ func (m ConnectionManager) dialConn(network, address string) (MessageConnection,
 	var err error
 	var conn net.Conn
 
-	if m.Proxy != nil {
-		conn, err = m.Proxy.Dial(network, address)
+	if m.proxy != nil {
+		conn, err = m.proxy.Dial(network, address)
 	} else {
 		conn, err = net.Dial(network, address)
 	}
@@ -112,8 +114,8 @@ func (mc MessageConnection) ReadMessages() ([]Message, error) {
 	return msgs, nil
 }
 
-func (mc MessageConnection) SendUUIDs(ids ...uuid.UUID) error {
-	_, err := mc.conn.WriteStruct(ids)
+func (mc MessageConnection) SendUUID(id uuid.UUID) error {
+	_, err := mc.conn.WriteBytes(id[:])
 	if err != nil {
 		return err
 	}
@@ -125,6 +127,7 @@ func (mc MessageConnection) SendUUIDs(ids ...uuid.UUID) error {
 
 func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
 	raw, err := mc.conn.ReadBytes()
+	log.Print(string(raw))
 	if err != nil {
 		return uuid.UUID{}, err
 	}
@@ -135,6 +138,27 @@ func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func (mc MessageConnection) SendUUIDs(ids ...uuid.UUID) error {
+	_, err := mc.conn.WriteStruct(ids)
+	if err != nil {
+		return err
+	}
+
+	mc.conn.Flush()
+
+	return nil
+}
+
+func (mc MessageConnection) ReadUUIDs() ([]uuid.UUID, error) {
+	ids := make([]uuid.UUID, 0)
+	err := mc.conn.ReadStruct(&ids)
+	if err != nil {
+		return nil, err
+	}
+
+	return ids, nil
 }
 
 func (mc MessageConnection) SendSyncMap(syncMap SyncMap) error {
@@ -197,10 +221,6 @@ func (mc MessageConnection) ReadContactResponse() (ContactResponse, error) {
 }
 
 func (mc MessageConnection) SolveFingerprintChallenge(sID Identity) error {
-	if mc.conn == nil {
-		log.Print("OOF")
-	}
-
 	challenge, err := mc.conn.ReadBytes()
 	if err != nil {
 		return err
@@ -208,7 +228,7 @@ func (mc MessageConnection) SolveFingerprintChallenge(sID Identity) error {
 
 	signed, err := sID.Sign(challenge)
 	if err != nil {
-		fmt.Print(err.Error())
+		log.WithError(err).Debug()
 	}
 
 	mc.conn.WriteString(sID.Fingerprint())
@@ -244,11 +264,11 @@ func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
 	return fingerprint, nil
 }
 
-func (mc MessageConnection) SendBlobs(blobIds ...uuid.UUID) error {
+func (mc MessageConnection) SendBlobs(blobManager blobmngr.BlobManager, blobIds ...uuid.UUID) error {
 	mc.SendUUIDs(blobIds...)
 
 	for _, id := range blobIds {
-		stat, err := blobmngr.StatFromID(id)
+		stat, err := blobManager.StatFromID(id)
 		if err != nil {
 			return err
 		}
@@ -261,7 +281,7 @@ func (mc MessageConnection) SendBlobs(blobIds ...uuid.UUID) error {
 		mc.conn.WriteInt(blockCount)
 		mc.conn.Flush()
 
-		file, err := blobmngr.FileFromID(id)
+		file, err := blobManager.FileFromID(id)
 		if err != nil {
 			return err
 		}
@@ -294,9 +314,8 @@ func (mc MessageConnection) SendBlobs(blobIds ...uuid.UUID) error {
 	return nil
 }
 
-func (mc MessageConnection) ReadAndCreateBlobs() error {
-	ids := make([]uuid.UUID, 0)
-	mc.conn.ReadStruct(&ids)
+func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.BlobManager) error {
+	ids, _ := mc.ReadUUIDs()
 
 	for _, id := range ids {
 		blockcount, err := mc.conn.ReadInt()
@@ -304,7 +323,7 @@ func (mc MessageConnection) ReadAndCreateBlobs() error {
 			return err
 		}
 
-		file, err := blobmngr.FileFromID(id)
+		file, err := blobManager.FileFromID(id)
 		if err != nil {
 			return err
 		}
@@ -313,7 +332,7 @@ func (mc MessageConnection) ReadAndCreateBlobs() error {
 		defer func() {
 			file.Close()
 			if !rcvOK {
-				blobmngr.RemoveBlob(id)
+				blobManager.RemoveBlob(id)
 			}
 		}()
 
@@ -367,10 +386,12 @@ func (m ConnectionManager) contactPeer(room *Room, peerCID Identity) (ContactRes
 func (mc MessageConnection) writeRandom(length int) ([]byte, error) {
 	r := make([]byte, length)
 	rand.Read(r)
+
 	_, err := mc.conn.WriteBytes(r)
 	if err != nil {
 		return nil, err
 	}
+
 	mc.conn.Flush()
 
 	return r, nil
@@ -392,7 +413,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 		return err
 	}
 
-	conn.SendUUIDs(room.ID)
+	conn.SendUUID(room.ID)
 
 	err = conn.ExpectStatusMessage(AuthOK)
 	if err != nil {
@@ -412,7 +433,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 		return err
 	}
 
-	err = conn.SendBlobs(blobIDsFromMessages(msgsToSync...)...)
+	err = conn.SendBlobs(m.blobManager, blobIDsFromMessages(msgsToSync...)...)
 	if err != nil {
 		return err
 	}

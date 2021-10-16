@@ -9,32 +9,31 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	StreamTo      = streamTo
-	MakeBlob      = makeBlob
-	FileFromID    = fileFromID
-	WriteIntoFile = writeIntoFile
-	StatFromID    = statFromID
+type BlobManager struct {
+	dir string
+}
 
-	blobdir = "./"
-)
+func NewBlobManager(dir string) BlobManager {
+	return BlobManager{
+		dir: dir,
+	}
+}
 
-func InitializeDir(dir string) error {
-	err := os.Mkdir(dir, 0700)
+func (bm BlobManager) CreateDirIfNotExists() error {
+	err := os.Mkdir(bm.dir, 0700)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	blobdir = dir
 	return nil
 }
 
-func GetRessource(id uuid.UUID) ([]byte, error) {
-	return ioutil.ReadFile(blobPath(id))
+func (bm BlobManager) GetResource(id uuid.UUID) ([]byte, error) {
+	return ioutil.ReadFile(bm.blobPath(id))
 }
 
-func streamTo(id uuid.UUID, w io.Writer) error {
-	file, err := FileFromID(id)
+func (bm BlobManager) StreamTo(id uuid.UUID, w io.Writer) error {
+	file, err := bm.FileFromID(id)
 	if err != nil {
 		return err
 	}
@@ -45,12 +44,12 @@ func streamTo(id uuid.UUID, w io.Writer) error {
 	return nil
 }
 
-func fileFromID(id uuid.UUID) (*os.File, error) {
-	return os.OpenFile(blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+func (bm BlobManager) FileFromID(id uuid.UUID) (*os.File, error) {
+	return os.OpenFile(bm.blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
-func statFromID(id uuid.UUID) (fs.FileInfo, error) {
-	return os.Stat(blobPath(id))
+func (bm BlobManager) StatFromID(id uuid.UUID) (fs.FileInfo, error) {
+	return os.Stat(bm.blobPath(id))
 }
 
 func writeIntoFile(from io.Reader, to *os.File) error {
@@ -71,19 +70,33 @@ func writeIntoFile(from io.Reader, to *os.File) error {
 	return nil
 }
 
-func SaveRessource(blob []byte) (uuid.UUID, error) {
+func (bm BlobManager) WriteIntoBlob(from io.Reader, blobID uuid.UUID) error {
+	file, err := bm.FileFromID(blobID)
+	if err != nil {
+		return err
+	}
+
+	err = writeIntoFile(from, file)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (bm BlobManager) SaveResource(blob []byte) (uuid.UUID, error) {
 	id := uuid.New()
-	return id, ioutil.WriteFile(blobPath(id), blob, 0600)
+	return id, ioutil.WriteFile(bm.blobPath(id), blob, 0600)
 }
 
-func makeBlob() (uuid.UUID, error) {
-	return SaveRessource(make([]byte, 0))
+func (bm BlobManager) MakeBlob() (uuid.UUID, error) {
+	return bm.SaveResource(make([]byte, 0))
 }
 
-func RemoveBlob(id uuid.UUID) error {
-	return os.Remove(blobPath(id))
+func (bm BlobManager) RemoveBlob(id uuid.UUID) error {
+	return os.Remove(bm.blobPath(id))
 }
 
-func blobPath(id uuid.UUID) string {
-	return blobdir + "/" + id.String() + ".blob"
+func (bm BlobManager) blobPath(id uuid.UUID) string {
+	return bm.dir + "/" + id.String() + ".blob"
 }

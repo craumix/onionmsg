@@ -362,7 +362,7 @@ func TestRoomSendFile(t *testing.T) {
 		return nil, nil
 	}
 
-	blobmngr.WriteIntoFile = func(from io.Reader, to *os.File) error {
+	blobmngr.writeIntoFile = func(from io.Reader, to *os.File) error {
 		return nil
 	}
 
@@ -462,7 +462,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 			return nil, tc.FileFromIDErr
 		}
 
-		blobmngr.WriteIntoFile = func(from io.Reader, to *os.File) error {
+		blobmngr.writeIntoFile = func(from io.Reader, to *os.File) error {
 			return tc.WriteIntoFileErr
 		}
 

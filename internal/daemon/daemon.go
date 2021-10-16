@@ -51,14 +51,14 @@ type Daemon struct {
 	data *SerializableData
 	Tor  *tor.Instance
 
-	//BlobManager blobmngr.BlobManager
 	Notifier          types.Notifier
 	ConnectionManager types.ConnectionManager
+	BlobManager       blobmngr.BlobManager
 
 	ctx context.Context
 
 	loContPort, loConvPort int
-	datafile, blobDir      string
+	datafile               string
 	loadFuse               bool
 }
 
@@ -87,16 +87,15 @@ func NewDaemon(conf Config) (*Daemon, error) {
 	}
 
 	return &Daemon{
-		Config: conf,
-		data:   &SerializableData{},
-		Tor:    newTorInstance,
-		//BlobManager: blobmngr.NewBlobManager(filepath.Join(conf.BaseDir, blobDir)),
-		Notifier:   types.Notifier{},
-		loadFuse:   false,
-		loContPort: defaultLocalControlPort + conf.PortOffset,
-		loConvPort: defaultLocalConversationPort + conf.PortOffset,
-		datafile:   filepath.Join(conf.BaseDir, datafile),
-		blobDir:    filepath.Join(conf.BaseDir, blobDir),
+		Config:      conf,
+		data:        &SerializableData{},
+		Tor:         newTorInstance,
+		BlobManager: blobmngr.NewBlobManager(filepath.Join(conf.BaseDir, blobDir)),
+		Notifier:    types.Notifier{},
+		loadFuse:    false,
+		loContPort:  defaultLocalControlPort + conf.PortOffset,
+		loConvPort:  defaultLocalConversationPort + conf.PortOffset,
+		datafile:    filepath.Join(conf.BaseDir, datafile),
 	}, nil
 }
 
@@ -122,7 +121,7 @@ func (d *Daemon) StartDaemon(ctx context.Context) error {
 		log.WithField("dir", d.Config.BaseDir).Debug("base directory not found, created it")
 	}
 
-	err := d.initBlobManager()
+	err := d.BlobManager.CreateDirIfNotExists()
 	if err != nil {
 		log.WithError(err).Debug()
 	}
@@ -159,21 +158,13 @@ func (d *Daemon) createBaseDirIfNotExists() bool {
 	return false
 }
 
-func (d *Daemon) initBlobManager() error {
-	err := blobmngr.InitializeDir(d.blobDir)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (d *Daemon) startTor() error {
 	err := d.Tor.Start(d.ctx)
 	if err != nil {
 		return err
 	}
 
-	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy)
+	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy, d.BlobManager)
 
 	lf := log.Fields{
 		"pid":     d.Tor.Pid(),

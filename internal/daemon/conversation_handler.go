@@ -60,7 +60,7 @@ func (d *Daemon) convClientHandler(conn net.Conn) {
 
 	mConn.SendStatusMessage(types.MessagesOK)
 
-	err = mConn.ReadAndCreateBlobs()
+	err = mConn.ReadAndCreateBlobs(d.BlobManager)
 	if err != nil {
 		log.WithError(err).Debug()
 	}
