@@ -127,7 +127,6 @@ func (mc MessageConnection) SendUUID(id uuid.UUID) error {
 
 func (mc MessageConnection) ReadUUID() (uuid.UUID, error) {
 	raw, err := mc.conn.ReadBytes()
-	log.Print(string(raw))
 	if err != nil {
 		return uuid.UUID{}, err
 	}

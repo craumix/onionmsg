@@ -16,63 +16,58 @@ const (
 	RoomCommandPromote    Command = "promote"
 	RoomCommandRemovePeer Command = "remove_peer"
 
-	//This command is essentially a No-Op,
+	// RoomCommandAccept is essentially a No-Op,
 	//and is mainly used for indication in frontends
 	RoomCommandAccept Command = "accept"
 
 	CommandDelimiter = " "
 )
 
-var (
-	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
-)
+type CommandHandler struct {
+	commandCallbacks map[Command]func(Command, *Message, *Room) error
+}
 
-func RegisterCommand(command Command, callback func(Command, *Message, *Room) error) error {
-	if _, found := commandCallbacks[command]; found {
+func NewCommandHandler(commandCallbacks map[Command]func(Command, *Message, *Room) error) CommandHandler {
+	return CommandHandler{
+		commandCallbacks: commandCallbacks,
+	}
+}
+
+func GetDefaultCommandHandler() CommandHandler {
+	ch := CommandHandler{
+		commandCallbacks: make(map[Command]func(Command, *Message, *Room) error),
+	}
+
+	ch.RegisterCommand(RoomCommandInvite, inviteCallback)
+
+	ch.RegisterCommand(RoomCommandNameRoom, nameRoomCallback)
+
+	ch.RegisterCommand(RoomCommandNick, nickCallback)
+
+	ch.RegisterCommand(RoomCommandPromote, promoteCallback)
+
+	ch.RegisterCommand(RoomCommandRemovePeer, removePeerCallback)
+
+	return ch
+}
+
+func (ch *CommandHandler) RegisterCommand(command Command, callback func(Command, *Message, *Room) error) error {
+	if _, found := ch.commandCallbacks[command]; found {
 		return fmt.Errorf("command %s is already registered", command)
 	}
-	commandCallbacks[command] = callback
+	ch.commandCallbacks[command] = callback
 	return nil
 }
 
-func HandleCommand(message *Message, room *Room) error {
+func (ch CommandHandler) HandleCommand(message *Message, room *Room) error {
 	hasCommand, command := message.isCommand()
 	if !hasCommand {
 		return fmt.Errorf("message isn't a command")
 	}
-	if _, found := commandCallbacks[Command(command)]; !found {
+	if _, found := ch.commandCallbacks[Command(command)]; !found {
 		return fmt.Errorf("command %s is not registered", command)
 	}
-	return commandCallbacks[Command(command)](Command(command), message, room)
-}
-
-func RegisterRoomCommands() error {
-	err := RegisterCommand(RoomCommandInvite, inviteCallback)
-	if err != nil {
-		return err
-	}
-
-	err = RegisterCommand(RoomCommandNameRoom, nameRoomCallback)
-	if err != nil {
-		return err
-	}
-
-	err = RegisterCommand(RoomCommandNick, nickCallback)
-	if err != nil {
-		return err
-	}
-
-	err = RegisterCommand(RoomCommandPromote, promoteCallback)
-	if err != nil {
-		return err
-	}
-
-	err = RegisterCommand(RoomCommandRemovePeer, removePeerCallback)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ch.commandCallbacks[Command(command)](Command(command), message, room)
 }
 
 func inviteCallback(command Command, message *Message, room *Room) error {
@@ -226,6 +221,6 @@ func ConstructCommand(message []byte, command Command) []byte {
 	return []byte(string(command) + CommandDelimiter + string(message))
 }
 
-func CleanCallbacks() {
-	commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
+func (ch *CommandHandler) CleanCallbacks() {
+	ch.commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
 }

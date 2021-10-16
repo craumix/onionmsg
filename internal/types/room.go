@@ -18,6 +18,7 @@ type Room struct {
 	Messages []Message        `json:"messages"`
 
 	connectionManager ConnectionManager
+	commandHandler    CommandHandler
 
 	SyncState      SyncMap `json:"lastMessage"`
 	msgUpdateMutex sync.Mutex
@@ -35,7 +36,7 @@ type RoomInfo struct {
 	Admins map[string]bool   `json:"admins,omitempty"`
 }
 
-func NewRoom(ctx context.Context, cManager ConnectionManager, contactIdentities ...Identity) (*Room, error) {
+func NewRoom(ctx context.Context, cManager ConnectionManager, commandHandler CommandHandler, contactIdentities ...Identity) (*Room, error) {
 	id, err := NewIdentity(Self, "")
 	if err != nil {
 		return nil, err
@@ -46,6 +47,7 @@ func NewRoom(ctx context.Context, cManager ConnectionManager, contactIdentities 
 		Self:              id,
 		ID:                uuid.New(),
 		connectionManager: cManager,
+		commandHandler:    commandHandler,
 		SyncState:         make(SyncMap),
 	}
 
@@ -65,6 +67,10 @@ func (r *Room) SetContext(ctx context.Context) {
 
 func (r *Room) SetConnectionManager(manager ConnectionManager) {
 	r.connectionManager = manager
+}
+
+func (r *Room) SetCommandHandler(handler CommandHandler) {
+	r.commandHandler = handler
 }
 
 /*
@@ -188,7 +194,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 			newSyncState[msg.Meta.Sender] = msg.Meta.Time
 
 			if msg.Content.Type == ContentTypeCmd {
-				err := HandleCommand(&msg, r)
+				err := r.commandHandler.HandleCommand(&msg, r)
 				if err != nil {
 					log.WithError(err).Warn()
 				}

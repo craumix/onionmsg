@@ -184,6 +184,7 @@ func (d *Daemon) loadData() error {
 	for _, room := range d.GetRooms() {
 		room.SetContext(d.ctx)
 		room.SetConnectionManager(d.ConnectionManager)
+		room.SetCommandHandler(types.GetDefaultCommandHandler())
 	}
 
 	d.loadFuse = true

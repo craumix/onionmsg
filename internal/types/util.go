@@ -3,8 +3,6 @@ package types
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/google/uuid"
 )
 
@@ -81,11 +79,4 @@ func (r ContactRequest) GenerateResponse(cID Identity) (ContactResponse, RoomReq
 			ViaFingerprint: cID.Fingerprint(),
 			ID:             uuid.New(),
 		}, nil
-}
-
-func init() {
-	err := RegisterRoomCommands()
-	if err != nil {
-		log.WithError(err).Warn()
-	}
 }

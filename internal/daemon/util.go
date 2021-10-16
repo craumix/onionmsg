@@ -29,6 +29,7 @@ func (d *Daemon) AcceptRoomRequest(toAccept string) error {
 
 	request.Room.SetContext(d.ctx)
 	request.Room.SetConnectionManager(d.ConnectionManager)
+	request.Room.SetCommandHandler(types.GetDefaultCommandHandler())
 
 	err := d.registerRoom(&request.Room)
 	if err != nil {
