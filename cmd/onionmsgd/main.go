@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -74,9 +73,8 @@ func main() {
 		log.WithError(err).Panic()
 	}
 
-	for {
-		time.Sleep(time.Second * 10)
-	}
+	// Wait forever
+	//select {}
 }
 
 func setupFlags() {

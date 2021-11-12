@@ -25,6 +25,8 @@ type Room struct {
 
 	ctx  context.Context
 	stop context.CancelFunc
+
+	newMessageHook func(uuid.UUID, ...Message)
 }
 
 type RoomInfo struct {
@@ -71,6 +73,10 @@ func (r *Room) SetConnectionManager(manager ConnectionManager) {
 
 func (r *Room) SetCommandHandler(handler CommandHandler) {
 	r.commandHandler = handler
+}
+
+func (r *Room) SetNewMessageHook(hook func(uuid.UUID, ...Message)) {
+	r.newMessageHook = hook
 }
 
 /*
@@ -212,6 +218,10 @@ func (r *Room) PushMessages(msgs ...Message) error {
 	r.SyncState = newSyncState
 
 	r.msgUpdateMutex.Unlock()
+
+	if (r.newMessageHook != nil) {
+		r.newMessageHook(r.ID, msgs...)
+	}
 
 	return nil
 }

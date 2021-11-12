@@ -67,9 +67,5 @@ func (d *Daemon) convClientHandler(conn net.Conn) {
 
 	room.PushMessages(newMsgs...)
 
-	if len(newMsgs) > 0 {
-		d.Notifier.NotifyNewMessage(roomID, newMsgs...)
-	}
-
 	mConn.SendStatusMessage(types.SyncOK)
 }

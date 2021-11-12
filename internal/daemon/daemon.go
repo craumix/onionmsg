@@ -185,6 +185,7 @@ func (d *Daemon) loadData() error {
 		room.SetContext(d.ctx)
 		room.SetConnectionManager(d.ConnectionManager)
 		room.SetCommandHandler(types.GetDefaultCommandHandler())
+		room.SetNewMessageHook(d.Notifier.NotifyNewMessage)
 	}
 
 	d.loadFuse = true
