@@ -24,7 +24,7 @@ const (
 	torrc    = "torrc"
 	torDir   = "cache/Tor"
 	blobDir  = "blobs"
-	datafile = "alliumd.zstd"
+	datafile = "alliumd.zst"
 
 	// LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
