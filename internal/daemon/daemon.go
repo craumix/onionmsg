@@ -22,7 +22,7 @@ const (
 	defaultLocalConversationPort = 10051
 
 	torrc    = "torrc"
-	torDir   = "cache/Tor"
+	torDir   = "cache/tor"
 	blobDir  = "blobs"
 	datafile = "alliumd.zst"
 
@@ -66,8 +66,8 @@ func NewDaemon(conf Config) (*Daemon, error) {
 	newTorInstance, err := tor.NewInstance(tor.Config{
 		SocksPort:   defaultSocksPort,
 		ControlPort: defaultControlPort,
-		DataDir:     torDir,
-		TorRC:       torrc,
+		DataDir:     filepath.Join(conf.BaseDir, torDir),
+		TorRC:       filepath.Join(conf.BaseDir, torrc),
 		ControlPass: conf.UseControlPass,
 		Binary:      conf.TorBinary,
 		StdOut: TorStringWriter{
