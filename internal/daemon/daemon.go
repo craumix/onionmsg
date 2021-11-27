@@ -2,11 +2,13 @@ package daemon
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/blobmngr"
@@ -25,6 +27,7 @@ const (
 	torDir   = "cache/tor"
 	blobDir  = "blobs"
 	datafile = "alliumd.zst"
+	pidfile  = "alliumd.pid"
 
 	// LastCommit is the first 7 letters of the last commit, injected at build time
 	LastCommit = "unknown"
@@ -59,6 +62,7 @@ type Daemon struct {
 
 	loContPort, loConvPort int
 	datafile               string
+	pidfile                string
 	loadFuse               bool
 }
 
@@ -96,6 +100,7 @@ func NewDaemon(conf Config) (*Daemon, error) {
 		loContPort:  defaultLocalControlPort + conf.PortOffset,
 		loConvPort:  defaultLocalConversationPort + conf.PortOffset,
 		datafile:    filepath.Join(conf.BaseDir, datafile),
+		pidfile:     filepath.Join(conf.BaseDir, pidfile),
 	}, nil
 }
 
@@ -114,14 +119,18 @@ func (d *Daemon) StartDaemon(ctx context.Context) error {
 			d.exitDaemon()
 		}
 	}()
-
 	d.startSignalHandler()
+
+	err := WritePIDFile(d.pidfile)
+	if err != nil {
+		log.WithError(err).Debug()
+	}
 
 	if d.createBaseDirIfNotExists() {
 		log.WithField("dir", d.Config.BaseDir).Debug("base directory not found, created it")
 	}
 
-	err := d.BlobManager.CreateDirIfNotExists()
+	err = d.BlobManager.CreateDirIfNotExists()
 	if err != nil {
 		log.WithError(err).Debug()
 	}
@@ -230,10 +239,15 @@ func (d *Daemon) exitDaemon() {
 		d.Tor.Stop()
 	}
 
+	err := os.Remove(d.pidfile)
+	if err != nil {
+		log.WithError(err).Error("error deleting pidfile")
+	}
+
 	if d.loadFuse {
 		err := d.saveData()
 		if err != nil {
-			log.WithError(err).Error()
+			log.WithError(err).Error("error saving data")
 			//TODO save struct in case of unable to save
 		}
 	}
@@ -247,4 +261,20 @@ func (d *Daemon) saveData() error {
 
 func (d *Daemon) TorInfo() interface{} {
 	return d.Tor.Info()
+}
+
+func WritePIDFile(path string) error {
+	file, err := os.OpenFile(path, os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	pid := os.Getpid()
+	_, err = file.Write([]byte(strconv.Itoa(pid)))
+	if err != nil {
+		return err
+	}
+
+	return err
 }
