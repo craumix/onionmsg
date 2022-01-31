@@ -48,7 +48,7 @@ func GetDefaultCommandHandler() CommandHandler {
 
 	ch.RegisterCommand(RoomCommandRemovePeer, removePeerCallback)
 
-	ch.RegisterCommand(RoomCommandAccept, nil)
+	ch.RegisterCommand(RoomCommandAccept, noop)
 
 	return ch
 }
@@ -70,11 +70,7 @@ func (ch CommandHandler) HandleCommand(message *Message, room *Room) error {
 		return fmt.Errorf("command %s is not registered", command)
 	}
 
-	handleFunc := ch.commandCallbacks[Command(command)]
-	if handleFunc != nil {
-		return handleFunc(Command(command), message, room)
-	}
-	return nil
+	return ch.commandCallbacks[Command(command)](Command(command), message, room)
 }
 
 func inviteCallback(command Command, message *Message, room *Room) error {
@@ -171,6 +167,10 @@ func removePeerCallback(command Command, message *Message, room *Room) error {
 	}
 
 	return room.removePeer(args[1])
+}
+
+func noop(_ Command, _ *Message, _ *Room) error {
+	return nil
 }
 
 func getSender(msg *Message, r *Room, shouldBeAdmin bool) (Identity, error) {
