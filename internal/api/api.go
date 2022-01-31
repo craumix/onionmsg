@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"io/ioutil"
 	"mime"
 	"net"
@@ -13,7 +14,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/craumix/onionmsg/internal/daemon"
 	"github.com/craumix/onionmsg/internal/types"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
@@ -35,6 +35,25 @@ func defaultUpgrader() websocket.Upgrader {
 	}
 }
 
+type Backend interface {
+	TorInfo() interface{}
+	GetNotifier() types.Notifier
+	GetBlobManager() blobmngr.ManagesBlobs
+	GetContactIDsAsStrings() []string
+	CreateAndRegisterNewContactID() (types.Identity, error)
+	DeregisterAndRemoveContactIDByFingerprint(fingerprint string) error
+	GetRoomRequests() []*types.RoomRequest
+	AcceptRoomRequest(id string) error
+	RemoveRoomRequestByID(toRemove string)
+	GetRoomInfoByID(roomId string) (*types.RoomInfo, error)
+	GetInfoForAllRooms() []*types.RoomInfo
+	DeregisterAndDeleteRoomByID(roomID string) error
+	CreateRoom(fingerprints []string) error
+	SendMessageInRoom(roomID string, content types.MessageContent) error
+	ListMessagesInRoom(roomID string, count int) ([]types.Message, error)
+	AddNewPeerToRoom(roomID string, newPeerFingerprint string) error
+}
+
 type Config struct {
 	UseUnixSocket bool
 	PortOffset    int
@@ -44,11 +63,11 @@ type API struct {
 	config Config
 
 	port       int
-	backend    *daemon.Daemon
+	backend    Backend
 	wsUpgrader websocket.Upgrader
 }
 
-func NewAPI(config Config, backend *daemon.Daemon) *API {
+func NewAPI(config Config, backend Backend) *API {
 	return &API{
 		config: config,
 
@@ -118,7 +137,8 @@ func (api *API) routeOpenWS(w http.ResponseWriter, req *http.Request) {
 		log.WithError(err).Warn("error when upgrading connection")
 	}
 
-	api.backend.Notifier.AddObserver(conn)
+	notifier := api.backend.GetNotifier()
+	notifier.AddObserver(conn)
 }
 
 func (api *API) RouteStatus(w http.ResponseWriter, _ *http.Request) {
@@ -137,7 +157,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err = api.backend.BlobManager.StatFromID(id)
+	_, err = api.backend.GetBlobManager().StatFromID(id)
 	if os.IsNotExist(err) {
 		http.Error(w, "Blob not found!", http.StatusNotFound)
 		return
@@ -153,7 +173,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Cache-Control", "public, max-age=604800, immutable")
 	w.Header().Add("Content-Type", "application/octet-stream")
 
-	err = api.backend.BlobManager.StreamTo(id, w)
+	err = api.backend.GetBlobManager().StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -282,13 +302,13 @@ func (api *API) RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
-	id, err := api.backend.BlobManager.MakeBlob()
+	id, err := api.backend.GetBlobManager().MakeBlob()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = api.backend.BlobManager.WriteIntoBlob(req.Body, id)
+	err = api.backend.GetBlobManager().WriteIntoBlob(req.Body, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -302,7 +322,7 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	filesize := 0
-	fileStat, err := api.backend.BlobManager.StatFromID(id)
+	fileStat, err := api.backend.GetBlobManager().StatFromID(id)
 	if err == nil {
 		filesize = int(fileStat.Size())
 	}

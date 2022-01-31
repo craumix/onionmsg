@@ -9,6 +9,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type ManagesBlobs interface {
+	CreateDirIfNotExists() error
+	GetResource(id uuid.UUID) ([]byte, error)
+	StreamTo(id uuid.UUID, w io.Writer) error
+	FileFromID(id uuid.UUID) (*os.File, error)
+	StatFromID(id uuid.UUID) (fs.FileInfo, error)
+	WriteIntoBlob(from io.Reader, blobID uuid.UUID) error
+	SaveResource(blob []byte) (uuid.UUID, error)
+	MakeBlob() (uuid.UUID, error)
+	RemoveBlob(id uuid.UUID) error
+}
+
 type BlobManager struct {
 	dir string
 }

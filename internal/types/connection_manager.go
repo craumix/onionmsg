@@ -33,14 +33,14 @@ const (
 
 type ConnectionManager struct {
 	proxy       proxy.Dialer
-	blobManager blobmngr.BlobManager
+	blobManager blobmngr.ManagesBlobs
 }
 
 type MessageConnection struct {
 	conn sio.ConnWrapper
 }
 
-func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.BlobManager) ConnectionManager {
+func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.ManagesBlobs) ConnectionManager {
 	return ConnectionManager{
 		proxy:       proxy,
 		blobManager: blobManager,
@@ -263,7 +263,7 @@ func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
 	return fingerprint, nil
 }
 
-func (mc MessageConnection) SendBlobs(blobManager blobmngr.BlobManager, blobIds ...uuid.UUID) error {
+func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds ...uuid.UUID) error {
 	mc.SendUUIDs(blobIds...)
 
 	for _, id := range blobIds {

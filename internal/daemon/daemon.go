@@ -56,7 +56,7 @@ type Daemon struct {
 
 	Notifier          types.Notifier
 	ConnectionManager types.ConnectionManager
-	BlobManager       blobmngr.BlobManager
+	BlobManager       blobmngr.ManagesBlobs
 
 	ctx context.Context
 
@@ -261,6 +261,14 @@ func (d *Daemon) saveData() error {
 
 func (d *Daemon) TorInfo() interface{} {
 	return d.Tor.Info()
+}
+
+func (d *Daemon) GetNotifier() types.Notifier {
+	return d.Notifier
+}
+
+func (d *Daemon) GetBlobManager() blobmngr.ManagesBlobs {
+	return d.BlobManager
 }
 
 func WritePIDFile(path string) error {
