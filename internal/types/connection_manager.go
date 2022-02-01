@@ -313,7 +313,7 @@ func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds
 	return nil
 }
 
-func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.BlobManager) error {
+func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs) error {
 	ids, _ := mc.ReadUUIDs()
 
 	for _, id := range ids {
