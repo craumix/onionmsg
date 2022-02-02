@@ -225,10 +225,7 @@ func (mc MessageConnection) SolveFingerprintChallenge(sID SelfIdentity) error {
 		return err
 	}
 
-	signed, err := sID.Sign(challenge)
-	if err != nil {
-		log.WithError(err).Debug()
-	}
+	signed := sID.Sign(challenge)
 
 	mc.conn.WriteString(sID.Fingerprint())
 	mc.conn.WriteBytes(signed)
