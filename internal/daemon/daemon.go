@@ -31,9 +31,9 @@ const (
 
 // SerializableData struct exists purely for serialization purposes
 type SerializableData struct {
-	ContactIdentities []types.Identity     `json:"contactIdentities"`
-	Rooms             []*types.Room        `json:"rooms"`
-	Requests          []*types.RoomRequest `json:"requests"`
+	ContactIdentities []types.ContactIdentity `json:"contactIdentities"`
+	Rooms             []*types.Room           `json:"rooms"`
+	Requests          []*types.RoomRequest    `json:"requests"`
 }
 
 type Config struct {

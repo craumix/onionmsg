@@ -219,7 +219,7 @@ func (mc MessageConnection) ReadContactResponse() (ContactResponse, error) {
 	return resp, nil
 }
 
-func (mc MessageConnection) SolveFingerprintChallenge(sID Identity) error {
+func (mc MessageConnection) SolveFingerprintChallenge(sID SelfIdentity) error {
 	challenge, err := mc.conn.ReadBytes()
 	if err != nil {
 		return err
@@ -357,7 +357,7 @@ func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs
 	return nil
 }
 
-func (m ConnectionManager) contactPeer(room *Room, peerCID Identity) (ContactResponse, error) {
+func (m ConnectionManager) contactPeer(room *Room, peerCID RemoteIdentity) (ContactResponse, error) {
 	conn, err := m.dialConn("tcp", peerCID.URL()+":"+strconv.Itoa(PubContPort))
 	if err != nil {
 		return ContactResponse{}, err
@@ -396,7 +396,7 @@ func (mc MessageConnection) writeRandom(length int) ([]byte, error) {
 	return r, nil
 }
 
-func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
+func (m ConnectionManager) syncMsgs(room *Room, peerRID RemoteIdentity) error {
 	if room == nil {
 		return fmt.Errorf("room not set")
 	}
@@ -407,7 +407,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID Identity) error {
 	}
 	defer conn.Close()
 
-	err = conn.SolveFingerprintChallenge(room.Self)
+	err = conn.SolveFingerprintChallenge(*room.Self)
 	if err != nil {
 		return err
 	}

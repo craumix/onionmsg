@@ -99,7 +99,7 @@ func (m *Message) signData() []byte {
 	return signData
 }
 
-func NewMessage(content MessageContent, sender Identity) Message {
+func NewMessage(content MessageContent, sender SelfIdentity) Message {
 	msg := Message{
 		Meta: MessageMeta{
 			Sender: sender.Fingerprint(),
@@ -108,7 +108,7 @@ func NewMessage(content MessageContent, sender Identity) Message {
 		Content: content,
 	}
 
-	msg.Sign(*sender.Priv)
+	msg.Sign(sender.Priv)
 
 	return msg
 }

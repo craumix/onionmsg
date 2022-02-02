@@ -12,8 +12,8 @@ const (
 )
 
 type MessagingPeer struct {
-	RIdentity     Identity `json:"identity"`
-	LastSyncState SyncMap  `json:"lastSync"`
+	RIdentity     RemoteIdentity `json:"identity"`
+	LastSyncState SyncMap        `json:"lastSync"`
 
 	ctx         context.Context
 	stop        context.CancelFunc
@@ -22,7 +22,7 @@ type MessagingPeer struct {
 	Room *Room `json:"-"`
 }
 
-func NewMessagingPeer(rid Identity) *MessagingPeer {
+func NewMessagingPeer(rid RemoteIdentity) *MessagingPeer {
 	return &MessagingPeer{
 		RIdentity: rid,
 	}

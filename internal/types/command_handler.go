@@ -83,7 +83,7 @@ func inviteCallback(command Command, message *Message, room *Room) error {
 		return fmt.Errorf("user %s already added, or self", args[1])
 	}
 
-	peerID, err := NewIdentity(Remote, args[1])
+	peerID, err := NewRemoteIdentity(args[1])
 	if err != nil {
 		return err
 	}
@@ -119,14 +119,22 @@ func nickCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	sender, err := getSender(message, room, false)
-	if err != nil {
-		return err
-	}
+	sender, self, err := getSender(message, room, false)
 
 	nickname := args[1]
-	sender.Meta.Nick = nickname
-	log.Debugf("Set nickname for %s to %s", sender.Fingerprint(), nickname)
+	debugMsg := ""
+	switch {
+	case err != nil:
+		return err
+	case self != nil:
+		room.Self.SetNick(nickname)
+		debugMsg = room.Self.Fingerprint()
+	case sender != nil:
+		sender.SetNick(nickname)
+		debugMsg = sender.Fingerprint()
+	}
+
+	log.Debugf("Set nickname for %s to %s", debugMsg, nickname)
 
 	return nil
 }
@@ -137,7 +145,7 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	_, err = getSender(message, room, true)
+	_, _, err = getSender(message, room, true)
 	if err != nil {
 		return err
 	}
@@ -145,9 +153,9 @@ func promoteCallback(command Command, message *Message, room *Room) error {
 	toPromote, found := room.PeerByFingerprint(args[1])
 	switch {
 	case found:
-		toPromote.Meta.Admin = true
+		toPromote.SetAdmin(true)
 	case room.isSelf(args[1]):
-		room.Self.Meta.Admin = true
+		room.Self.SetAdmin(true)
 	default:
 		return peerNotFoundError(args[1])
 	}
@@ -161,7 +169,7 @@ func removePeerCallback(command Command, message *Message, room *Room) error {
 		return err
 	}
 
-	_, err = getSender(message, room, true)
+	_, _, err = getSender(message, room, true)
 	if err != nil {
 		return err
 	}
@@ -173,20 +181,25 @@ func noop(_ Command, _ *Message, _ *Room) error {
 	return nil
 }
 
-func getSender(msg *Message, r *Room, shouldBeAdmin bool) (Identity, error) {
+func getSender(msg *Message, r *Room, shouldBeAdmin bool) (*RemoteIdentity, *SelfIdentity, error) {
+	isSelf := false
 	sender, found := r.PeerByFingerprint(msg.Meta.Sender)
 	if !found {
 		if r.Self.Fingerprint() != msg.Meta.Sender {
-			return Identity{}, peerNotFoundError(msg.Meta.Sender)
+			return nil, nil, peerNotFoundError(msg.Meta.Sender)
 		}
-		sender = r.Self
+		isSelf = true
 	}
 
-	if shouldBeAdmin && !sender.Meta.Admin {
-		return Identity{}, peerNotAdminError(msg.Meta.Sender)
+	if shouldBeAdmin && ((!isSelf && !sender.isAdmin()) || (isSelf && !r.Self.isAdmin())) {
+		return nil, nil, peerNotAdminError(msg.Meta.Sender)
 	}
 
-	return sender, nil
+	if isSelf {
+		return nil, r.Self, nil
+	}
+
+	return sender, nil, nil
 }
 
 func parseCommand(message *Message, actualCommand, expectedCommand Command, expectedArgs int) ([]string, error) {

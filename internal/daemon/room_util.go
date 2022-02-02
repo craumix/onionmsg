@@ -9,7 +9,7 @@ import (
 
 func (d *Daemon) initRooms() error {
 	for _, room := range d.GetRooms() {
-		err := d.serveConvIDService(room.Self)
+		err := d.serveConvIDService(*room.Self)
 		if err != nil {
 			return err
 		}
@@ -20,7 +20,7 @@ func (d *Daemon) initRooms() error {
 }
 
 func (d *Daemon) registerRoom(room *types.Room) error {
-	err := d.serveConvIDService(room.Self)
+	err := d.serveConvIDService(*room.Self)
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func (d *Daemon) registerRoom(room *types.Room) error {
 	return nil
 }
 
-func (d *Daemon) serveConvIDService(i types.Identity) error {
-	return d.Tor.RegisterService(*i.Priv, types.PubConvPort, d.loConvPort)
+func (d *Daemon) serveConvIDService(i types.SelfIdentity) error {
+	return d.Tor.RegisterService(i.Priv, types.PubConvPort, d.loConvPort)
 }
 
 func (d *Daemon) deregisterRoom(id string) error {
@@ -44,7 +44,7 @@ func (d *Daemon) deregisterRoom(id string) error {
 		return nil
 	}
 
-	err := d.Tor.DeregisterService(*room.Self.Pub)
+	err := d.Tor.DeregisterService(room.Self.Pub)
 	if err != nil {
 		return err
 	}
@@ -58,9 +58,9 @@ func (d *Daemon) deregisterRoom(id string) error {
 
 // Maybe this should be run in a goroutine
 func (d *Daemon) CreateRoom(fingerprints []string) error {
-	var ids []types.Identity
+	var ids []types.RemoteIdentity
 	for _, fingerprint := range fingerprints {
-		id, err := types.NewIdentity(types.Remote, fingerprint)
+		id, err := types.NewRemoteIdentity(fingerprint)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (d *Daemon) AddNewPeerToRoom(roomID string, newPeerFingerprint string) erro
 		return fmt.Errorf("no such room %s", roomID)
 	}
 
-	rID, err := types.NewIdentity(types.Remote, newPeerFingerprint)
+	rID, err := types.NewRemoteIdentity(newPeerFingerprint)
 	if err != nil {
 		return err
 	}

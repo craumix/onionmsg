@@ -11,7 +11,7 @@ type MockBackend struct {
 	TorInfoFunc                                   func() interface{}
 	GetNotifierFunc                               func() types.Notifier
 	GetContactIDsAsStringsFunc                    func() []string
-	CreateAndRegisterNewContactIDFunc             func() (types.Identity, error)
+	CreateAndRegisterNewContactIDFunc             func() (types.ContactIdentity, error)
 	DeregisterAndRemoveContactIDByFingerprintFunc func(fingerprint string) error
 	GetRoomRequestsFunc                           func() []*types.RoomRequest
 	AcceptRoomRequestFunc                         func(id string) error
@@ -45,7 +45,7 @@ func (m MockBackend) GetContactIDsAsStrings() []string {
 	return m.GetContactIDsAsStringsFunc()
 }
 
-func (m MockBackend) CreateAndRegisterNewContactID() (types.Identity, error) {
+func (m MockBackend) CreateAndRegisterNewContactID() (types.ContactIdentity, error) {
 	return m.CreateAndRegisterNewContactIDFunc()
 }
 

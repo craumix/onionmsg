@@ -8,9 +8,9 @@ type MockReadCloser struct {
 	CloseReturnError error
 }
 
-func (m *MockReadCloser) Read(readInto []byte) (n int, err error) {
-	for i, byte := range m.ReadFrom {
-		readInto[i] = byte
+func (m *MockReadCloser) Read(readInto []byte) (int, error) {
+	for i, b := range m.ReadFrom {
+		readInto[i] = b
 	}
 
 	return len(m.ReadFrom), m.ReadReturnError

@@ -39,7 +39,7 @@ type Backend interface {
 	GetNotifier() types.Notifier
 	GetBlobManager() blobmngr.ManagesBlobs
 	GetContactIDsAsStrings() []string
-	CreateAndRegisterNewContactID() (types.Identity, error)
+	CreateAndRegisterNewContactID() (types.ContactIdentity, error)
 	DeregisterAndRemoveContactIDByFingerprint(fingerprint string) error
 	GetRoomRequests() []*types.RoomRequest
 	AcceptRoomRequest(id string) error

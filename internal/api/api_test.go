@@ -237,11 +237,11 @@ func TestDeleteRoomError(t *testing.T) {
 func TestRouteContactCreate(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	expected, _ := types.NewIdentity(types.Contact, "")
+	expected := types.NewContactIdentity()
 
 	backend := mocks.DefaultBackend()
 
-	backend.CreateAndRegisterNewContactIDFunc = func() (types.Identity, error) {
+	backend.CreateAndRegisterNewContactIDFunc = func() (types.ContactIdentity, error) {
 		return expected, nil
 	}
 
@@ -259,8 +259,8 @@ func TestRouteContactCreateError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.CreateAndRegisterNewContactIDFunc = func() (types.Identity, error) {
-		return types.Identity{}, test.GetTestError()
+	backend.CreateAndRegisterNewContactIDFunc = func() (types.ContactIdentity, error) {
+		return types.ContactIdentity{}, test.GetTestError()
 	}
 
 	apiT := api.NewAPI(defaultConf(), backend)

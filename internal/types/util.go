@@ -55,11 +55,11 @@ func blobIDsFromMessages(msgs ...Message) []uuid.UUID {
 	return ids
 }
 
-func (r ContactRequest) GenerateResponse(cID Identity) (ContactResponse, RoomRequest, error) {
-	remoteID, _ := NewIdentity(Remote, r.LocalFP)
-	remoteID.Meta.Admin = true
+func (r ContactRequest) GenerateResponse(cID ContactIdentity) (ContactResponse, RoomRequest, error) {
+	remoteID, _ := NewRemoteIdentity(r.LocalFP)
+	remoteID.SetAdmin(true)
 
-	convID, _ := NewIdentity(Self, "")
+	convID := NewSelfIdentity()
 
 	sig, err := cID.Sign(append([]byte(convID.Fingerprint()), r.ID[:]...))
 	if err != nil {
@@ -71,7 +71,7 @@ func (r ContactRequest) GenerateResponse(cID Identity) (ContactResponse, RoomReq
 			Sig:    sig,
 		}, RoomRequest{
 			Room: Room{
-				Self:      convID,
+				Self:      &convID,
 				Peers:     []*MessagingPeer{NewMessagingPeer(remoteID)},
 				ID:        r.ID,
 				SyncState: make(SyncMap),

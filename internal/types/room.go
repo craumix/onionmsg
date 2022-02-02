@@ -11,7 +11,7 @@ import (
 )
 
 type Room struct {
-	Self     Identity         `json:"self"`
+	Self     *SelfIdentity    `json:"self"`
 	Peers    []*MessagingPeer `json:"peers"`
 	ID       uuid.UUID        `json:"uuid"`
 	Name     string           `json:"name"`
@@ -38,15 +38,12 @@ type RoomInfo struct {
 	Admins map[string]bool   `json:"admins,omitempty"`
 }
 
-func NewRoom(ctx context.Context, cManager ConnectionManager, commandHandler CommandHandler, contactIdentities ...Identity) (*Room, error) {
-	id, err := NewIdentity(Self, "")
-	if err != nil {
-		return nil, err
-	}
+func NewRoom(ctx context.Context, cManager ConnectionManager, commandHandler CommandHandler, remoteIds ...RemoteIdentity) (*Room, error) {
+	id := NewSelfIdentity()
 
-	id.Meta.Admin = true
+	id.SetAdmin(true)
 	room := &Room{
-		Self:              id,
+		Self:              &id,
 		ID:                uuid.New(),
 		connectionManager: cManager,
 		commandHandler:    commandHandler,
@@ -55,7 +52,7 @@ func NewRoom(ctx context.Context, cManager ConnectionManager, commandHandler Com
 
 	room.SetContext(ctx)
 
-	err = room.AddPeers(contactIdentities...)
+	err := room.AddPeers(remoteIds...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,10 +80,10 @@ func (r *Room) SetNewMessageHook(hook func(uuid.UUID, ...Message)) {
 AddPeers adds a user to the Room, and if successful syncs the PeerLists.
 If not successful returns the error.
 */
-func (r *Room) AddPeers(contactIdentities ...Identity) error {
+func (r *Room) AddPeers(contactIdentities ...RemoteIdentity) error {
 	var newPeers []*MessagingPeer
 	for _, identity := range contactIdentities {
-		newPeer, err := r.createPeerViaContactID(identity)
+		newPeer, err := r.createPeerViaRemoteID(identity)
 		if err != nil {
 			return err
 		}
@@ -122,30 +119,30 @@ This function tries to add a user with the contactID to the Room.
 This only adds the user, so the user lists are then out of sync.
 Call syncPeerLists() to sync them again.
 */
-func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer, error) {
-	resp, err := r.connectionManager.contactPeer(r, contactIdentity)
+func (r *Room) createPeerViaRemoteID(cid RemoteIdentity) (*MessagingPeer, error) {
+	resp, err := r.connectionManager.contactPeer(r, cid)
 	if err != nil {
 		return nil, err
 	}
 
-	if ok, _ := contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); !ok {
-		return nil, fmt.Errorf("invalid signature from contactIdentity %s", contactIdentity.URL())
+	if ok, _ := cid.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); !ok {
+		return nil, fmt.Errorf("invalid signature from Contact %s", cid.URL())
 	}
 
-	switch ok, err := contactIdentity.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); {
+	switch ok, err := cid.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); {
 	case err != nil:
 		return nil, err
 	case !ok:
-		return nil, fmt.Errorf("invalid signature from contactIdentity %s", contactIdentity.URL())
+		return nil, fmt.Errorf("invalid signature from Contact %s", cid.URL())
 	}
 
-	peerID, err := NewIdentity(Remote, resp.ConvFP)
+	peerID, err := NewRemoteIdentity(resp.ConvFP)
 	if err != nil {
 		return nil, err
 	}
 
 	lf := log.Fields{
-		"contact-url":     contactIdentity.URL(),
+		"contact-url":     cid.URL(),
 		"conversation-id": resp.ConvFP,
 		"peer":            peerID,
 		"room":            r.ID.String(),
@@ -157,7 +154,7 @@ func (r *Room) createPeerViaContactID(contactIdentity Identity) (*MessagingPeer,
 }
 
 func (r *Room) SendMessageToAllPeers(content MessageContent) {
-	msg := NewMessage(content, r.Self)
+	msg := NewMessage(content, *r.Self)
 
 	r.PushMessages(msg)
 
@@ -172,13 +169,13 @@ func (r *Room) RunMessageQueueForAllPeers() {
 	}
 }
 
-func (r *Room) PeerByFingerprint(fingerprint string) (Identity, bool) {
+func (r *Room) PeerByFingerprint(fingerprint string) (*RemoteIdentity, bool) {
 	for _, peer := range r.Peers {
 		if peer.RIdentity.Fingerprint() == fingerprint {
-			return peer.RIdentity, true
+			return &peer.RIdentity, true
 		}
 	}
-	return Identity{}, false
+	return nil, false
 }
 
 // StopQueues cancels this context and with that all message queues of
@@ -219,7 +216,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 
 	r.msgUpdateMutex.Unlock()
 
-	if (r.newMessageHook != nil) {
+	if r.newMessageHook != nil {
 		r.newMessageHook(r.ID, msgs...)
 	}
 
@@ -240,13 +237,13 @@ func (r *Room) Info() *RoomInfo {
 		Admins: map[string]bool{},
 	}
 
-	info.Nicks[r.Self.Fingerprint()] = r.Self.Meta.Nick
-	info.Admins[r.Self.Fingerprint()] = r.Self.Meta.Admin
+	info.Nicks[r.Self.Fingerprint()] = r.Self.Nick()
+	info.Admins[r.Self.Fingerprint()] = r.Self.isAdmin()
 
 	for _, peer := range r.Peers {
 		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
-		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Meta.Nick
-		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.Meta.Admin
+		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick()
+		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.isAdmin()
 	}
 
 	return info
@@ -276,6 +273,6 @@ func (r *Room) findMessagesToSync(remoteSyncTimes SyncMap) []Message {
 	return msgs
 }
 
-func (r *Room) syncMsgs(peerRID Identity) error {
+func (r *Room) syncMsgs(peerRID RemoteIdentity) error {
 	return r.connectionManager.syncMsgs(r, peerRID)
 }
