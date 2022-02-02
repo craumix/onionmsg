@@ -10,14 +10,16 @@ import (
 
 const testCommand Command = "test-command"
 
-func TestRegisterCallback(t *testing.T) {
-	CleanCallbacks()
+func emptyCommandHandler() CommandHandler {
+	return NewCommandHandler(make(map[Command]func(Command, *Message, *Room) error))
+}
 
+func TestRegisterCallback(t *testing.T) {
 	called := 0
-	RegisterCommand(testCommand, func(Command, *Message, *Room) error {
+	testFunc := func(Command, *Message, *Room) error {
 		called++
 		return nil
-	})
+	}
 
 	testMsg := Message{
 		Meta: MessageMeta{},
@@ -29,28 +31,37 @@ func TestRegisterCallback(t *testing.T) {
 		Sig: nil,
 	}
 
-	HandleCommand(&testMsg, nil)
+	handler := emptyCommandHandler()
+
+	err := handler.RegisterCommand(testCommand, testFunc)
+	assert.Nil(t, err)
+
+	err = handler.HandleCommand(&testMsg, nil)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 1, called)
 }
 
 func TestRegisterCallbackError(t *testing.T) {
-	CleanCallbacks()
+	handler := emptyCommandHandler()
 
-	err1 := RegisterCommand(testCommand, func(Command, *Message, *Room) error {
+	func1 := func() func(Command, *Message, *Room) error {
 		return nil
-	})
+	}
 
-	err2 := RegisterCommand(testCommand, func(Command, *Message, *Room) error {
+	func2 := func() func(Command, *Message, *Room) error {
 		return nil
-	})
+	}
+
+	err1 := handler.RegisterCommand(testCommand, func1())
+	err2 := handler.RegisterCommand(testCommand, func2())
 
 	assert.Nil(t, err1)
 	assert.Error(t, err2)
 }
 
 func TestHandleCallbackNoCommand(t *testing.T) {
-	CleanCallbacks()
+	handler := emptyCommandHandler()
 
 	testMsg := Message{
 		Meta: MessageMeta{},
@@ -62,13 +73,13 @@ func TestHandleCallbackNoCommand(t *testing.T) {
 		Sig: nil,
 	}
 
-	actual := HandleCommand(&testMsg, nil)
+	err := handler.HandleCommand(&testMsg, nil)
 
-	assert.Error(t, actual)
+	assert.Error(t, err)
 }
 
 func TestHandleCallbackCommandNotRegistered(t *testing.T) {
-	CleanCallbacks()
+	handler := emptyCommandHandler()
 
 	testMsg := Message{
 		Meta: MessageMeta{},
@@ -80,44 +91,33 @@ func TestHandleCallbackCommandNotRegistered(t *testing.T) {
 		Sig: nil,
 	}
 
-	actual := HandleCommand(&testMsg, nil)
+	err := handler.HandleCommand(&testMsg, nil)
 
-	assert.Error(t, actual)
+	assert.Error(t, err)
 }
 
-func TestCleanCallbacks(t *testing.T) {
-	CleanCallbacks()
-
-	called := 0
-	RegisterCommand(testCommand, func(Command, *Message, *Room) error {
-		called++
-		return nil
-	})
-
-	testMsg := Message{
-		Meta: MessageMeta{},
-		Content: MessageContent{
-			Type: ContentTypeCmd,
-			Blob: &BlobMeta{},
-			Data: []byte(testCommand),
-		},
-		Sig: nil,
-	}
-
-	CleanCallbacks()
-
-	actual := HandleCommand(&testMsg, nil)
-
-	assert.Error(t, actual)
-	assert.Zero(t, called)
-}
-
-func TestAddCommand(t *testing.T) {
+func TestConstructCommand(t *testing.T) {
 	message := "test-message"
 
 	expected := string(testCommand) + CommandDelimiter + message
 
 	actual := ConstructCommand([]byte(message), testCommand)
+
+	assert.Equal(t, expected, string(actual))
+}
+
+func TestConstructCommandNoCommand(t *testing.T) {
+	message := "test-message"
+
+	actual := ConstructCommand([]byte(message), "")
+
+	assert.Equal(t, message, string(actual))
+}
+
+func TestConstructCommandNoMessage(t *testing.T) {
+	expected := string(testCommand)
+
+	actual := ConstructCommand([]byte(""), testCommand)
 
 	assert.Equal(t, expected, string(actual))
 }

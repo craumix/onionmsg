@@ -227,7 +227,3 @@ func ConstructCommand(message []byte, command Command) []byte {
 
 	return []byte(string(command) + CommandDelimiter + string(message))
 }
-
-func (ch *CommandHandler) CleanCallbacks() {
-	ch.commandCallbacks = map[Command]func(Command, *Message, *Room) error{}
-}
