@@ -25,7 +25,6 @@ const (
 	maxFileSize    = 2 << 30 //2G
 
 	unixSocketName = "onionmsg.sock"
-	defaultApiPort = 10052
 )
 
 func defaultUpgrader() websocket.Upgrader {
@@ -56,7 +55,7 @@ type Backend interface {
 
 type Config struct {
 	UseUnixSocket bool
-	PortOffset    int
+	PortGroup     types.PortGroup
 }
 
 type API struct {
@@ -71,7 +70,7 @@ func NewAPI(config Config, backend Backend) *API {
 	return &API{
 		config: config,
 
-		port:       defaultApiPort + config.PortOffset,
+		port:       config.PortGroup.ApiPort,
 		backend:    backend,
 		wsUpgrader: defaultUpgrader(),
 	}
@@ -86,7 +85,7 @@ func (api *API) Start() error {
 	if api.config.UseUnixSocket {
 		listener, err = sio.CreateUnixSocket(unixSocketName)
 	} else {
-		listener, err = sio.CreateTCPSocket(defaultApiPort)
+		listener, err = sio.CreateTCPSocket(api.port)
 	}
 
 	if err != nil {

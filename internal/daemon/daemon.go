@@ -17,12 +17,6 @@ import (
 )
 
 const (
-	defaultSocksPort   = 10048
-	defaultControlPort = 10049
-
-	defaultLocalControlPort      = 10050
-	defaultLocalConversationPort = 10051
-
 	torrc    = "torrc"
 	torDir   = "cache/tor"
 	blobDir  = "blobs"
@@ -44,7 +38,7 @@ type SerializableData struct {
 
 type Config struct {
 	BaseDir, TorBinary         string
-	PortOffset                 int
+	PortGroup                  types.PortGroup
 	UseControlPass, AutoAccept bool
 }
 
@@ -68,8 +62,8 @@ type Daemon struct {
 
 func NewDaemon(conf Config) (*Daemon, error) {
 	newTorInstance, err := tor.NewInstance(tor.Config{
-		SocksPort:   defaultSocksPort,
-		ControlPort: defaultControlPort,
+		SocksPort:   conf.PortGroup.SocksPort,
+		ControlPort: conf.PortGroup.ControlPort,
 		DataDir:     filepath.Join(conf.BaseDir, torDir),
 		TorRC:       filepath.Join(conf.BaseDir, torrc),
 		ControlPass: conf.UseControlPass,
@@ -97,8 +91,8 @@ func NewDaemon(conf Config) (*Daemon, error) {
 		BlobManager: blobmngr.NewBlobManager(filepath.Join(conf.BaseDir, blobDir)),
 		Notifier:    types.Notifier{},
 		loadFuse:    false,
-		loContPort:  defaultLocalControlPort + conf.PortOffset,
-		loConvPort:  defaultLocalConversationPort + conf.PortOffset,
+		loContPort:  conf.PortGroup.LocalControlPort,
+		loConvPort:  conf.PortGroup.LocalConversationPort,
 		datafile:    filepath.Join(conf.BaseDir, datafile),
 		pidfile:     filepath.Join(conf.BaseDir, pidfile),
 	}, nil

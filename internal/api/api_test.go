@@ -22,7 +22,7 @@ import (
 func defaultConf() api.Config {
 	return api.Config{
 		UseUnixSocket: false,
-		PortOffset:    0,
+		PortGroup:     types.NewPortGroup(0),
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/craumix/onionmsg/internal/types"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -47,9 +48,11 @@ func main() {
 		log.SetLevel(log.TraceLevel)
 	}
 
+	ports := types.NewPortGroup(portOffset)
+
 	backend, err := daemon.NewDaemon(daemon.Config{
 		BaseDir:        baseDir,
-		PortOffset:     portOffset,
+		PortGroup:      ports,
 		UseControlPass: !noControlPass,
 		AutoAccept:     autoAccept,
 		TorBinary:      torBinary,
@@ -65,7 +68,7 @@ func main() {
 
 	frontend := api.NewAPI(api.Config{
 		UseUnixSocket: useUnixSocket,
-		PortOffset:    portOffset,
+		PortGroup:     ports,
 	}, backend)
 
 	err = frontend.Start()
