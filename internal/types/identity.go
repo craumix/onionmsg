@@ -11,8 +11,8 @@ type identityPub struct {
 	Pub ed25519.PublicKey `json:"pub"`
 }
 
-func (i identityPub) Verify(msg, sig []byte) (bool, error) {
-	return ed25519.Verify(i.Pub, msg, sig), nil
+func (i identityPub) Verify(msg, sig []byte) bool {
+	return ed25519.Verify(i.Pub, msg, sig)
 }
 
 func (i identityPub) Fingerprint() string {
@@ -32,8 +32,8 @@ type identityPriv struct {
 	Priv ed25519.PrivateKey `json:"priv"`
 }
 
-func (i identityPriv) Sign(data []byte) ([]byte, error) {
-	return ed25519.Sign(i.Priv, data), nil
+func (i identityPriv) Sign(data []byte) []byte {
+	return ed25519.Sign(i.Priv, data)
 }
 
 type identityMeta struct {

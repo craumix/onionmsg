@@ -125,14 +125,8 @@ func (r *Room) createPeerViaRemoteID(cid RemoteIdentity) (*MessagingPeer, error)
 		return nil, err
 	}
 
-	if ok, _ := cid.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); !ok {
-		return nil, fmt.Errorf("invalid signature from Contact %s", cid.URL())
-	}
-
-	switch ok, err := cid.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig); {
-	case err != nil:
-		return nil, err
-	case !ok:
+	ok := cid.Verify(append([]byte(resp.ConvFP), r.ID[:]...), resp.Sig)
+	if !ok {
 		return nil, fmt.Errorf("invalid signature from Contact %s", cid.URL())
 	}
 

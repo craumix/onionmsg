@@ -61,10 +61,7 @@ func (r ContactRequest) GenerateResponse(cID ContactIdentity) (ContactResponse, 
 
 	convID := NewSelfIdentity()
 
-	sig, err := cID.Sign(append([]byte(convID.Fingerprint()), r.ID[:]...))
-	if err != nil {
-		return ContactResponse{}, RoomRequest{}, err
-	}
+	sig := cID.Sign(append([]byte(convID.Fingerprint()), r.ID[:]...))
 
 	return ContactResponse{
 			ConvFP: convID.Fingerprint(),
