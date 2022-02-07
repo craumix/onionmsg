@@ -313,46 +313,54 @@ func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds
 }
 
 func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs) error {
-	ids, _ := mc.ReadUUIDs()
+	blobIds, _ := mc.ReadUUIDs()
 
-	for _, id := range ids {
-		blockcount, err := mc.conn.ReadInt()
+	for _, id := range blobIds {
+		err := mc.createBlob(blobManager, id)
 		if err != nil {
 			return err
 		}
-
-		file, err := blobManager.FileFromID(id)
-		if err != nil {
-			return err
-		}
-
-		rcvOK := false
-		defer func() {
-			file.Close()
-			if !rcvOK {
-				blobManager.RemoveBlob(id)
-			}
-		}()
-
-		for i := 0; i < blockcount; i++ {
-			buf, err := mc.conn.ReadBytes()
-			if err != nil {
-				return err
-			}
-
-			_, err = file.Write(buf)
-			if err != nil {
-				return err
-			}
-
-			mc.SendStatusMessage(BlockOK)
-		}
-
-		mc.SendStatusMessage(BlobOK)
-
-		rcvOK = true
 	}
 
+	return nil
+}
+
+func (mc MessageConnection) createBlob(blobManager blobmngr.ManagesBlobs, blobId uuid.UUID) error {
+	blockCount, err := mc.conn.ReadInt()
+	if err != nil {
+		return err
+	}
+
+	blobFile, err := blobManager.FileFromID(blobId)
+	if err != nil {
+		return err
+	}
+
+	rcvOK := false
+	defer func() {
+		blobFile.Close()
+		if !rcvOK {
+			blobManager.RemoveBlob(blobId)
+		}
+	}()
+
+	for i := 0; i < blockCount; i++ {
+		buf, err := mc.conn.ReadBytes()
+		if err != nil {
+			return err
+		}
+
+		_, err = blobFile.Write(buf)
+		if err != nil {
+			return err
+		}
+
+		mc.SendStatusMessage(BlockOK)
+	}
+
+	mc.SendStatusMessage(BlobOK)
+
+	rcvOK = true
 	return nil
 }
 
