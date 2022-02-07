@@ -4,23 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	. "github.com/craumix/onionmsg/internal/api"
+	"github.com/craumix/onionmsg/internal/types"
+	"github.com/craumix/onionmsg/test"
+	"github.com/craumix/onionmsg/test/mocks"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
-
-	"github.com/craumix/onionmsg/internal/api"
-	"github.com/craumix/onionmsg/internal/types"
-	"github.com/craumix/onionmsg/test"
-	"github.com/craumix/onionmsg/test/mocks"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 )
 
-func defaultConf() api.Config {
-	return api.Config{
+func defaultConf() Config {
+	return Config{
 		UseUnixSocket: false,
 		PortGroup:     types.NewPortGroup(0),
 	}
@@ -29,7 +28,7 @@ func defaultConf() api.Config {
 func TestRouteStatus(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	apiT := api.NewAPI(defaultConf(), nil)
+	apiT := NewAPI(defaultConf(), nil)
 
 	apiT.RouteStatus(resWriter, nil)
 
@@ -59,7 +58,7 @@ func TestRouteTorLog(t *testing.T) {
 		return expected
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteTorInfo(resWriter, nil)
 
@@ -86,7 +85,7 @@ func TestRouteContactList(t *testing.T) {
 		return expected
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactList(resWriter, nil)
 
@@ -114,7 +113,7 @@ func TestRouteRoomList(t *testing.T) {
 		return expected
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomList(resWriter, nil)
 
@@ -141,7 +140,7 @@ func TestRouteRoomCreate(t *testing.T) {
 
 	req := getRequest(expected, false, true)
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomCreate(resWriter, req)
 
@@ -185,7 +184,7 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 
 	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteRoomCreate(resWriter, tc.req)
 
@@ -210,7 +209,7 @@ func TestDeleteRoom(t *testing.T) {
 	expected := "test id"
 	req.Form.Add("uuid", expected)
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomDelete(resWriter, req)
 
@@ -227,7 +226,7 @@ func TestDeleteRoomError(t *testing.T) {
 		return test.GetTestError()
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomDelete(resWriter, getRequest(nil, false, true))
 
@@ -245,7 +244,7 @@ func TestRouteContactCreate(t *testing.T) {
 		return expected, nil
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactCreate(resWriter, nil)
 
@@ -263,7 +262,7 @@ func TestRouteContactCreateError(t *testing.T) {
 		return types.ContactIdentity{}, test.GetTestError()
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactCreate(resWriter, nil)
 
@@ -287,7 +286,7 @@ func TestRouteContactDelete(t *testing.T) {
 	expected := "test id"
 	req.Form.Add("fingerprint", expected)
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactDelete(resWriter, req)
 
@@ -309,7 +308,7 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 
 	req := getRequest(nil, false, true)
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactDelete(resWriter, req)
 
@@ -330,7 +329,7 @@ func TestRouteContactDeleteError(t *testing.T) {
 
 	req.Form.Add("fingerprint", "test id")
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteContactDelete(resWriter, req)
 
@@ -356,7 +355,7 @@ func TestRouteRoomCommandUseradd(t *testing.T) {
 
 	req.Form.Add("uuid", expectedID)
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomCommandUseradd(resWriter, req)
 
@@ -403,7 +402,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 
 		tc.req.Form.Add("uuid", tc.uuid)
 
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteRoomCommandUseradd(resWriter, tc.req)
 
@@ -460,13 +459,13 @@ func TestRoomSendFile(t *testing.T) {
 		Data: nil,
 	}
 
-	req.Header.Set(api.FilenameHeader, expectedMsgContent.Blob.Name)
-	req.Header.Set(api.MimetypeHeader, expectedMsgContent.Blob.Type)
+	req.Header.Set(FilenameHeader, expectedMsgContent.Blob.Name)
+	req.Header.Set(MimetypeHeader, expectedMsgContent.Blob.Type)
 	req.Header.Set("Content-Length", "69")
 
 	resWriter := mocks.GetMockResponseWriter()
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteRoomSendFile(resWriter, req)
 
@@ -550,7 +549,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 		req := getRequest(nil, false, true)
 		req.Header.Set("Content-Length", tc.fileLength)
 
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteRoomSendFile(resWriter, req)
 
@@ -600,7 +599,7 @@ func TestRouteRoomMessages(t *testing.T) {
 
 		req.Form.Add("count", tc.expectedCount)
 
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteRoomMessages(resWriter, req)
 
@@ -633,7 +632,7 @@ func TestRouteBlob(t *testing.T) {
 	backend := mocks.DefaultBackend()
 	backend.BlobManager = manager
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteBlob(resWriter, req)
 
@@ -681,7 +680,7 @@ func TestRouteBlobStreamToErrors(t *testing.T) {
 		backend := mocks.DefaultBackend()
 		backend.BlobManager = manager
 
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteBlob(resWriter, req)
 
@@ -712,7 +711,7 @@ func TestRouteBlobBlobNotFoundError(t *testing.T) {
 	backend := mocks.DefaultBackend()
 	backend.BlobManager = manager
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	apiT.RouteBlob(resWriter, req)
 
@@ -754,7 +753,7 @@ func TestRouteBlobContentDisposition(t *testing.T) {
 
 	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
-		apiT := api.NewAPI(defaultConf(), backend)
+		apiT := NewAPI(defaultConf(), backend)
 
 		req := getRequest(nil, false, true)
 
@@ -783,7 +782,7 @@ func TestSendTextFunctions(t *testing.T) {
 		return nil
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	testcases := []struct {
 		name                string
@@ -807,6 +806,12 @@ func TestSendTextFunctions(t *testing.T) {
 			name:                "RouteRoomCommandPromote",
 			testFunc:            apiT.RouteRoomCommandPromote,
 			command:             types.RoomCommandPromote,
+			expectedContentType: types.ContentTypeCmd,
+		},
+		{
+			name:                "RoomCommandRemovePeer",
+			testFunc:            apiT.RouteRoomCommandRemovePeer,
+			command:             types.RoomCommandRemovePeer,
 			expectedContentType: types.ContentTypeCmd,
 		},
 		{
@@ -856,7 +861,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		return test.GetTestError()
 	}
 
-	apiT := api.NewAPI(defaultConf(), backend)
+	apiT := NewAPI(defaultConf(), backend)
 
 	testcases := []struct {
 		name     string
@@ -877,6 +882,10 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 		{
 			name:     "RouteRoomSendMessage",
 			testFunc: apiT.RouteRoomSendMessage,
+		},
+		{
+			name:     "RouteRoomCommandRemovePeer",
+			testFunc: apiT.RouteRoomCommandRemovePeer,
 		},
 	}
 
@@ -906,6 +915,213 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 			assertErrorCode(t, resWriter, te.expectedErrorCode, tc.name+"-"+te.name)
 		}
 	}
+}
+
+func TestRouteRequestList(t *testing.T) {
+	backend := mocks.DefaultBackend()
+
+	expected := []types.RoomRequest{
+		{
+			Room:           types.Room{},
+			ViaFingerprint: "test-fingerprint",
+			ID:             uuid.UUID{},
+		},
+	}
+
+	backend.GetRoomRequestsFunc = func() []*types.RoomRequest {
+		var res []*types.RoomRequest
+		for _, rr := range expected {
+			res = append(res, &rr)
+		}
+		return res
+	}
+
+	req := getRequest(nil, false, true)
+
+	resWriter := mocks.GetMockResponseWriter()
+
+	apiT := NewAPI(defaultConf(), backend)
+
+	apiT.RouteRequestList(resWriter, req)
+
+	var actual []types.RoomRequest
+	json.Unmarshal(resWriter.WriteInput[0], &actual)
+
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expected, actual)
+}
+
+func TestRouteRequestAccept(t *testing.T) {
+	backend := mocks.DefaultBackend()
+
+	actualID := ""
+	backend.AcceptRoomRequestFunc = func(id string) error {
+		actualID = id
+		return nil
+	}
+
+	req := getRequest(nil, false, true)
+
+	expectedID := test.GetValidUUID()
+	req.Form.Add("uuid", expectedID)
+
+	resWriter := mocks.GetMockResponseWriter()
+
+	apiT := NewAPI(defaultConf(), backend)
+
+	apiT.RouteRequestAccept(resWriter, req)
+
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expectedID, actualID)
+}
+
+func TestMalformedUuidErrors(t *testing.T) {
+	apiT := NewAPI(defaultConf(), mocks.DefaultBackend())
+
+	testcases := []struct {
+		name     string
+		testFunc func(w http.ResponseWriter, req *http.Request)
+	}{
+		{
+			name:     "RouteRequestAccept",
+			testFunc: apiT.RouteRequestAccept,
+		},
+		{
+			name:     "RouteRequestDelete",
+			testFunc: apiT.RouteRequestDelete,
+		},
+		{
+			name:     "RouteRoomInfo",
+			testFunc: apiT.RouteRoomInfo,
+		},
+	}
+
+	for _, tc := range testcases {
+		resWriter := mocks.GetMockResponseWriter()
+
+		req := getRequest(nil, true, true)
+		req.Form.Add("uuid", "MalformedUUID")
+
+		tc.testFunc(resWriter, req)
+
+		assertErrorCode(t, resWriter, http.StatusBadRequest, tc.name)
+	}
+}
+
+func TestRouteRequestAcceptError(t *testing.T) {
+	testcases := []struct {
+		name       string
+		id         string
+		errCode    int
+		backendErr error
+	}{
+		{
+			name:       "RoomId not accepted",
+			id:         test.GetValidUUID(),
+			errCode:    http.StatusInternalServerError,
+			backendErr: test.GetTestError(),
+		},
+	}
+
+	for _, tc := range testcases {
+		backend := mocks.DefaultBackend()
+
+		backend.AcceptRoomRequestFunc = func(id string) error {
+			return tc.backendErr
+		}
+
+		req := getRequest(nil, false, true)
+
+		req.Form.Add("uuid", tc.id)
+
+		resWriter := mocks.GetMockResponseWriter()
+
+		apiT := NewAPI(defaultConf(), backend)
+
+		apiT.RouteRequestAccept(resWriter, req)
+
+		assertErrorCode(t, resWriter, tc.errCode)
+	}
+}
+
+func TestRouteRequestDelete(t *testing.T) {
+	backend := mocks.DefaultBackend()
+
+	var actualID string
+	backend.RemoveRoomRequestByIDFunc = func(toRemove string) {
+		actualID = toRemove
+	}
+
+	req := getRequest(nil, false, true)
+
+	expectedID := test.GetValidUUID()
+	req.Form.Add("uuid", expectedID)
+
+	resWriter := mocks.GetMockResponseWriter()
+
+	apiT := NewAPI(defaultConf(), backend)
+
+	apiT.RouteRequestDelete(resWriter, req)
+
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+}
+
+func TestRouteRoomInfo(t *testing.T) {
+	backend := mocks.DefaultBackend()
+
+	expectedInfo := types.RoomInfo{
+		Self:   "test-self",
+		Peers:  []string{"a", "b"},
+		ID:     uuid.UUID{},
+		Name:   "test-name",
+		Nicks:  nil,
+		Admins: nil,
+	}
+
+	var actualID string
+	backend.GetRoomInfoByIDFunc = func(roomId string) (*types.RoomInfo, error) {
+		actualID = roomId
+		return &expectedInfo, nil
+	}
+
+	req := getRequest(nil, false, true)
+
+	expectedID := test.GetValidUUID()
+	req.Form.Add("uuid", expectedID)
+
+	resWriter := mocks.GetMockResponseWriter()
+
+	apiT := NewAPI(defaultConf(), backend)
+
+	apiT.RouteRoomInfo(resWriter, req)
+
+	var actualInfo types.RoomInfo
+	json.Unmarshal(resWriter.WriteInput[0], &actualInfo)
+
+	assertZeroStatusCode(t, resWriter)
+	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+	assert.Equal(t, expectedInfo, actualInfo, "Wrong Info")
+}
+
+func TestTestRouteRoomInfoError(t *testing.T) {
+	backend := mocks.DefaultBackend()
+
+	backend.GetRoomInfoByIDFunc = func(roomId string) (*types.RoomInfo, error) {
+		return nil, test.GetTestError()
+	}
+
+	req := getRequest(nil, false, true)
+
+	req.Form.Add("uuid", test.GetValidUUID())
+
+	resWriter := mocks.GetMockResponseWriter()
+
+	apiT := NewAPI(defaultConf(), backend)
+
+	apiT.RouteRoomInfo(resWriter, req)
+
+	assertErrorCode(t, resWriter, http.StatusNotFound)
 }
 
 func assertZeroStatusCode(t *testing.T, resWriter *mocks.MockResponseWriter, name ...string) {

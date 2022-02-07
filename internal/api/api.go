@@ -213,8 +213,7 @@ func (api *API) RouteRequestList(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
-	sid := req.FormValue("uuid")
-	id, err := uuid.Parse(sid)
+	id, err := getUuidFromHeader(req)
 	if err != nil {
 		http.Error(w, "Malformed uuid", http.StatusBadRequest)
 		return
@@ -227,8 +226,7 @@ func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
-	sid := req.FormValue("uuid")
-	id, err := uuid.Parse(sid)
+	id, err := getUuidFromHeader(req)
 	if err != nil {
 		http.Error(w, "Malformed uuid", http.StatusBadRequest)
 		return
@@ -238,8 +236,7 @@ func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
-	sid := req.FormValue("uuid")
-	id, err := uuid.Parse(sid)
+	id, err := getUuidFromHeader(req)
 	if err != nil {
 		http.Error(w, "Malformed uuid", http.StatusBadRequest)
 		return
@@ -294,7 +291,7 @@ func (api *API) RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
 
 func (api *API) RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 	//TODO Modify this to only send messages and create extra endpoint for blobs
-	errCode, err := api.sendMessage(req, "")
+	errCode, err := api.SendMessage(req, "")
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
@@ -372,7 +369,7 @@ func (api *API) RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request) {
-	roomID, err := uuid.Parse(req.FormValue("uuid"))
+	roomID, err := getUuidFromHeader(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -392,34 +389,34 @@ func (api *API) RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request
 }
 
 func (api *API) RouteRoomCommandNameRoom(w http.ResponseWriter, req *http.Request) {
-	errCode, err := api.sendMessage(req, types.RoomCommandNameRoom)
+	errCode, err := api.SendMessage(req, types.RoomCommandNameRoom)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
 func (api *API) RouteRoomCommandSetNick(w http.ResponseWriter, req *http.Request) {
-	errCode, err := api.sendMessage(req, types.RoomCommandNick)
+	errCode, err := api.SendMessage(req, types.RoomCommandNick)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
 func (api *API) RouteRoomCommandPromote(w http.ResponseWriter, req *http.Request) {
-	errCode, err := api.sendMessage(req, types.RoomCommandPromote)
+	errCode, err := api.SendMessage(req, types.RoomCommandPromote)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
 func (api *API) RouteRoomCommandRemovePeer(w http.ResponseWriter, req *http.Request) {
-	errCode, err := api.sendMessage(req, types.RoomCommandRemovePeer)
+	errCode, err := api.SendMessage(req, types.RoomCommandRemovePeer)
 	if err != nil {
 		http.Error(w, err.Error(), errCode)
 	}
 }
 
-func (api *API) sendMessage(req *http.Request, roomCommand types.Command) (int, error) {
+func (api *API) SendMessage(req *http.Request, roomCommand types.Command) (int, error) {
 	content, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -449,4 +446,8 @@ func (api *API) sendMessage(req *http.Request, roomCommand types.Command) (int, 
 	}
 
 	return 0, nil
+}
+
+func getUuidFromHeader(req *http.Request) (uuid.UUID, error) {
+	return uuid.Parse(req.FormValue("uuid"))
 }
