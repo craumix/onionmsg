@@ -2,28 +2,32 @@ package mocks
 
 import (
 	"github.com/craumix/onionmsg/internal/types"
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/google/uuid"
 )
 
 type MockBackend struct {
-	BlobManager MockBlobManager
+	MockBlobManager
 
-	TorInfoFunc                       func() interface{}
-	GetNotifierFunc                   func() types.Notifier
-	GetContactIDsAsStringsFunc        func() []string
-	CreateAndRegisterNewContactIDFunc func() (types.ContactIdentity, error)
-	DeregisterAndRemoveContactIDFunc  func(fingerprint types.Fingerprint) error
-	GetRoomInfoFunc                   func(roomId uuid.UUID) (*types.RoomInfo, error)
-	GetInfoForAllRoomsFunc            func() []*types.RoomInfo
-	DeregisterAndDeleteRoomFunc       func(roomID uuid.UUID) error
-	CreateRoomFunc                    func(fingerprints []string) error
-	SendMessageInRoomFunc             func(roomID uuid.UUID, content types.MessageContent) error
-	ListMessagesInRoomFunc            func(roomID uuid.UUID, count int) ([]types.Message, error)
-	AddNewPeerToRoomFunc              func(roomID uuid.UUID, newPeer types.Fingerprint) error
-	GetRoomRequestsFunc               func() []*types.RoomRequest
-	AcceptRoomRequestFunc             func(roomReqID uuid.UUID) error
-	RemoveRoomRequestFunc             func(roomReqID uuid.UUID)
+	TorInfoFunc            func() interface{}
+	GetNotifierFunc        func() types.Notifier
+	GetContactIDsFunc      func() []types.ContactIdentity
+	CreateContactIDFunc    func() (types.ContactIdentity, error)
+	DeleteContactIDFunc    func(fingerprint types.Fingerprint) error
+	GetRoomInfoFunc        func(roomId uuid.UUID) (*types.RoomInfo, error)
+	GetInfoForAllRoomsFunc func() []*types.RoomInfo
+	DeleteRoomFunc         func(roomID uuid.UUID) error
+	CreateRoomFunc         func(fingerprints []string) error
+	SendMessageInRoomFunc  func(roomID uuid.UUID, content types.MessageContent) error
+	ListMessagesInRoomFunc func(roomID uuid.UUID, count int) ([]types.Message, error)
+	AddNewPeerToRoomFunc   func(roomID uuid.UUID, newPeer types.Fingerprint) error
+	GetRoomRequestsFunc    func() []*types.RoomRequest
+	AcceptRoomRequestFunc  func(roomReqID uuid.UUID) error
+	DeleteRoomRequestFunc  func(roomReqID uuid.UUID)
+}
+
+func (m MockBackend) AddObserver(newObserver types.Observer) {
+	//TODO implement me
+	panic("AddObserver in MockBackend not implemented!")
 }
 
 func (m MockBackend) TorInfo() interface{} {
@@ -34,20 +38,16 @@ func (m MockBackend) GetNotifier() types.Notifier {
 	return m.GetNotifierFunc()
 }
 
-func (m MockBackend) GetBlobManager() blobmngr.ManagesBlobs {
-	return m.BlobManager
+func (m MockBackend) GetContactIDs() []types.ContactIdentity {
+	return m.GetContactIDsFunc()
 }
 
-func (m MockBackend) GetContactIDsAsStrings() []string {
-	return m.GetContactIDsAsStringsFunc()
+func (m MockBackend) CreateContactID() (types.ContactIdentity, error) {
+	return m.CreateContactIDFunc()
 }
 
-func (m MockBackend) CreateAndRegisterNewContactID() (types.ContactIdentity, error) {
-	return m.CreateAndRegisterNewContactIDFunc()
-}
-
-func (m MockBackend) DeregisterAndRemoveContactID(fingerprint types.Fingerprint) error {
-	return m.DeregisterAndRemoveContactIDFunc(fingerprint)
+func (m MockBackend) DeleteContactID(fingerprint types.Fingerprint) error {
+	return m.DeleteContactIDFunc(fingerprint)
 }
 
 func (m MockBackend) GetRoomInfo(roomId uuid.UUID) (*types.RoomInfo, error) {
@@ -58,8 +58,8 @@ func (m MockBackend) GetInfoForAllRooms() []*types.RoomInfo {
 	return m.GetInfoForAllRoomsFunc()
 }
 
-func (m MockBackend) DeregisterAndDeleteRoom(roomID uuid.UUID) error {
-	return m.DeregisterAndDeleteRoomFunc(roomID)
+func (m MockBackend) DeleteRoom(roomID uuid.UUID) error {
+	return m.DeleteRoomFunc(roomID)
 }
 
 func (m MockBackend) CreateRoom(fingerprints []string) error {
@@ -86,8 +86,8 @@ func (m MockBackend) AcceptRoomRequest(roomReqID uuid.UUID) error {
 	return m.AcceptRoomRequestFunc(roomReqID)
 }
 
-func (m MockBackend) RemoveRoomRequest(roomReqID uuid.UUID) {
-	m.RemoveRoomRequestFunc(roomReqID)
+func (m MockBackend) DeleteRoomRequest(roomReqID uuid.UUID) {
+	m.DeleteRoomRequestFunc(roomReqID)
 }
 
 func DefaultBackend() MockBackend {

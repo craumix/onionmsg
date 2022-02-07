@@ -27,7 +27,7 @@ func (d *Daemon) convClientHandler(conn net.Conn) {
 		return
 	}
 
-	room, ok := d.GetRoomByID(roomID)
+	room, ok := d.getRoom(roomID)
 	if !ok {
 		log.WithField("room", roomID).Debug("unknown room")
 		mConn.SendStatusMessage(types.AuthFailed)
@@ -60,7 +60,7 @@ func (d *Daemon) convClientHandler(conn net.Conn) {
 
 	mConn.SendStatusMessage(types.MessagesOK)
 
-	err = mConn.ReadAndCreateBlobs(d.BlobManager)
+	err = mConn.ReadAndCreateBlobs(d.LocalBlobManager)
 	if err != nil {
 		log.WithError(err).Debug()
 	}

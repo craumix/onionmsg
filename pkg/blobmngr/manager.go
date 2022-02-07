@@ -9,29 +9,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type ManagesBlobs interface {
-	CreateDirIfNotExists() error
-	GetResource(id uuid.UUID) ([]byte, error)
-	StreamTo(id uuid.UUID, w io.Writer) error
-	FileFromID(id uuid.UUID) (*os.File, error)
-	StatFromID(id uuid.UUID) (fs.FileInfo, error)
-	WriteIntoBlob(from io.Reader, blobID uuid.UUID) error
-	SaveResource(blob []byte) (uuid.UUID, error)
-	MakeBlob() (uuid.UUID, error)
-	RemoveBlob(id uuid.UUID) error
-}
-
-type BlobManager struct {
+type LocalBlobManager struct {
 	dir string
 }
 
-func NewBlobManager(dir string) BlobManager {
-	return BlobManager{
+func NewLocalBlobManager(dir string) LocalBlobManager {
+	return LocalBlobManager{
 		dir: dir,
 	}
 }
 
-func (bm BlobManager) CreateDirIfNotExists() error {
+func (bm LocalBlobManager) CreateDirIfNotExists() error {
 	err := os.Mkdir(bm.dir, 0700)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -40,11 +28,11 @@ func (bm BlobManager) CreateDirIfNotExists() error {
 	return nil
 }
 
-func (bm BlobManager) GetResource(id uuid.UUID) ([]byte, error) {
+func (bm LocalBlobManager) GetResource(id uuid.UUID) ([]byte, error) {
 	return ioutil.ReadFile(bm.blobPath(id))
 }
 
-func (bm BlobManager) StreamTo(id uuid.UUID, w io.Writer) error {
+func (bm LocalBlobManager) StreamTo(id uuid.UUID, w io.Writer) error {
 	file, err := bm.FileFromID(id)
 	if err != nil {
 		return err
@@ -56,11 +44,11 @@ func (bm BlobManager) StreamTo(id uuid.UUID, w io.Writer) error {
 	return nil
 }
 
-func (bm BlobManager) FileFromID(id uuid.UUID) (*os.File, error) {
+func (bm LocalBlobManager) FileFromID(id uuid.UUID) (*os.File, error) {
 	return os.OpenFile(bm.blobPath(id), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
 }
 
-func (bm BlobManager) StatFromID(id uuid.UUID) (fs.FileInfo, error) {
+func (bm LocalBlobManager) StatFromID(id uuid.UUID) (fs.FileInfo, error) {
 	return os.Stat(bm.blobPath(id))
 }
 
@@ -82,7 +70,7 @@ func writeIntoFile(from io.Reader, to *os.File) error {
 	return nil
 }
 
-func (bm BlobManager) WriteIntoBlob(from io.Reader, blobID uuid.UUID) error {
+func (bm LocalBlobManager) WriteIntoBlob(from io.Reader, blobID uuid.UUID) error {
 	file, err := bm.FileFromID(blobID)
 	if err != nil {
 		return err
@@ -96,19 +84,19 @@ func (bm BlobManager) WriteIntoBlob(from io.Reader, blobID uuid.UUID) error {
 	return nil
 }
 
-func (bm BlobManager) SaveResource(blob []byte) (uuid.UUID, error) {
+func (bm LocalBlobManager) SaveResource(blob []byte) (uuid.UUID, error) {
 	id := uuid.New()
 	return id, ioutil.WriteFile(bm.blobPath(id), blob, 0600)
 }
 
-func (bm BlobManager) MakeBlob() (uuid.UUID, error) {
+func (bm LocalBlobManager) MakeBlob() (uuid.UUID, error) {
 	return bm.SaveResource(make([]byte, 0))
 }
 
-func (bm BlobManager) RemoveBlob(id uuid.UUID) error {
+func (bm LocalBlobManager) RemoveBlob(id uuid.UUID) error {
 	return os.Remove(bm.blobPath(id))
 }
 
-func (bm BlobManager) blobPath(id uuid.UUID) string {
+func (bm LocalBlobManager) blobPath(id uuid.UUID) string {
 	return bm.dir + "/" + id.String() + ".blob"
 }

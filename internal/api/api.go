@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"io/ioutil"
 	"mime"
 	"net"
@@ -36,26 +35,12 @@ func defaultUpgrader() websocket.Upgrader {
 
 type Backend interface {
 	TorInfo() interface{}
-	GetNotifier() types.Notifier
+	AddObserver(newObserver types.Observer)
 
-	GetBlobManager() blobmngr.ManagesBlobs
-
-	GetContactIDsAsStrings() []string
-	CreateAndRegisterNewContactID() (types.ContactIdentity, error)
-	DeregisterAndRemoveContactID(fingerprint types.Fingerprint) error
-
-	GetRoomInfo(roomId uuid.UUID) (*types.RoomInfo, error)
-	GetInfoForAllRooms() []*types.RoomInfo
-	DeregisterAndDeleteRoom(roomID uuid.UUID) error
-
-	CreateRoom(fingerprints []string) error
-	SendMessageInRoom(roomID uuid.UUID, content types.MessageContent) error
-	ListMessagesInRoom(roomID uuid.UUID, count int) ([]types.Message, error)
-	AddNewPeerToRoom(roomID uuid.UUID, newPeer types.Fingerprint) error
-
-	GetRoomRequests() []*types.RoomRequest
-	AcceptRoomRequest(roomReqID uuid.UUID) error
-	RemoveRoomRequest(roomReqID uuid.UUID)
+	types.BlobManager
+	types.ContactManager
+	types.RoomManager
+	types.RoomRequestManager
 }
 
 type Config struct {
@@ -141,8 +126,7 @@ func (api *API) routeOpenWS(w http.ResponseWriter, req *http.Request) {
 		log.WithError(err).Warn("error when upgrading connection")
 	}
 
-	notifier := api.backend.GetNotifier()
-	notifier.AddObserver(conn)
+	api.backend.AddObserver(conn)
 }
 
 func (api *API) RouteStatus(w http.ResponseWriter, _ *http.Request) {
@@ -161,7 +145,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err = api.backend.GetBlobManager().StatFromID(id)
+	_, err = api.backend.StatFromID(id)
 	if os.IsNotExist(err) {
 		http.Error(w, "Blob not found!", http.StatusNotFound)
 		return
@@ -177,7 +161,7 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Cache-Control", "public, max-age=604800, immutable")
 	w.Header().Add("Content-Type", "application/octet-stream")
 
-	err = api.backend.GetBlobManager().StreamTo(id, w)
+	err = api.backend.StreamTo(id, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -185,11 +169,16 @@ func (api *API) RouteBlob(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteContactList(w http.ResponseWriter, _ *http.Request) {
-	sendSerialized(w, api.backend.GetContactIDsAsStrings())
+	var fingerprints []string
+	for _, cid := range api.backend.GetContactIDs() {
+		fingerprints = append(fingerprints, string(cid.Fingerprint()))
+	}
+
+	sendSerialized(w, fingerprints)
 }
 
 func (api *API) RouteContactCreate(w http.ResponseWriter, _ *http.Request) {
-	cID, err := api.backend.CreateAndRegisterNewContactID()
+	cID, err := api.backend.CreateContactID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -206,7 +195,7 @@ func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err := api.backend.DeregisterAndRemoveContactID(types.Fingerprint(fp))
+	err := api.backend.DeleteContactID(types.Fingerprint(fp))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -237,7 +226,7 @@ func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	api.backend.RemoveRoomRequest(id)
+	api.backend.DeleteRoomRequest(id)
 }
 
 func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
@@ -293,7 +282,7 @@ func (api *API) RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = api.backend.DeregisterAndDeleteRoom(roomID)
+	err = api.backend.DeleteRoom(roomID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -309,13 +298,13 @@ func (api *API) RouteRoomSendMessage(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
-	id, err := api.backend.GetBlobManager().MakeBlob()
+	id, err := api.backend.MakeBlob()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = api.backend.GetBlobManager().WriteIntoBlob(req.Body, id)
+	err = api.backend.WriteIntoBlob(req.Body, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -329,12 +318,12 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 	}
 
 	filesize := 0
-	fileStat, err := api.backend.GetBlobManager().StatFromID(id)
+	fileStat, err := api.backend.StatFromID(id)
 	if err == nil {
 		filesize = int(fileStat.Size())
 	}
 
-	replyto, err := replyFromHeader(req)
+	replyTo, err := replyFromHeader(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -348,7 +337,7 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 
 	err = api.backend.SendMessageInRoom(roomID, types.MessageContent{
 		Type:    types.ContentTypeFile,
-		ReplyTo: replyto,
+		ReplyTo: replyTo,
 		Blob: &types.BlobMeta{
 			ID:   id,
 			Name: filename,
@@ -454,7 +443,7 @@ func (api *API) SendMessage(req *http.Request, roomCommand types.Command) (int, 
 		msgType = types.ContentTypeCmd
 	}
 
-	replyto, err := replyFromHeader(req)
+	replyTo, err := replyFromHeader(req)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -466,7 +455,7 @@ func (api *API) SendMessage(req *http.Request, roomCommand types.Command) (int, 
 
 	err = api.backend.SendMessageInRoom(roomID, types.MessageContent{
 		Type:    msgType,
-		ReplyTo: replyto,
+		ReplyTo: replyTo,
 		Data:    types.ConstructCommand(content, roomCommand),
 	})
 	if err != nil {

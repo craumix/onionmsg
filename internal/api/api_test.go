@@ -79,9 +79,9 @@ func TestRouteContactList(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	expected := []string{"Contact1"}
-
-	backend.GetContactIDsAsStringsFunc = func() []string {
+	var expected []types.ContactIdentity
+	expected = append(expected, types.NewContactIdentity())
+	backend.GetContactIDsFunc = func() []types.ContactIdentity {
 		return expected
 	}
 
@@ -93,7 +93,7 @@ func TestRouteContactList(t *testing.T) {
 	json.Unmarshal(resWriter.WriteInput[0], &actual)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expected, actual, "Contacts were modified!")
+	assert.Equal(t, string(expected[0].Fingerprint()), actual[0], "Contacts were modified!")
 }
 
 func TestRouteRoomList(t *testing.T) {
@@ -199,7 +199,7 @@ func TestDeleteRoom(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndDeleteRoomFunc = func(uuid uuid.UUID) error {
+	backend.DeleteRoomFunc = func(uuid uuid.UUID) error {
 		actual = uuid
 		return nil
 	}
@@ -222,7 +222,7 @@ func TestDeleteRoomError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndDeleteRoomFunc = func(uuid uuid.UUID) error {
+	backend.DeleteRoomFunc = func(uuid uuid.UUID) error {
 		return test.GetTestError()
 	}
 
@@ -243,7 +243,7 @@ func TestRouteContactCreate(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.CreateAndRegisterNewContactIDFunc = func() (types.ContactIdentity, error) {
+	backend.CreateContactIDFunc = func() (types.ContactIdentity, error) {
 		return expected, nil
 	}
 
@@ -261,7 +261,7 @@ func TestRouteContactCreateError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.CreateAndRegisterNewContactIDFunc = func() (types.ContactIdentity, error) {
+	backend.CreateContactIDFunc = func() (types.ContactIdentity, error) {
 		return types.ContactIdentity{}, test.GetTestError()
 	}
 
@@ -279,7 +279,7 @@ func TestRouteContactDelete(t *testing.T) {
 
 	var actual types.Fingerprint
 
-	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
+	backend.DeleteContactIDFunc = func(fingerprint types.Fingerprint) error {
 		actual = fingerprint
 		return nil
 	}
@@ -304,7 +304,7 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 
 	called := false
 
-	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
+	backend.DeleteContactIDFunc = func(fingerprint types.Fingerprint) error {
 		called = true
 		return nil
 	}
@@ -324,7 +324,7 @@ func TestRouteContactDeleteError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
+	backend.DeleteContactIDFunc = func(fingerprint types.Fingerprint) error {
 		return test.GetTestError()
 	}
 
@@ -416,26 +416,22 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 }
 
 func TestRoomSendFile(t *testing.T) {
-
-	manager := mocks.DefaultBlobManager()
+	backend := mocks.DefaultBackend()
 
 	newBlobId := uuid.New()
-	manager.MakeBlobFunc = func() (uuid.UUID, error) {
+	backend.MakeBlobFunc = func() (uuid.UUID, error) {
 		return newBlobId, nil
 	}
 
 	writtenInto := false
-	manager.WriteIntoBlobFunc = func(from io.Reader, blobID uuid.UUID) error {
+	backend.WriteIntoBlobFunc = func(from io.Reader, blobID uuid.UUID) error {
 		writtenInto = true
 		return nil
 	}
 
-	manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+	backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
 		return mocks.MockFileInfo{}, nil
 	}
-
-	backend := mocks.DefaultBackend()
-	backend.BlobManager = manager
 
 	var (
 		actualID         uuid.UUID
@@ -525,22 +521,19 @@ func TestRoomSendFileErrors(t *testing.T) {
 	for _, tc := range testcases {
 		resWriter := mocks.GetMockResponseWriter()
 
-		manager := mocks.DefaultBlobManager()
+		backend := mocks.DefaultBackend()
 
-		manager.MakeBlobFunc = func() (uuid.UUID, error) {
+		backend.MakeBlobFunc = func() (uuid.UUID, error) {
 			return uuid.UUID{}, tc.MakeBlobErr
 		}
 
-		manager.WriteIntoBlobFunc = func(from io.Reader, blobID uuid.UUID) error {
+		backend.WriteIntoBlobFunc = func(from io.Reader, blobID uuid.UUID) error {
 			return tc.WriteIntoBlobErr
 		}
 
-		manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+		backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
 			return mocks.MockFileInfo{}, nil
 		}
-
-		backend := mocks.DefaultBackend()
-		backend.BlobManager = manager
 
 		backend.SendMessageInRoomFunc = func(uuid uuid.UUID, content types.MessageContent) error {
 			return tc.SendErr
@@ -619,15 +612,15 @@ func TestRouteRoomMessages(t *testing.T) {
 
 func TestRouteBlob(t *testing.T) {
 
-	manager := mocks.DefaultBlobManager()
+	backend := mocks.DefaultBackend()
 
 	var actualID string
-	manager.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
+	backend.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
 		actualID = id.String()
 		return nil
 	}
 
-	manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+	backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
 		return mocks.MockFileInfo{}, nil
 	}
 
@@ -637,9 +630,6 @@ func TestRouteBlob(t *testing.T) {
 	req.Form.Add("uuid", expectedID)
 
 	resWriter := mocks.GetMockResponseWriter()
-
-	backend := mocks.DefaultBackend()
-	backend.BlobManager = manager
 
 	apiT := NewAPI(defaultConf(), backend)
 
@@ -670,14 +660,14 @@ func TestRouteBlobStreamToErrors(t *testing.T) {
 		},
 	}
 
-	manager := mocks.DefaultBlobManager()
-
-	manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
-		return mocks.MockFileInfo{}, nil
-	}
-
 	for _, tc := range testcases {
-		manager.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
+		backend := mocks.DefaultBackend()
+
+		backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+			return mocks.MockFileInfo{}, nil
+		}
+
+		backend.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
 			return tc.StreamToErr
 		}
 
@@ -685,9 +675,6 @@ func TestRouteBlobStreamToErrors(t *testing.T) {
 		req.Form.Add("uuid", tc.id)
 
 		resWriter := mocks.GetMockResponseWriter()
-
-		backend := mocks.DefaultBackend()
-		backend.BlobManager = manager
 
 		apiT := NewAPI(defaultConf(), backend)
 
@@ -698,15 +685,15 @@ func TestRouteBlobStreamToErrors(t *testing.T) {
 }
 
 func TestRouteBlobBlobNotFoundError(t *testing.T) {
-	manager := mocks.DefaultBlobManager()
+	backend := mocks.DefaultBackend()
 
 	called := false
-	manager.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
+	backend.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
 		called = true
 		return nil
 	}
 
-	manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+	backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
 		return mocks.MockFileInfo{}, os.ErrNotExist
 	}
 
@@ -716,9 +703,6 @@ func TestRouteBlobBlobNotFoundError(t *testing.T) {
 	req.Form.Add("uuid", expectedID)
 
 	resWriter := mocks.GetMockResponseWriter()
-
-	backend := mocks.DefaultBackend()
-	backend.BlobManager = manager
 
 	apiT := NewAPI(defaultConf(), backend)
 
@@ -746,21 +730,17 @@ func TestRouteBlobContentDisposition(t *testing.T) {
 			expectedContentDisposition: "attachment; filename=\"test\"",
 		},
 	}
-
-	manager := mocks.DefaultBlobManager()
-
-	manager.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
-		return nil
-	}
-
-	manager.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
-		return mocks.MockFileInfo{}, nil
-	}
-
-	backend := mocks.DefaultBackend()
-	backend.BlobManager = manager
-
 	for _, tc := range testcases {
+		backend := mocks.DefaultBackend()
+
+		backend.StreamToFunc = func(id uuid.UUID, w io.Writer) error {
+			return nil
+		}
+
+		backend.StatFromIDFunc = func(id uuid.UUID) (fs.FileInfo, error) {
+			return mocks.MockFileInfo{}, nil
+		}
+
 		resWriter := mocks.GetMockResponseWriter()
 		apiT := NewAPI(defaultConf(), backend)
 
@@ -1058,7 +1038,7 @@ func TestRouteRequestDelete(t *testing.T) {
 	backend := mocks.DefaultBackend()
 
 	var actualID uuid.UUID
-	backend.RemoveRoomRequestFunc = func(toRemove uuid.UUID) {
+	backend.DeleteRoomRequestFunc = func(toRemove uuid.UUID) {
 		actualID = toRemove
 	}
 

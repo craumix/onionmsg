@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/craumix/onionmsg/pkg/blobmngr"
 	"github.com/craumix/onionmsg/pkg/sio"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -33,7 +32,7 @@ const (
 
 type ConnectionManager struct {
 	proxy       proxy.Dialer
-	blobManager blobmngr.ManagesBlobs
+	blobManager BlobManager
 	ports       PortGroup
 }
 
@@ -41,7 +40,7 @@ type MessageConnection struct {
 	conn sio.ConnWrapper
 }
 
-func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.ManagesBlobs, ports PortGroup) ConnectionManager {
+func NewConnectionManager(proxy proxy.Dialer, blobManager BlobManager, ports PortGroup) ConnectionManager {
 	return ConnectionManager{
 		proxy:       proxy,
 		blobManager: blobManager,
@@ -262,7 +261,7 @@ func (mc MessageConnection) ReadFingerprintWithChallenge() (Fingerprint, error) 
 	return Fingerprint(fingerprint), nil
 }
 
-func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds ...uuid.UUID) error {
+func (mc MessageConnection) SendBlobs(blobManager BlobManager, blobIds ...uuid.UUID) error {
 	mc.SendUUIDs(blobIds...)
 
 	for _, id := range blobIds {
@@ -312,7 +311,7 @@ func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds
 	return nil
 }
 
-func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs) error {
+func (mc MessageConnection) ReadAndCreateBlobs(blobManager BlobManager) error {
 	blobIds, _ := mc.ReadUUIDs()
 
 	for _, id := range blobIds {
@@ -325,7 +324,7 @@ func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs
 	return nil
 }
 
-func (mc MessageConnection) createBlob(blobManager blobmngr.ManagesBlobs, blobId uuid.UUID) error {
+func (mc MessageConnection) createBlob(blobManager BlobManager, blobId uuid.UUID) error {
 	blockCount, err := mc.conn.ReadInt()
 	if err != nil {
 		return err

@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -43,14 +42,15 @@ type Config struct {
 }
 
 type Daemon struct {
+	blobmngr.LocalBlobManager
+	types.Notifier
+
 	Config Config
 
 	data *SerializableData
 	Tor  *tor.Instance
 
-	Notifier          types.Notifier
 	ConnectionManager types.ConnectionManager
-	BlobManager       blobmngr.ManagesBlobs
 
 	ctx context.Context
 
@@ -85,16 +85,16 @@ func NewDaemon(conf Config) (*Daemon, error) {
 	}
 
 	return &Daemon{
-		Config:      conf,
-		data:        &SerializableData{},
-		Tor:         newTorInstance,
-		BlobManager: blobmngr.NewBlobManager(filepath.Join(conf.BaseDir, blobDir)),
-		Notifier:    types.Notifier{},
-		loadFuse:    false,
-		loContPort:  conf.PortGroup.LocalControlPort,
-		loConvPort:  conf.PortGroup.LocalConversationPort,
-		datafile:    filepath.Join(conf.BaseDir, datafile),
-		pidfile:     filepath.Join(conf.BaseDir, pidfile),
+		LocalBlobManager: blobmngr.NewLocalBlobManager(filepath.Join(conf.BaseDir, blobDir)),
+		Config:           conf,
+		data:             &SerializableData{},
+		Tor:              newTorInstance,
+		Notifier:         types.Notifier{},
+		loContPort:       conf.PortGroup.LocalControlPort,
+		loConvPort:       conf.PortGroup.LocalConversationPort,
+		datafile:         filepath.Join(conf.BaseDir, datafile),
+		pidfile:          filepath.Join(conf.BaseDir, pidfile),
+		loadFuse:         false,
 	}, nil
 }
 
@@ -115,7 +115,7 @@ func (d *Daemon) StartDaemon(ctx context.Context) error {
 	}()
 	d.startSignalHandler()
 
-	err := WritePIDFile(d.pidfile)
+	err := writePIDFile(d.pidfile)
 	if err != nil {
 		log.WithError(err).Debug()
 	}
@@ -124,7 +124,7 @@ func (d *Daemon) StartDaemon(ctx context.Context) error {
 		log.WithField("dir", d.Config.BaseDir).Debug("base directory not found, created it")
 	}
 
-	err = d.BlobManager.CreateDirIfNotExists()
+	err = d.LocalBlobManager.CreateDirIfNotExists()
 	if err != nil {
 		log.WithError(err).Debug()
 	}
@@ -167,7 +167,7 @@ func (d *Daemon) startTor() error {
 		return err
 	}
 
-	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy, d.BlobManager, d.Config.PortGroup)
+	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy, d.LocalBlobManager, d.Config.PortGroup)
 
 	lf := log.Fields{
 		"pid":     d.Tor.Pid(),
@@ -184,7 +184,7 @@ func (d *Daemon) loadData() error {
 		return err
 	}
 
-	for _, room := range d.GetRooms() {
+	for _, room := range d.getRooms() {
 		room.SetContext(d.ctx)
 		room.SetConnectionManager(d.ConnectionManager)
 		room.SetCommandHandler(types.GetDefaultCommandHandler())
@@ -255,28 +255,4 @@ func (d *Daemon) saveData() error {
 
 func (d *Daemon) TorInfo() interface{} {
 	return d.Tor.Info()
-}
-
-func (d *Daemon) GetNotifier() types.Notifier {
-	return d.Notifier
-}
-
-func (d *Daemon) GetBlobManager() blobmngr.ManagesBlobs {
-	return d.BlobManager
-}
-
-func WritePIDFile(path string) error {
-	file, err := os.OpenFile(path, os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	pid := os.Getpid()
-	_, err = file.Write([]byte(strconv.Itoa(pid)))
-	if err != nil {
-		return err
-	}
-
-	return err
 }

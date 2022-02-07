@@ -2,23 +2,33 @@ package types
 
 import (
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
+	"io"
 )
 
 type NotificationType string
 
 const (
-	NotificationTypeNewMessage = "NewMessage"
-	NotificationTypeNewRoom    = "NewRoom"
-	NotificationTypeError      = "Error"
-	NotificationTypeNewRequest = "NewRequest"
+	NotificationTypeNewMessage NotificationType = "NewMessage"
+	NotificationTypeNewRoom    NotificationType = "NewRoom"
+	NotificationTypeError      NotificationType = "Error"
+	NotificationTypeNewRequest NotificationType = "NewRequest"
 )
 
-type Notifier struct {
-	observers []*websocket.Conn
+type Observer interface {
+	io.Closer
+	WriteJSON(v interface{}) error
 }
 
-func (n *Notifier) AddObserver(newObserver *websocket.Conn) {
+type Notifier struct {
+	observers []Observer
+}
+
+type Notification struct {
+	Type NotificationType `json:"type"`
+	Data interface{}      `json:"data"`
+}
+
+func (n *Notifier) AddObserver(newObserver Observer) {
 	n.observers = append(n.observers, newObserver)
 }
 
@@ -31,30 +41,22 @@ func (n *Notifier) NotifyNewMessage(id uuid.UUID, msg ...Message) {
 		msg,
 	}
 
-	n.notifyObservers(NotificationTypeNewMessage, data)
+	n.notifyObservers(Notification{NotificationTypeNewMessage, data})
 }
 
 func (n *Notifier) NotifyNewRoom(info *RoomInfo) {
-	n.notifyObservers(NotificationTypeNewRoom, info)
+	n.notifyObservers(Notification{NotificationTypeNewRoom, info})
 }
 
 func (n *Notifier) NotifyError(err error) {
-	n.notifyObservers(NotificationTypeError, err.Error())
+	n.notifyObservers(Notification{NotificationTypeError, err.Error()})
 }
 
 func (n *Notifier) NotifyNewRequest(req *RoomRequest) {
-	n.notifyObservers(NotificationTypeNewRequest, req)
+	n.notifyObservers(Notification{NotificationTypeNewRequest, req})
 }
 
-func (n *Notifier) notifyObservers(ntype NotificationType, msg interface{}) {
-	notification := struct {
-		Type NotificationType `json:"type"`
-		Data interface{}      `json:"data"`
-	}{
-		ntype,
-		msg,
-	}
-
+func (n *Notifier) notifyObservers(notification Notification) {
 	for _, conn := range n.observers {
 		err := conn.WriteJSON(notification)
 		if err != nil {
