@@ -191,7 +191,7 @@ func getSender(msg *Message, r *Room, shouldBeAdmin bool) (*RemoteIdentity, *Sel
 		isSelf = true
 	}
 
-	if shouldBeAdmin && ((!isSelf && !sender.isAdmin()) || (isSelf && !r.Self.isAdmin())) {
+	if shouldBeAdmin && ((!isSelf && !sender.Admin) || (isSelf && !r.Self.Admin)) {
 		return nil, nil, peerNotAdminError(msg.Meta.Sender)
 	}
 

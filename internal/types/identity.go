@@ -37,20 +37,12 @@ func (i identityPriv) Sign(data []byte) []byte {
 }
 
 type identityMeta struct {
-	Nickname string `json:"nick"`
-	Admin    bool   `json:"admin"`
-}
-
-func (i identityMeta) Nick() string {
-	return i.Nickname
+	Nick  string `json:"nick"`
+	Admin bool   `json:"admin"`
 }
 
 func (i *identityMeta) SetNick(nick string) {
-	i.Nickname = nick
-}
-
-func (i identityMeta) isAdmin() bool {
-	return i.Admin
+	i.Nick = nick
 }
 
 func (i *identityMeta) SetAdmin(isAdmin bool) {

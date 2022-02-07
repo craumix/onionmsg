@@ -231,13 +231,13 @@ func (r *Room) Info() *RoomInfo {
 		Admins: map[string]bool{},
 	}
 
-	info.Nicks[r.Self.Fingerprint()] = r.Self.Nick()
-	info.Admins[r.Self.Fingerprint()] = r.Self.isAdmin()
+	info.Nicks[r.Self.Fingerprint()] = r.Self.Nick
+	info.Admins[r.Self.Fingerprint()] = r.Self.Admin
 
 	for _, peer := range r.Peers {
 		info.Peers = append(info.Peers, peer.RIdentity.Fingerprint())
-		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick()
-		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.isAdmin()
+		info.Nicks[peer.RIdentity.Fingerprint()] = peer.RIdentity.Nick
+		info.Admins[peer.RIdentity.Fingerprint()] = peer.RIdentity.Admin
 	}
 
 	return info
