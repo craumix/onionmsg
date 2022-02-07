@@ -31,7 +31,7 @@ func (d *Daemon) registerContactID(cID types.ContactIdentity) error {
 }
 
 func (d *Daemon) serveContactIDService(id types.ContactIdentity) error {
-	return d.Tor.RegisterService(id.Priv, types.PubContPort, d.loContPort)
+	return d.Tor.RegisterService(id.Priv, d.loContPort, d.loContPort)
 }
 
 func (d *Daemon) deregisterContactID(fingerprint string) error {

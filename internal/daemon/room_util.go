@@ -35,7 +35,7 @@ func (d *Daemon) registerRoom(room *types.Room) error {
 }
 
 func (d *Daemon) serveConvIDService(i types.SelfIdentity) error {
-	return d.Tor.RegisterService(i.Priv, types.PubConvPort, d.loConvPort)
+	return d.Tor.RegisterService(i.Priv, d.loConvPort, d.loConvPort)
 }
 
 func (d *Daemon) deregisterRoom(id string) error {

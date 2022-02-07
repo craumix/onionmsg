@@ -62,8 +62,8 @@ type Daemon struct {
 
 func NewDaemon(conf Config) (*Daemon, error) {
 	newTorInstance, err := tor.NewInstance(tor.Config{
-		SocksPort:   conf.PortGroup.SocksPort,
-		ControlPort: conf.PortGroup.ControlPort,
+		SocksPort:   conf.PortGroup.TorSocksPort,
+		ControlPort: conf.PortGroup.TorControlPort,
 		DataDir:     filepath.Join(conf.BaseDir, torDir),
 		TorRC:       filepath.Join(conf.BaseDir, torrc),
 		ControlPass: conf.UseControlPass,
@@ -167,7 +167,7 @@ func (d *Daemon) startTor() error {
 		return err
 	}
 
-	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy, d.BlobManager)
+	d.ConnectionManager = types.NewConnectionManager(d.Tor.Proxy, d.BlobManager, d.Config.PortGroup)
 
 	lf := log.Fields{
 		"pid":     d.Tor.Pid(),

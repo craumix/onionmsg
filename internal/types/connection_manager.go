@@ -34,16 +34,18 @@ const (
 type ConnectionManager struct {
 	proxy       proxy.Dialer
 	blobManager blobmngr.ManagesBlobs
+	ports       PortGroup
 }
 
 type MessageConnection struct {
 	conn sio.ConnWrapper
 }
 
-func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.ManagesBlobs) ConnectionManager {
+func NewConnectionManager(proxy proxy.Dialer, blobManager blobmngr.ManagesBlobs, ports PortGroup) ConnectionManager {
 	return ConnectionManager{
 		proxy:       proxy,
 		blobManager: blobManager,
+		ports:       ports,
 	}
 }
 
@@ -355,7 +357,7 @@ func (mc MessageConnection) ReadAndCreateBlobs(blobManager blobmngr.ManagesBlobs
 }
 
 func (m ConnectionManager) contactPeer(room *Room, peerCID RemoteIdentity) (ContactResponse, error) {
-	conn, err := m.dialConn("tcp", peerCID.URL()+":"+strconv.Itoa(PubContPort))
+	conn, err := m.dialConn("tcp", peerCID.URL()+":"+strconv.Itoa(m.ports.LocalControlPort))
 	if err != nil {
 		return ContactResponse{}, err
 	}
@@ -398,7 +400,7 @@ func (m ConnectionManager) syncMsgs(room *Room, peerRID RemoteIdentity) error {
 		return fmt.Errorf("room not set")
 	}
 
-	conn, err := m.dialConn("tcp", peerRID.URL()+":"+strconv.Itoa(PubConvPort))
+	conn, err := m.dialConn("tcp", peerRID.URL()+":"+strconv.Itoa(m.ports.LocalConversationPort))
 	if err != nil {
 		return err
 	}

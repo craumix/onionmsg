@@ -15,8 +15,8 @@ const (
 )
 
 type PortGroup struct {
-	SocksPort             int
-	ControlPort           int
+	TorSocksPort          int
+	TorControlPort        int
 	LocalControlPort      int
 	LocalConversationPort int
 	ApiPort               int
@@ -26,8 +26,8 @@ func NewPortGroup(offset int) PortGroup {
 	actualOffset := numPorts * offset
 
 	return PortGroup{
-		SocksPort:             defaultSocksPort + actualOffset,
-		ControlPort:           defaultControlPort + actualOffset,
+		TorSocksPort:          defaultSocksPort + actualOffset,
+		TorControlPort:        defaultControlPort + actualOffset,
 		LocalControlPort:      defaultLocalControlPort + actualOffset,
 		LocalConversationPort: defaultLocalConversationPort + actualOffset,
 		ApiPort:               defaultApiPort + actualOffset,
