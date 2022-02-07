@@ -7,6 +7,8 @@ import (
 	"github.com/wybiral/torgo"
 )
 
+type Fingerprint string
+
 type identityPub struct {
 	Pub ed25519.PublicKey `json:"pub"`
 }
@@ -15,8 +17,8 @@ func (i identityPub) Verify(msg, sig []byte) bool {
 	return ed25519.Verify(i.Pub, msg, sig)
 }
 
-func (i identityPub) Fingerprint() string {
-	return base64.RawURLEncoding.EncodeToString(i.Pub)
+func (i identityPub) Fingerprint() Fingerprint {
+	return Fingerprint(base64.RawURLEncoding.EncodeToString(i.Pub))
 }
 
 func (i identityPub) ServiceID() string {
@@ -58,7 +60,7 @@ func (i RemoteIdentity) String() string {
 	return fmt.Sprintf("Remote: %s", i.Fingerprint())
 }
 
-func NewRemoteIdentity(fingerprint string) (RemoteIdentity, error) {
+func NewRemoteIdentity(fingerprint Fingerprint) (RemoteIdentity, error) {
 	rid := RemoteIdentity{}
 
 	var err error
@@ -104,8 +106,8 @@ func NewContactIdentity() ContactIdentity {
 	return cid
 }
 
-func getPubKeyFromFingerprint(fingerprint string) (ed25519.PublicKey, error) {
-	raw, err := base64.RawURLEncoding.DecodeString(fingerprint)
+func getPubKeyFromFingerprint(fingerprint Fingerprint) (ed25519.PublicKey, error) {
+	raw, err := base64.RawURLEncoding.DecodeString(string(fingerprint))
 	if err != nil {
 		return nil, err
 	}

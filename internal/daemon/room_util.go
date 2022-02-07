@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/types"
@@ -38,7 +39,7 @@ func (d *Daemon) serveConvIDService(i types.SelfIdentity) error {
 	return d.Tor.RegisterService(i.Priv, d.loConvPort, d.loConvPort)
 }
 
-func (d *Daemon) deregisterRoom(id string) error {
+func (d *Daemon) deregisterRoom(id uuid.UUID) error {
 	room, found := d.GetRoomByID(id)
 	if !found {
 		return nil
@@ -60,7 +61,7 @@ func (d *Daemon) deregisterRoom(id string) error {
 func (d *Daemon) CreateRoom(fingerprints []string) error {
 	var ids []types.RemoteIdentity
 	for _, fingerprint := range fingerprints {
-		id, err := types.NewRemoteIdentity(fingerprint)
+		id, err := types.NewRemoteIdentity(types.Fingerprint(fingerprint))
 		if err != nil {
 			return err
 		}
@@ -75,7 +76,7 @@ func (d *Daemon) CreateRoom(fingerprints []string) error {
 	return d.registerRoom(room)
 }
 
-func (d *Daemon) AddNewPeerToRoom(roomID string, newPeerFingerprint string) error {
+func (d *Daemon) AddNewPeerToRoom(roomID uuid.UUID, newPeerFingerprint types.Fingerprint) error {
 	room, found := d.GetRoomByID(roomID)
 	if !found {
 		return fmt.Errorf("no such room %s", roomID)
@@ -89,7 +90,7 @@ func (d *Daemon) AddNewPeerToRoom(roomID string, newPeerFingerprint string) erro
 	return room.AddPeers(rID)
 }
 
-func (d *Daemon) DeregisterAndDeleteRoomByID(roomID string) error {
+func (d *Daemon) DeregisterAndDeleteRoom(roomID uuid.UUID) error {
 	err := d.deregisterRoom(roomID)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func (d *Daemon) GetInfoForAllRooms() []*types.RoomInfo {
 	return roomInfos
 }
 
-func (d *Daemon) SendMessageInRoom(roomID string, content types.MessageContent) error {
+func (d *Daemon) SendMessageInRoom(roomID uuid.UUID, content types.MessageContent) error {
 	room, found := d.GetRoomByID(roomID)
 	if !found {
 		return fmt.Errorf("no such room %s", roomID)
@@ -119,7 +120,7 @@ func (d *Daemon) SendMessageInRoom(roomID string, content types.MessageContent) 
 	return nil
 }
 
-func (d *Daemon) ListMessagesInRoom(roomID string, count int) ([]types.Message, error) {
+func (d *Daemon) ListMessagesInRoom(roomID uuid.UUID, count int) ([]types.Message, error) {
 	room, found := d.GetRoomByID(roomID)
 	if !found {
 		return nil, fmt.Errorf("no such room %s", roomID)
@@ -141,21 +142,21 @@ func (d *Daemon) AddRoom(room *types.Room) {
 }
 
 func (d *Daemon) RemoveRoom(toRemove *types.Room) {
-	d.RemoveRoomByID(toRemove.ID.String())
+	d.RemoveRoomByID(toRemove.ID)
 }
 
-func (d *Daemon) RemoveRoomByID(toRemove string) {
+func (d *Daemon) RemoveRoomByID(toRemove uuid.UUID) {
 	for i, room := range d.GetRooms() {
-		if room.ID.String() == toRemove {
+		if room.ID == toRemove {
 			d.data.Rooms = append(d.data.Rooms[:i], d.data.Rooms[i+1:]...)
 			return
 		}
 	}
 }
 
-func (d *Daemon) GetRoomByID(toFind string) (*types.Room, bool) {
+func (d *Daemon) GetRoomByID(toFind uuid.UUID) (*types.Room, bool) {
 	for _, room := range d.GetRooms() {
-		if room.ID.String() == toFind {
+		if room.ID == toFind {
 			return room, true
 		}
 	}
@@ -163,7 +164,7 @@ func (d *Daemon) GetRoomByID(toFind string) (*types.Room, bool) {
 	return nil, false
 }
 
-func (d *Daemon) GetRoomInfoByID(roomID string) (*types.RoomInfo, error) {
+func (d *Daemon) GetRoomInfo(roomID uuid.UUID) (*types.RoomInfo, error) {
 	room, found := d.GetRoomByID(roomID)
 	if !found {
 		return nil, fmt.Errorf("no such room %s", roomID)

@@ -195,18 +195,18 @@ func TestRouteRoomCreateErrors(t *testing.T) {
 func TestDeleteRoom(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	var actual string
+	var actual uuid.UUID
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndDeleteRoomByIDFunc = func(uuid string) error {
+	backend.DeregisterAndDeleteRoomFunc = func(uuid uuid.UUID) error {
 		actual = uuid
 		return nil
 	}
 
 	req := getRequest(nil, false, true)
 
-	expected := "test id"
+	expected := test.GetValidUUID()
 	req.Form.Add("uuid", expected)
 
 	apiT := NewAPI(defaultConf(), backend)
@@ -214,7 +214,7 @@ func TestDeleteRoom(t *testing.T) {
 	apiT.RouteRoomDelete(resWriter, req)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expected, actual, "Uuid was modified")
+	assert.Equal(t, expected, actual.String(), "Uuid was modified")
 }
 
 func TestDeleteRoomError(t *testing.T) {
@@ -222,13 +222,16 @@ func TestDeleteRoomError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndDeleteRoomByIDFunc = func(uuid string) error {
+	backend.DeregisterAndDeleteRoomFunc = func(uuid uuid.UUID) error {
 		return test.GetTestError()
 	}
 
+	req := getRequest(nil, false, true)
+	req.Form.Add("uuid", test.GetValidUUID())
+
 	apiT := NewAPI(defaultConf(), backend)
 
-	apiT.RouteRoomDelete(resWriter, getRequest(nil, false, true))
+	apiT.RouteRoomDelete(resWriter, req)
 
 	assertErrorCode(t, resWriter, http.StatusInternalServerError)
 }
@@ -274,9 +277,9 @@ func TestRouteContactDelete(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	var actual string
+	var actual types.Fingerprint
 
-	backend.DeregisterAndRemoveContactIDByFingerprintFunc = func(fingerprint string) error {
+	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
 		actual = fingerprint
 		return nil
 	}
@@ -291,7 +294,7 @@ func TestRouteContactDelete(t *testing.T) {
 	apiT.RouteContactDelete(resWriter, req)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expected, actual, "Uuid was modified")
+	assert.Equal(t, expected, string(actual), "Uuid was modified")
 }
 
 func TestRouteContactDeleteNoID(t *testing.T) {
@@ -301,7 +304,7 @@ func TestRouteContactDeleteNoID(t *testing.T) {
 
 	called := false
 
-	backend.DeregisterAndRemoveContactIDByFingerprintFunc = func(fingerprint string) error {
+	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
 		called = true
 		return nil
 	}
@@ -321,7 +324,7 @@ func TestRouteContactDeleteError(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.DeregisterAndRemoveContactIDByFingerprintFunc = func(fingerprint string) error {
+	backend.DeregisterAndRemoveContactIDFunc = func(fingerprint types.Fingerprint) error {
 		return test.GetTestError()
 	}
 
@@ -339,11 +342,12 @@ func TestRouteContactDeleteError(t *testing.T) {
 func TestRouteRoomCommandUseradd(t *testing.T) {
 	resWriter := mocks.GetMockResponseWriter()
 
-	var actualID, actualFp string
+	var actualID uuid.UUID
+	var actualFp types.Fingerprint
 
 	backend := mocks.DefaultBackend()
 
-	backend.AddNewPeerToRoomFunc = func(roomID string, fingerprint string) error {
+	backend.AddNewPeerToRoomFunc = func(roomID uuid.UUID, fingerprint types.Fingerprint) error {
 		actualID = roomID
 		actualFp = fingerprint
 		return nil
@@ -360,8 +364,8 @@ func TestRouteRoomCommandUseradd(t *testing.T) {
 	apiT.RouteRoomCommandUseradd(resWriter, req)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expectedID, actualID, "Uuid was modified")
-	assert.Equal(t, expectedFp, actualFp, "Fingerprint was modified")
+	assert.Equal(t, expectedID, actualID.String(), "Uuid was modified")
+	assert.Equal(t, expectedFp, string(actualFp), "Fingerprint was modified")
 }
 
 func TestRouteRoomCommandUseraddErrors(t *testing.T) {
@@ -393,7 +397,7 @@ func TestRouteRoomCommandUseraddErrors(t *testing.T) {
 
 	backend := mocks.DefaultBackend()
 
-	backend.AddNewPeerToRoomFunc = func(roomID string, fingerprint string) error {
+	backend.AddNewPeerToRoomFunc = func(roomID uuid.UUID, fingerprint types.Fingerprint) error {
 		return test.GetTestError()
 	}
 
@@ -434,18 +438,18 @@ func TestRoomSendFile(t *testing.T) {
 	backend.BlobManager = manager
 
 	var (
-		actualID         string
+		actualID         uuid.UUID
 		actualMsgContent types.MessageContent
 	)
-	backend.SendMessageInRoomFunc = func(uuid string, msgContent types.MessageContent) error {
-		actualID = uuid
+	backend.SendMessageInRoomFunc = func(roomID uuid.UUID, msgContent types.MessageContent) error {
+		actualID = roomID
 		actualMsgContent = msgContent
 		return nil
 	}
 
 	req := getRequest(nil, false, true)
 
-	expectedID := "test id"
+	expectedID := test.GetValidUUID()
 	req.Form.Add("uuid", expectedID)
 
 	expectedMsgContent := types.MessageContent{
@@ -475,7 +479,7 @@ func TestRoomSendFile(t *testing.T) {
 
 	assert.Truef(t, writtenInto, "Generated Blob wasn't written into")
 	//assert.Equal(t, newBlobId.String(), actualFileId.String(), "FileFromID was called with a different id than generated")
-	assert.Equal(t, expectedID, actualID, "SendMessageInRoom didn't get the Id from the request")
+	assert.Equal(t, expectedID, actualID.String(), "SendMessageInRoom didn't get the Id from the request")
 	assert.Equal(t, expectedMsgContent, actualMsgContent)
 }
 
@@ -538,7 +542,7 @@ func TestRoomSendFileErrors(t *testing.T) {
 		backend := mocks.DefaultBackend()
 		backend.BlobManager = manager
 
-		backend.SendMessageInRoomFunc = func(uuid string, content types.MessageContent) error {
+		backend.SendMessageInRoomFunc = func(uuid uuid.UUID, content types.MessageContent) error {
 			return tc.SendErr
 		}
 
@@ -568,19 +572,23 @@ func TestRouteRoomMessages(t *testing.T) {
 		{
 			name:          "Count set",
 			expectedCount: "42",
+			expectedID:    test.GetValidUUID(),
 		},
 		{
-			name: "Count not set",
+			name:       "Count not set",
+			expectedID: uuid.UUID{}.String(),
 		},
 		{
 			name:            "Invalid count set",
 			expectedCount:   "invalid",
 			expectedErrCode: http.StatusBadRequest,
+			expectedID:      uuid.UUID{}.String(),
 		},
 		{
 			name:            "ListMessagesInRoom error",
 			ListMessagesErr: test.GetTestError(),
 			expectedErrCode: http.StatusBadRequest,
+			expectedID:      test.GetValidUUID(),
 		},
 	}
 
@@ -589,8 +597,8 @@ func TestRouteRoomMessages(t *testing.T) {
 
 		backend := mocks.DefaultBackend()
 
-		var actualID string
-		backend.ListMessagesInRoomFunc = func(uuid string, count int) ([]types.Message, error) {
+		var actualID uuid.UUID
+		backend.ListMessagesInRoomFunc = func(uuid uuid.UUID, count int) ([]types.Message, error) {
 			actualID = uuid
 			return nil, tc.ListMessagesErr
 		}
@@ -598,13 +606,14 @@ func TestRouteRoomMessages(t *testing.T) {
 		req := getRequest(nil, false, true)
 
 		req.Form.Add("count", tc.expectedCount)
+		req.Form.Add("uuid", tc.expectedID)
 
 		apiT := NewAPI(defaultConf(), backend)
 
 		apiT.RouteRoomMessages(resWriter, req)
 
 		assertErrorCode(t, resWriter, tc.expectedErrCode, tc.name)
-		assert.Equal(t, tc.expectedID, actualID, tc.name+": Uuid was modified")
+		assert.Equal(t, tc.expectedID, actualID.String(), tc.name+": Uuid was modified")
 	}
 }
 
@@ -770,13 +779,13 @@ func TestRouteBlobContentDisposition(t *testing.T) {
 
 func TestSendTextFunctions(t *testing.T) {
 	var (
-		actualID         string
+		actualID         uuid.UUID
 		actualMsgContent types.MessageContent
 	)
 
 	backend := mocks.DefaultBackend()
 
-	backend.SendMessageInRoomFunc = func(uuid string, content types.MessageContent) error {
+	backend.SendMessageInRoomFunc = func(uuid uuid.UUID, content types.MessageContent) error {
 		actualID = uuid
 		actualMsgContent = content
 		return nil
@@ -841,7 +850,7 @@ func TestSendTextFunctions(t *testing.T) {
 
 		req, _ := http.NewRequest("", "", &reader)
 
-		expectedID := "test id"
+		expectedID := test.GetValidUUID()
 		req.Form = url.Values{}
 		req.Form.Add("uuid", expectedID)
 
@@ -849,7 +858,7 @@ func TestSendTextFunctions(t *testing.T) {
 
 		assertZeroStatusCode(t, resWriter)
 
-		assert.Equal(t, expectedID, actualID, tc.name+": Uuid was modified")
+		assert.Equal(t, expectedID, actualID.String(), tc.name+": Uuid was modified")
 		assert.Equal(t, expectedMsgContent, actualMsgContent)
 	}
 }
@@ -857,7 +866,7 @@ func TestSendTextFunctions(t *testing.T) {
 func TestSendTextFunctionsErrors(t *testing.T) {
 	backend := mocks.DefaultBackend()
 
-	backend.SendMessageInRoomFunc = func(uuid string, content types.MessageContent) error {
+	backend.SendMessageInRoomFunc = func(uuid uuid.UUID, content types.MessageContent) error {
 		return test.GetTestError()
 	}
 
@@ -909,6 +918,7 @@ func TestSendTextFunctionsErrors(t *testing.T) {
 	for _, tc := range testcases {
 		for _, te := range testErrors {
 			resWriter := mocks.GetMockResponseWriter()
+			te.req.Form.Add("uuid", test.GetValidUUID())
 
 			tc.testFunc(resWriter, te.req)
 
@@ -954,8 +964,8 @@ func TestRouteRequestList(t *testing.T) {
 func TestRouteRequestAccept(t *testing.T) {
 	backend := mocks.DefaultBackend()
 
-	actualID := ""
-	backend.AcceptRoomRequestFunc = func(id string) error {
+	var actualID uuid.UUID
+	backend.AcceptRoomRequestFunc = func(id uuid.UUID) error {
 		actualID = id
 		return nil
 	}
@@ -972,7 +982,7 @@ func TestRouteRequestAccept(t *testing.T) {
 	apiT.RouteRequestAccept(resWriter, req)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expectedID, actualID)
+	assert.Equal(t, expectedID, actualID.String())
 }
 
 func TestMalformedUuidErrors(t *testing.T) {
@@ -1026,7 +1036,7 @@ func TestRouteRequestAcceptError(t *testing.T) {
 	for _, tc := range testcases {
 		backend := mocks.DefaultBackend()
 
-		backend.AcceptRoomRequestFunc = func(id string) error {
+		backend.AcceptRoomRequestFunc = func(id uuid.UUID) error {
 			return tc.backendErr
 		}
 
@@ -1047,8 +1057,8 @@ func TestRouteRequestAcceptError(t *testing.T) {
 func TestRouteRequestDelete(t *testing.T) {
 	backend := mocks.DefaultBackend()
 
-	var actualID string
-	backend.RemoveRoomRequestByIDFunc = func(toRemove string) {
+	var actualID uuid.UUID
+	backend.RemoveRoomRequestFunc = func(toRemove uuid.UUID) {
 		actualID = toRemove
 	}
 
@@ -1064,7 +1074,7 @@ func TestRouteRequestDelete(t *testing.T) {
 	apiT.RouteRequestDelete(resWriter, req)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+	assert.Equal(t, expectedID, actualID.String(), "Uuid was modified")
 }
 
 func TestRouteRoomInfo(t *testing.T) {
@@ -1072,15 +1082,15 @@ func TestRouteRoomInfo(t *testing.T) {
 
 	expectedInfo := types.RoomInfo{
 		Self:   "test-self",
-		Peers:  []string{"a", "b"},
+		Peers:  []types.Fingerprint{"a", "b"},
 		ID:     uuid.UUID{},
 		Name:   "test-name",
 		Nicks:  nil,
 		Admins: nil,
 	}
 
-	var actualID string
-	backend.GetRoomInfoByIDFunc = func(roomId string) (*types.RoomInfo, error) {
+	var actualID uuid.UUID
+	backend.GetRoomInfoFunc = func(roomId uuid.UUID) (*types.RoomInfo, error) {
 		actualID = roomId
 		return &expectedInfo, nil
 	}
@@ -1100,14 +1110,14 @@ func TestRouteRoomInfo(t *testing.T) {
 	json.Unmarshal(resWriter.WriteInput[0], &actualInfo)
 
 	assertZeroStatusCode(t, resWriter)
-	assert.Equal(t, expectedID, actualID, "Uuid was modified")
+	assert.Equal(t, expectedID, actualID.String(), "Uuid was modified")
 	assert.Equal(t, expectedInfo, actualInfo, "Wrong Info")
 }
 
 func TestTestRouteRoomInfoError(t *testing.T) {
 	backend := mocks.DefaultBackend()
 
-	backend.GetRoomInfoByIDFunc = func(roomId string) (*types.RoomInfo, error) {
+	backend.GetRoomInfoFunc = func(roomId uuid.UUID) (*types.RoomInfo, error) {
 		return nil, test.GetTestError()
 	}
 

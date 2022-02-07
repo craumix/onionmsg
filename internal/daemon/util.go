@@ -3,6 +3,7 @@ package daemon
 import (
 	"fmt"
 	"github.com/craumix/onionmsg/internal/types"
+	"github.com/google/uuid"
 	"strings"
 )
 
@@ -21,7 +22,7 @@ func (w TorStringWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (d *Daemon) AcceptRoomRequest(toAccept string) error {
+func (d *Daemon) AcceptRoomRequest(toAccept uuid.UUID) error {
 	request, found := d.GetRoomRequestByID(toAccept)
 	if !found {
 		return fmt.Errorf("room request with toAccept %s not found", toAccept)
@@ -43,7 +44,7 @@ func (d *Daemon) AcceptRoomRequest(toAccept string) error {
 		Data: types.ConstructCommand(nil, types.RoomCommandAccept),
 	})
 
-	d.RemoveContactIDByFingerprint(toAccept)
+	d.RemoveContactIDByFingerprint(types.Fingerprint(request.ViaFingerprint)) // FIXME Something is wrong here
 
 	return nil
 }
@@ -56,22 +57,18 @@ func (d *Daemon) AddRoomRequest(request *types.RoomRequest) {
 	d.data.Requests = append(d.data.Requests, request)
 }
 
-func (d *Daemon) RemoveRoomRequest(toRemove *types.RoomRequest) {
-	d.RemoveRoomRequestByID(toRemove.ID.String())
-}
-
-func (d *Daemon) RemoveRoomRequestByID(toRemove string) {
+func (d *Daemon) RemoveRoomRequest(toRemove uuid.UUID) {
 	for i, request := range d.GetRoomRequests() {
-		if request.ID.String() == toRemove {
+		if request.ID == toRemove {
 			d.data.Requests = append(d.data.Requests[:i], d.data.Requests[i+1:]...)
 			return
 		}
 	}
 }
 
-func (d *Daemon) GetRoomRequestByID(toFind string) (*types.RoomRequest, bool) {
+func (d *Daemon) GetRoomRequestByID(toFind uuid.UUID) (*types.RoomRequest, bool) {
 	for _, request := range d.GetRoomRequests() {
-		if request.ID.String() == toFind {
+		if request.ID == toFind {
 			return request, true
 		}
 	}

@@ -37,20 +37,25 @@ func defaultUpgrader() websocket.Upgrader {
 type Backend interface {
 	TorInfo() interface{}
 	GetNotifier() types.Notifier
+
 	GetBlobManager() blobmngr.ManagesBlobs
+
 	GetContactIDsAsStrings() []string
 	CreateAndRegisterNewContactID() (types.ContactIdentity, error)
-	DeregisterAndRemoveContactIDByFingerprint(fingerprint string) error
-	GetRoomRequests() []*types.RoomRequest
-	AcceptRoomRequest(id string) error
-	RemoveRoomRequestByID(toRemove string)
-	GetRoomInfoByID(roomId string) (*types.RoomInfo, error)
+	DeregisterAndRemoveContactID(fingerprint types.Fingerprint) error
+
+	GetRoomInfo(roomId uuid.UUID) (*types.RoomInfo, error)
 	GetInfoForAllRooms() []*types.RoomInfo
-	DeregisterAndDeleteRoomByID(roomID string) error
+	DeregisterAndDeleteRoom(roomID uuid.UUID) error
+
 	CreateRoom(fingerprints []string) error
-	SendMessageInRoom(roomID string, content types.MessageContent) error
-	ListMessagesInRoom(roomID string, count int) ([]types.Message, error)
-	AddNewPeerToRoom(roomID string, newPeerFingerprint string) error
+	SendMessageInRoom(roomID uuid.UUID, content types.MessageContent) error
+	ListMessagesInRoom(roomID uuid.UUID, count int) ([]types.Message, error)
+	AddNewPeerToRoom(roomID uuid.UUID, newPeer types.Fingerprint) error
+
+	GetRoomRequests() []*types.RoomRequest
+	AcceptRoomRequest(roomReqID uuid.UUID) error
+	RemoveRoomRequest(roomReqID uuid.UUID)
 }
 
 type Config struct {
@@ -201,7 +206,7 @@ func (api *API) RouteContactDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err := api.backend.DeregisterAndRemoveContactIDByFingerprint(fp)
+	err := api.backend.DeregisterAndRemoveContactID(types.Fingerprint(fp))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -219,7 +224,7 @@ func (api *API) RouteRequestAccept(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = api.backend.AcceptRoomRequest(id.String())
+	err = api.backend.AcceptRoomRequest(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -232,7 +237,7 @@ func (api *API) RouteRequestDelete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	api.backend.RemoveRoomRequestByID(id.String())
+	api.backend.RemoveRoomRequest(id)
 }
 
 func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
@@ -242,7 +247,7 @@ func (api *API) RouteRoomInfo(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	info, err := api.backend.GetRoomInfoByID(id.String())
+	info, err := api.backend.GetRoomInfo(id)
 	if err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
@@ -282,7 +287,13 @@ func (api *API) RouteRoomCreate(w http.ResponseWriter, req *http.Request) {
 }
 
 func (api *API) RouteRoomDelete(w http.ResponseWriter, req *http.Request) {
-	err := api.backend.DeregisterAndDeleteRoomByID(req.FormValue("uuid"))
+	roomID, err := getUuidFromHeader(req)
+	if err != nil {
+		http.Error(w, "Malformed uuid", http.StatusBadRequest)
+		return
+	}
+
+	err = api.backend.DeregisterAndDeleteRoom(roomID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -329,7 +340,13 @@ func (api *API) RouteRoomSendFile(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = api.backend.SendMessageInRoom(req.FormValue("uuid"), types.MessageContent{
+	roomID, err := getUuidFromHeader(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = api.backend.SendMessageInRoom(roomID, types.MessageContent{
 		Type:    types.ContentTypeFile,
 		ReplyTo: replyto,
 		Blob: &types.BlobMeta{
@@ -359,7 +376,13 @@ func (api *API) RouteRoomMessages(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	messages, err := api.backend.ListMessagesInRoom(req.FormValue("uuid"), count)
+	roomID, err := getUuidFromHeader(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	messages, err := api.backend.ListMessagesInRoom(roomID, count)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -381,9 +404,9 @@ func (api *API) RouteRoomCommandUseradd(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	fingerprint := string(content)
+	fingerprint := types.Fingerprint(content)
 
-	if err := api.backend.AddNewPeerToRoom(roomID.String(), fingerprint); err != nil {
+	if err := api.backend.AddNewPeerToRoom(roomID, fingerprint); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -436,7 +459,12 @@ func (api *API) SendMessage(req *http.Request, roomCommand types.Command) (int, 
 		return http.StatusBadRequest, err
 	}
 
-	err = api.backend.SendMessageInRoom(req.FormValue("uuid"), types.MessageContent{
+	roomID, err := getUuidFromHeader(req)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	err = api.backend.SendMessageInRoom(roomID, types.MessageContent{
 		Type:    msgType,
 		ReplyTo: replyto,
 		Data:    types.ConstructCommand(content, roomCommand),

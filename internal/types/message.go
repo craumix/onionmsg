@@ -30,8 +30,8 @@ type BlobMeta struct {
 }
 
 type MessageMeta struct {
-	Sender string    `json:"sender"`
-	Time   time.Time `json:"time"`
+	Sender Fingerprint `json:"sender"`
+	Time   time.Time   `json:"time"`
 }
 
 type MessageContent struct {
@@ -56,7 +56,7 @@ func (m *Message) Sign(key ed25519.PrivateKey) {
 }
 
 func (m *Message) SigIsValid() bool {
-	rawKey, err := base64.RawURLEncoding.DecodeString(m.Meta.Sender)
+	rawKey, err := base64.RawURLEncoding.DecodeString(string(m.Meta.Sender))
 	if err != nil {
 		log.Debugf("unable to decode %s as message sender!", m.Meta.Sender)
 		return false

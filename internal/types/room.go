@@ -30,12 +30,12 @@ type Room struct {
 }
 
 type RoomInfo struct {
-	Self   string            `json:"self"`
-	Peers  []string          `json:"peers"`
-	ID     uuid.UUID         `json:"uuid"`
-	Name   string            `json:"name,omitempty"`
-	Nicks  map[string]string `json:"nicks,omitempty"`
-	Admins map[string]bool   `json:"admins,omitempty"`
+	Self   Fingerprint            `json:"self"`
+	Peers  []Fingerprint          `json:"peers"`
+	ID     uuid.UUID              `json:"uuid"`
+	Name   string                 `json:"name,omitempty"`
+	Nicks  map[Fingerprint]string `json:"nicks,omitempty"`
+	Admins map[Fingerprint]bool   `json:"admins,omitempty"`
 }
 
 func NewRoom(ctx context.Context, cManager ConnectionManager, commandHandler CommandHandler, remoteIds ...RemoteIdentity) (*Room, error) {
@@ -163,7 +163,7 @@ func (r *Room) RunMessageQueueForAllPeers() {
 	}
 }
 
-func (r *Room) PeerByFingerprint(fingerprint string) (*RemoteIdentity, bool) {
+func (r *Room) PeerByFingerprint(fingerprint Fingerprint) (*RemoteIdentity, bool) {
 	for _, peer := range r.Peers {
 		if peer.RIdentity.Fingerprint() == fingerprint {
 			return &peer.RIdentity, true
@@ -217,7 +217,7 @@ func (r *Room) PushMessages(msgs ...Message) error {
 	return nil
 }
 
-func (r *Room) isSelf(fingerprint string) bool {
+func (r *Room) isSelf(fingerprint Fingerprint) bool {
 	return fingerprint == r.Self.Fingerprint()
 }
 
@@ -227,8 +227,8 @@ func (r *Room) Info() *RoomInfo {
 		Self:   r.Self.Fingerprint(),
 		ID:     r.ID,
 		Name:   r.Name,
-		Nicks:  map[string]string{},
-		Admins: map[string]bool{},
+		Nicks:  map[Fingerprint]string{},
+		Admins: map[Fingerprint]bool{},
 	}
 
 	info.Nicks[r.Self.Fingerprint()] = r.Self.Nick
@@ -243,7 +243,7 @@ func (r *Room) Info() *RoomInfo {
 	return info
 }
 
-func (r *Room) removePeer(toRemove string) error {
+func (r *Room) removePeer(toRemove Fingerprint) error {
 	for i, peer := range r.Peers {
 		if peer.RIdentity.Fingerprint() == toRemove {
 			peer.Stop()

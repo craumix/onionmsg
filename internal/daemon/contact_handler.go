@@ -37,7 +37,7 @@ func (d *Daemon) handleContact(conn net.Conn) {
 	d.AddRoomRequest(&roomRequest)
 
 	if d.Config.AutoAccept {
-		d.AcceptRoomRequest(roomRequest.ID.String())
+		d.AcceptRoomRequest(roomRequest.ID)
 	} else {
 		d.Notifier.NotifyNewRequest(&roomRequest)
 	}

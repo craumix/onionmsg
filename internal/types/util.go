@@ -6,16 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type SyncMap map[string]time.Time
+type SyncMap map[Fingerprint]time.Time
 
 type ContactRequest struct {
-	RemoteFP string
-	LocalFP  string
+	RemoteFP Fingerprint
+	LocalFP  Fingerprint
 	ID       uuid.UUID
 }
 
 type ContactResponse struct {
-	ConvFP string
+	ConvFP Fingerprint
 	Sig    []byte
 }
 

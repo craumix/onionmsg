@@ -34,7 +34,7 @@ func (d *Daemon) serveContactIDService(id types.ContactIdentity) error {
 	return d.Tor.RegisterService(id.Priv, d.loContPort, d.loContPort)
 }
 
-func (d *Daemon) deregisterContactID(fingerprint string) error {
+func (d *Daemon) deregisterContactID(fingerprint types.Fingerprint) error {
 	i, ok := d.GetContactIDByFingerprint(fingerprint)
 	if !ok {
 		return nil
@@ -53,7 +53,7 @@ func (d *Daemon) deregisterContactID(fingerprint string) error {
 func (d *Daemon) GetContactIDsAsStrings() []string {
 	var cIDs []string
 	for _, cID := range d.GetContactIDs() {
-		cIDs = append(cIDs, cID.Fingerprint())
+		cIDs = append(cIDs, string(cID.Fingerprint()))
 	}
 	return cIDs
 }
@@ -69,7 +69,7 @@ func (d *Daemon) CreateAndRegisterNewContactID() (types.ContactIdentity, error) 
 	return cID, nil
 }
 
-func (d *Daemon) DeregisterAndRemoveContactIDByFingerprint(fingerprint string) error {
+func (d *Daemon) DeregisterAndRemoveContactID(fingerprint types.Fingerprint) error {
 	err := d.deregisterContactID(fingerprint)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (d *Daemon) RemoveContactID(toRemove types.ContactIdentity) {
 	d.RemoveContactIDByFingerprint(toRemove.Fingerprint())
 }
 
-func (d *Daemon) RemoveContactIDByFingerprint(toRemove string) {
+func (d *Daemon) RemoveContactIDByFingerprint(toRemove types.Fingerprint) {
 	for i, cID := range d.GetContactIDs() {
 		if cID.Fingerprint() == toRemove {
 			d.data.ContactIdentities = append(d.data.ContactIdentities[:i], d.data.ContactIdentities[i+1:]...)
@@ -101,7 +101,7 @@ func (d *Daemon) RemoveContactIDByFingerprint(toRemove string) {
 	}
 }
 
-func (d *Daemon) GetContactIDByFingerprint(toFind string) (types.ContactIdentity, bool) {
+func (d *Daemon) GetContactIDByFingerprint(toFind types.Fingerprint) (types.ContactIdentity, bool) {
 	for _, cID := range d.GetContactIDs() {
 		if cID.Fingerprint() == toFind {
 			return cID, true

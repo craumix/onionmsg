@@ -229,7 +229,7 @@ func (mc MessageConnection) SolveFingerprintChallenge(sID SelfIdentity) error {
 
 	signed := sID.Sign(challenge)
 
-	mc.conn.WriteString(sID.Fingerprint())
+	mc.conn.WriteString(string(sID.Fingerprint()))
 	mc.conn.WriteBytes(signed)
 
 	mc.conn.Flush()
@@ -237,7 +237,7 @@ func (mc MessageConnection) SolveFingerprintChallenge(sID SelfIdentity) error {
 	return nil
 }
 
-func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
+func (mc MessageConnection) ReadFingerprintWithChallenge() (Fingerprint, error) {
 	challenge, _ := mc.writeRandom(32)
 
 	fingerprint, err := mc.conn.ReadString()
@@ -259,7 +259,7 @@ func (mc MessageConnection) ReadFingerprintWithChallenge() (string, error) {
 		return "", fmt.Errorf("remote failed challenge")
 	}
 
-	return fingerprint, nil
+	return Fingerprint(fingerprint), nil
 }
 
 func (mc MessageConnection) SendBlobs(blobManager blobmngr.ManagesBlobs, blobIds ...uuid.UUID) error {

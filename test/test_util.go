@@ -9,5 +9,5 @@ func GetTestError() error {
 }
 
 func GetValidUUID() string {
-	return "00000000-0000-0000-0000-000000000000"
+	return "12345678-0000-0000-0000-000000000000"
 }

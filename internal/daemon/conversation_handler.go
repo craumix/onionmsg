@@ -27,7 +27,7 @@ func (d *Daemon) convClientHandler(conn net.Conn) {
 		return
 	}
 
-	room, ok := d.GetRoomByID(roomID.String())
+	room, ok := d.GetRoomByID(roomID)
 	if !ok {
 		log.WithField("room", roomID).Debug("unknown room")
 		mConn.SendStatusMessage(types.AuthFailed)
