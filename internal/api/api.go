@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/craumix/onionmsg/internal/daemon"
@@ -87,7 +88,7 @@ func Start(unixSocket bool, portOffset int) {
 	http.HandleFunc("/v1/room/command/promote", RouteRoomCommandPromote)
 	http.HandleFunc("/v1/room/command/removepeer", RouteRoomCommandRemovePeer)
 
-	err = http.Serve(listener, nil)
+	err = http.Serve(listener, cors.Default().Handler(http.DefaultServeMux))
 	if err != nil {
 		log.WithError(err).Fatal()
 	}
